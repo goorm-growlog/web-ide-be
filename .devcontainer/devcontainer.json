@@ -1,0 +1,11 @@
+{
+  "name": "Backend Dev Environment",
+
+  "dockerComposeFile": [
+    "../docker-compose.yml"
+  ],
+
+  "service": "backend",
+  "workspaceFolder": "/app",
+  "overrideCommand": false
+}
