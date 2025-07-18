@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.2.5'
 	id 'io.spring.dependency-management' version '1.1.7'
+    id 'checkstyle'
 }
 
 group = 'com.growlog'
@@ -11,6 +12,13 @@ java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(21)
 	}
+}
+
+checkstyle {
+    maxWarnings = 0
+    configFile = file("${rootDir}/config/naver-checkstyle-rules.xml")
+    configProperties = ["suppressionFile": "${rootDir}/config/naver-checkstyle-suppressions.xml"]
+    toolVersion = "8.42"
 }
 
 configurations {
