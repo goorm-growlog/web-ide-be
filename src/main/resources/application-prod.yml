@@ -1,5 +1,5 @@
 spring:
-  datasource:
+  # datasource:
     #url: jdbc:mysql://${RDS_ENDPOINT}:3306/${RDS_DB_NAME}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&connectTimeout=10000&socketTimeout=10000&useSSL=false
     #driver-class-name: com.mysql.cj.jdbc.Driver
     #username: ${RDS_DB_USER_NAME}
