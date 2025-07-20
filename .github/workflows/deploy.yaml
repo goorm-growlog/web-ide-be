@@ -3,8 +3,6 @@ name: Web IDE Backend CI/CD
 on:
   push:
     branches: [ main ]  # main 브랜치에 push 될 때 실행
-  pull_request:
-    branches: [ main ]  # main 브랜치로 PR 생성 시 실행
 
 env:
   AWS_REGION: ap-northeast-2
