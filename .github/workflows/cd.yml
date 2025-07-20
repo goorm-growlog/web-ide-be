@@ -1,0 +1,57 @@
+name: Web IDE Backend CI/CD
+
+on:
+  push:
+    branches: [ main ]  # main 브랜치에 push(=머지 포함)되었을 때 실행됨
+
+env:
+  AWS_REGION: ap-northeast-2
+  EC2_HOST: ${{ secrets.EC2_HOST }}         # EC2 퍼블릭 IP 주소 (Secrets에 등록)
+  EC2_USER: ubuntu                          # EC2 사용자 계정명 (보통 ubuntu)
+  PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}   # EC2 접속용 .pem 키 내용 (Secrets에 텍스트로 등록)
+  BACKEND_IMAGE: webide-backend             # Docker 이미지 이름 (태그 포함 X)
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}  # Docker Hub 계정
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}  # Docker Hub 비밀번호 or Access Token
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest  # GitHub가 제공하는 최신 우분투 환경에서 실행
+
+    steps:
+      # 1. GitHub 코드 체크아웃
+      - name: 🔄 Checkout source code
+        uses: actions/checkout@v3  # 리포지토리의 코드를 워크플로우 환경에 다운로드
+
+      # 2. JDK 21 설치 (Spring 애플리케이션 빌드에 필요)
+      - name: ☕ JDK 21 설치
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'       # 사용 중인 Java 버전
+          distribution: 'temurin'  # OpenJDK 배포판 중 하나 (가장 많이 사용)
+
+      # 3. Gradle 빌드 (코드 검증, 실패 시 Docker 빌드 & 배포 중단)
+      - name: 🧪 Gradle Build (사전 확인용)
+        run: ./gradlew build       # build = compile + test까지 포함됨
+
+      # 4. Docker Hub 로그인
+      - name: 🔐 Docker Hub 로그인
+        run: echo "${{ env.DOCKER_PASSWORD }}" | docker login -u "${{ env.DOCKER_USERNAME }}" --password-stdin
+
+      # 5. Docker 이미지 빌드 및 Push
+      - name: 🐳 Docker 이미지 빌드 및 Push
+        run: |
+          docker build -t $DOCKER_USERNAME/$BACKEND_IMAGE:latest -f Dockerfile .  # 이미지 빌드
+          docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest                      # Docker Hub로 푸시
+
+      # 6. EC2에 SSH로 접속해서 컨테이너 배포 (현재 주석 처리됨)
+#      - name: 🚀 EC2 배포 (컨테이너 교체)
+#        uses: appleboy/ssh-action@v1.0.0
+#        with:
+#          host: ${{ env.EC2_HOST }}
+#          username: ${{ env.EC2_USER }}
+#          key: ${{ env.PRIVATE_KEY }}
+#          script: |
+#            docker pull $DOCKER_USERNAME/$BACKEND_IMAGE:latest
+#            docker stop webide-backend || true
+#            docker rm webide-backend || true
+#            docker run -d --name webide-backend -p 8080:8080 $DOCKER_USERNAME/$BACKEND_IMAGE:latest
