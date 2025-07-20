@@ -1,0 +1,50 @@
+name: Web IDE Backend CI/CD
+
+on:
+  push:
+    branches: [ main ]  # main 브랜치에 push 될 때 실행
+  pull_request:
+    branches: [ main ]  # main 브랜치로 PR 생성 시 실행
+
+env:
+  AWS_REGION: ap-northeast-2
+  EC2_HOST: ${{ secrets.EC2_HOST }}         # EC2 퍼블릭 IP
+  EC2_USER: ubuntu                          # EC2 사용자 (보통 ubuntu)
+  PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}   # EC2 .pem 키 (Secrets에 텍스트로 등록)
+  BACKEND_IMAGE: webide-backend             # Docker 이미지 이름
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # CI(지속적 통합) 단계
+      # 1. GitHub 코드 체크아웃
+      - name: 🔄 Checkout source code
+        uses: actions/checkout@v3
+
+      # 2. Docker Hub 로그인
+      - name: 🔐 Docker Hub 로그인
+        run: echo "${{ env.DOCKER_PASSWORD }}" | docker login -u "${{ env.DOCKER_USERNAME }}" --password-stdin
+
+      # 3. Docker 이미지 빌드 및 업로드
+      - name: 🐳 Docker 이미지 빌드 및 Push
+        run: |
+          docker build -t $DOCKER_USERNAME/$BACKEND_IMAGE:latest -f Dockerfile .
+          docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest
+
+#      # CD(지속적 배포) 단계
+#      # 4. EC2에 SSH로 접속해 배포
+#      - name: 🚀 EC2 배포 (컨테이너 교체)
+#        uses: appleboy/ssh-action@v1.0.0
+#        with:
+#          host: ${{ env.EC2_HOST }}
+#          username: ${{ env.EC2_USER }}
+#          key: ${{ env.PRIVATE_KEY }}
+#          script: |
+#            docker pull $DOCKER_USERNAME/$BACKEND_IMAGE:latest
+#            docker stop webide-backend || true
+#            docker rm webide-backend || true
+#            docker run -d --name webide-backend -p 8080:8080 $DOCKER_USERNAME/$BACKEND_IMAGE:latest
