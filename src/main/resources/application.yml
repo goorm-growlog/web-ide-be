@@ -1,6 +1,6 @@
 spring:
   profiles:
-    active: local
+    active: ${SPRING_PROFILES_ACTIVE}
     include: s3
   config:
     import: optional:file:.env[.properties]
