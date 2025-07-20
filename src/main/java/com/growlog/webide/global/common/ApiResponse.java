@@ -1,6 +1,6 @@
-package com.growlog.web_ide.global.common;
+package com.growlog.webide.global.common;
 
-import com.growlog.web_ide.global.common.exception.ErrorCode;
+import com.growlog.webide.global.common.exception.ErrorCode;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

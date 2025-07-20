@@ -1,4 +1,4 @@
-package com.growlog.web_ide;
+package com.growlog.webide;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

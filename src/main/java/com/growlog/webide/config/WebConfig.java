@@ -1,4 +1,4 @@
-package com.growlog.web_ide.config;
+package com.growlog.webide.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

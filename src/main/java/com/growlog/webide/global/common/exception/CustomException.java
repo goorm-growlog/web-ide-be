@@ -1,9 +1,9 @@
-package com.growlog.web_ide.global.common.exception;
+package com.growlog.webide.global.common.exception;
 
 import lombok.Getter;
 
 @Getter
-public class CustomException extends RuntimeException{
+public class CustomException extends RuntimeException {
 
 	private final ErrorCode errorCode;
 
