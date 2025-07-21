@@ -44,14 +44,14 @@ jobs:
           docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest                      # Docker Hub로 푸시
 
       # 6. EC2에 SSH로 접속해서 컨테이너 배포 (현재 주석 처리됨)
-#      - name: 🚀 EC2 배포 (컨테이너 교체)
-#        uses: appleboy/ssh-action@v1.0.0
-#        with:
-#          host: ${{ env.EC2_HOST }}
-#          username: ${{ env.EC2_USER }}
-#          key: ${{ env.PRIVATE_KEY }}
-#          script: |
-#            docker pull $DOCKER_USERNAME/$BACKEND_IMAGE:latest
-#            docker stop webide-backend || true
-#            docker rm webide-backend || true
-#            docker run -d --name webide-backend -p 8080:8080 $DOCKER_USERNAME/$BACKEND_IMAGE:latest
+      - name: 🚀 EC2 배포 (컨테이너 교체)
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ env.EC2_HOST }}
+          username: ${{ env.EC2_USER }}
+          key: ${{ env.PRIVATE_KEY }}
+          script: |
+            docker pull $DOCKER_USERNAME/$BACKEND_IMAGE:latest
+            docker stop webide-backend || true
+            docker rm webide-backend || true
+            docker run -d --name webide-backend -p 8080:8080 $DOCKER_USERNAME/$BACKEND_IMAGE:latest
