@@ -1,0 +1,25 @@
+name: Web IDE Backend CI
+
+on:
+  pull_request:
+    branches: [main, develop]  # main 또는 develop 브랜치로의 PR 생성/수정 시 실행됨
+
+jobs:
+  test:
+    runs-on: ubuntu-latest  # GitHub 제공 우분투 환경에서 실행
+
+    steps:
+      # 1. GitHub 코드 체크아웃
+      - name: 🔄 Checkout source code
+        uses: actions/checkout@v3  # PR 브랜치의 소스코드를 가져옴
+
+      # 2. JDK 21 설치
+      - name: ☕ JDK 21 설치
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'       # 프로젝트에서 사용하는 Java 버전
+          distribution: 'temurin'  # Temurin은 OpenJDK 배포판 중 하나
+
+      # 3. Gradle 빌드 및 테스트 실행
+      - name: 🧪 Gradle Build & Test
+        run: ./gradlew build       # compile, test 등 전체 빌드 수행
