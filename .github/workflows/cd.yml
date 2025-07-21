@@ -3,6 +3,7 @@ name: Web IDE Backend CI/CD
 on:
   push:
     branches: [ main ]  # main 브랜치에 push(=머지 포함)되었을 때 실행됨
+    workflow_dispatch:  # 👈 수동 실행 가능하게 추가
 
 env:
   AWS_REGION: ap-northeast-2
@@ -50,6 +51,7 @@ jobs:
           host: ${{ env.EC2_HOST }}
           username: ${{ env.EC2_USER }}
           key: ${{ env.PRIVATE_KEY }}
+          envs: DOCKER_USERNAME,BACKEND_IMAGE
           script: |
             docker pull $DOCKER_USERNAME/$BACKEND_IMAGE:latest
             docker stop webide-backend || true
