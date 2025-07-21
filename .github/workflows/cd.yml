@@ -53,7 +53,20 @@ jobs:
           key: ${{ env.PRIVATE_KEY }}
           envs: DOCKER_USERNAME,BACKEND_IMAGE
           script: |
+            # 최신 이미지 pull
             docker pull $DOCKER_USERNAME/$BACKEND_IMAGE:latest
+
+            # 기존 컨테이너 정리
             docker stop webide-backend || true
             docker rm webide-backend || true
-            docker run -d --name webide-backend -p 8080:8080 $DOCKER_USERNAME/$BACKEND_IMAGE:latest
+
+            # ✅ 환경변수 확인 로그 출력
+            echo "✅ .env 파일 적용 완료"
+
+
+            # 컨테이너 실행
+            docker run -d --name webide-backend \
+              --env-file /home/ubuntu/web-ide-be/.env \
+              -p 8080:8080 \
+              $DOCKER_USERNAME/$BACKEND_IMAGE:latest
+
