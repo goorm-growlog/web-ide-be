@@ -1,6 +1,8 @@
 name: Web IDE Backend CI
 
 on:
+  push:
+    branches: [develop]
   pull_request:
     branches: [main, develop]  # main 또는 develop 브랜치로의 PR 생성/수정 시 실행됨
 
