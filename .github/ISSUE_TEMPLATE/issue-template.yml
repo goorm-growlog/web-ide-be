@@ -12,14 +12,10 @@ body:
       label: "이슈 유형"
       description: "생성할 Jira 이슈의 유형을 선택해주세요."
       options:
-        - label: "작업"
-          value: "Task"
-        - label: "버그"
-          value: "Bug"
-        - label: "스토리"
-          value: "Story"
-        - label: "하위 작업"
-          value: "Sub-task"
+        - Task
+        - Bug
+        - Story
+        - Sub-task
     validations:
       required: true
 
