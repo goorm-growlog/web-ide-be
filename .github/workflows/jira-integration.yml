@@ -1,0 +1,100 @@
+name: Create Jira Issue and Branch from Issue Form
+
+on:
+  issues:
+    types: [opened]
+
+# [추가됨] 워크플로우가 이슈를 수정하고 브랜치를 생성할 수 있도록 권한을 부여합니다.
+permissions:
+  issues: write
+  contents: write
+
+jobs:
+  automation:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Jira 로그인
+      - name: Login to Jira
+        uses: atlassian/gajira-login@v3
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+
+      # 2. Jira 이슈 생성을 위한 설명(description) 조합
+      - name: Prepare Jira Description
+        id: prep_description
+        run: |
+          # 체크박스 목록을 마크다운 형식으로 변환합니다.
+          tasks=$(echo "${{ github.event.inputs.task_list }}" | sed 's/^/- [ ] /' | sed 's/$/\\n/')
+          # 최종 설명을 조합합니다.
+          description=$(cat <<EOF
+          ${{ github.event.inputs.issue_description }}
+
+          ---
+          ### 작업 목록
+          $tasks
+
+          ---
+          *Original GitHub Issue:* ${{ github.event.issue.html_url }}
+          EOF
+          )
+          # 줄바꿈 문자를 이스케이프하여 한 줄로 만듭니다. (중요)
+          echo "description<<EOF" >> $GITHUB_OUTPUT
+          echo "$description" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # 3. Jira 이슈 생성
+      - name: Create Jira Issue
+        id: create_jira
+        uses: atlassian/gajira-create@v3
+        with:
+          # [수정] project 키는 본인 환경에 맞게 변경
+          project: YOUR_PROJECT_KEY
+          # [수정] 템플릿의 dropdown에서 선택한 값 사용
+          issuetype: ${{ github.event.inputs.issue_type }}
+          summary: ${{ github.event.issue.title }}
+          # [수정] 이전 단계에서 조합한 설명 사용
+          description: ${{ steps.prep_description.outputs.description }}
+          # [추가] 에픽 번호가 입력되었을 경우에만 부모로 설정
+          parent: ${{ github.event.inputs.epic_number }}
+
+      # 4. [신규] 생성된 Jira 키로 GitHub 이슈 제목 업데이트
+      - name: Update GitHub Issue Title
+        if: steps.create_jira.outputs.issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              title: `[${{ steps.create_jira.outputs.issue }}] ${{ github.event.issue.title }}`
+            })
+
+      # 5. [신규] 입력된 GitHub 레이블 추가
+      - name: Add GitHub Labels
+        if: github.event.inputs.issue_label
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = `${{ github.event.inputs.issue_label }}`.split('\n');
+            github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: labels
+            });
+
+      # 6. [신규] 브랜치 자동 생성
+      - name: Checkout repository
+        if: github.event.inputs.branch_name
+        uses: actions/checkout@v4
+
+      - name: Create Branch
+        if: github.event.inputs.branch_name
+        run: |
+          BRANCH_NAME="${{ github.event.inputs.branch_name }}"
+          git checkout -b "$BRANCH_NAME"
+          git push origin "$BRANCH_NAME"
+          echo "Branch '$BRANCH_NAME' created and pushed."
