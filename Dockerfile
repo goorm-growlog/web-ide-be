@@ -18,7 +18,7 @@ FROM eclipse-temurin:21-jre
 
 # 5. 애플리케이션 JAR 복사
 # 빌드한 JAR 파일만 실행 이미지로 복사
-COPY --from=builder /app/build/libs/*-SANPSHOT.jar app.jar
+COPY --from=builder /app/build/libs/*-SNAPSHOT.jar app.jar
 
 # 6. 포트 설정 (Spring Boot 기본 포트) - 사용할 포트 정의
 EXPOSE 8080
