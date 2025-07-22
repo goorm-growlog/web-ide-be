@@ -12,10 +12,14 @@ body:
       label: "이슈 유형"
       description: "생성할 Jira 이슈의 유형을 선택해주세요."
       options:
-        - Task  # Jira에 실제 존재하는 이슈 유형 이름과 일치시켜야 합니다.
-        - Bug
-        - Story
-        - Improvement
+        - label: "작업"
+          value: "Task"
+        - label: "버그"
+          value: "Bug"
+        - label: "스토리"
+          value: "Story"
+        - label: "하위 작업"
+          value: "Sub-task"
     validations:
       required: true
 
@@ -43,13 +47,6 @@ body:
     validations:
       required: false
 
-  - type: input
-    id: branch_name
-    attributes:
-      label: "브랜치명"
-      description: "자동으로 생성할 브랜치명을 작성해주세요. (선택 사항)"
-      placeholder: "예: feature/login"
-
   - type: textarea
     id: issue_description
     attributes:
@@ -59,12 +56,14 @@ body:
     validations:
       required: true
 
-  - type: checkboxes
+  - type: textarea
     id: task_list
     attributes:
       label: 작업 목록 (체크리스트)
-      description: "Jira 이슈 내용에 포함될 작업 항목입니다."
-      options:
-        - label: "/api/login 엔드포인트 개발"
-        - label: "이메일 및 비밀번호 데이터베이스 검증 로직 구현"
-        - label: "성공 시 JWT 토큰 발급 및 응답"
+      description: |
+        작업 항목을 직접 작성해주세요. 줄바꿈으로 구분되며, Jira 이슈의 checklist로 포함됩니다.
+      placeholder: |
+        예)
+        /api/login 엔드포인트 개발
+        이메일 및 비밀번호 검증 로직 구현
+        JWT 토큰 발급 및 응답 처리
