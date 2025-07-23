@@ -1,13 +1,15 @@
 package com.growlog.webide.config;
 
-import java.time.*;
+import java.time.Duration;
 
-import org.springframework.context.annotation.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
-import com.github.dockerjava.api.*;
-import com.github.dockerjava.core.*;
-import com.github.dockerjava.httpclient5.*;
-import com.github.dockerjava.transport.*;
+import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.core.DefaultDockerClientConfig;
+import com.github.dockerjava.core.DockerClientImpl;
+import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
+import com.github.dockerjava.transport.DockerHttpClient;
 
 @Configuration
 public class DockerConfig {
