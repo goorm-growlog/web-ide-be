@@ -17,3 +17,15 @@ spring:
         format_sql: true
         show_sql: true
       dialect: org.hibernate.dialect.MySQL8InnoDBDialect
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+email:
+  from: ${MAIL_FROM} #커스텀 클래스에서 사용하는 값
