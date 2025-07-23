@@ -6,7 +6,7 @@ package com.growlog.webide.domain.projects.service;
 
 import java.util.UUID;
 
-import org.jvnet.hk2.annotations.Service;
+import org.springframework.stereotype.Service;
 
 import com.github.dockerjava.api.DockerClient;
 import com.growlog.webide.domain.images.entity.Image;

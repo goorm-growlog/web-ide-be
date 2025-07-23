@@ -1,11 +1,12 @@
 {
   "name": "Backend Dev Environment",
-
   "dockerComposeFile": [
     "../docker-compose.yml"
   ],
-
   "service": "backend",
   "workspaceFolder": "/app",
-  "overrideCommand": false
+  "overrideCommand": false,
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ]
 }

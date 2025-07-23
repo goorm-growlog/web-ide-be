@@ -31,11 +31,12 @@ import lombok.NoArgsConstructor;
 public class Project {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "project_id")
 	private long id;
 
 	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "user_id", nullable = false)
+	@JoinColumn(name = "create_user_id", nullable = false)
 	private User owner;
 
 	@Column(nullable = false)

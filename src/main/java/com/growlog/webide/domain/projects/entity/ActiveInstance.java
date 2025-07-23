@@ -29,11 +29,12 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
-@Table(name = "active_instance")
+@Table(name = "active_instances")
 public class ActiveInstance {
 
 	@Id
-	@GeneratedValue(strategy = GenerationType.AUTO)
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "instance_id")
 	private Long id;
 
 	@ManyToOne(fetch = FetchType.LAZY)

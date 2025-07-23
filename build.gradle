@@ -55,12 +55,12 @@ dependencies {
     // swagger
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.2'
     // Docker-java
-    implementation 'com.github.docker-java:docker-java:3.3.0'
+    implementation 'com.github.docker-java:docker-java-core:3.3.0'
     implementation 'com.github.docker-java:docker-java-transport-httpclient5:3.3.0'
     // JAXB API
-    implementation 'javax.xml.bind:jaxb-api:2.3.1'
-    implementation 'org.glassfish.jaxb:jaxb-runtime:2.3.1' // jaxb-api와 버전을 맞춰줍니다.
-    implementation 'org.javassist:javassist:3.25.0-GA' // jaxb-runtime이 필요로 할 수 있는 의존성
+//    implementation 'javax.xml.bind:jaxb-api:2.3.1'
+//    implementation 'org.glassfish.jaxb:jaxb-runtime:2.3.1' // jaxb-api와 버전을 맞춰줍니다.
+//    implementation 'org.javassist:javassist:3.25.0-GA' // jaxb-runtime이 필요로 할 수 있는 의존성
 }
 
 tasks.named('test') {
