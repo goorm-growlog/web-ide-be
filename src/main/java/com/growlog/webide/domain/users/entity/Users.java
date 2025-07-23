@@ -43,8 +43,6 @@ public class Users {
 
 	private LocalDateTime updatedAt;
 
-	private LocalDateTime deletedAt;
-
 	// 저장 전에 자동 호출
 	@PrePersist
 	protected void onCreate() {
