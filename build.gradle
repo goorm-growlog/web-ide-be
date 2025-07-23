@@ -57,6 +57,9 @@ dependencies {
 
     //java mail sender
     implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+    // AWS S3 SDK (v1 기준)
+    implementation 'com.amazonaws:aws-java-sdk-s3:1.12.590'
 }
 
 tasks.named('test') {

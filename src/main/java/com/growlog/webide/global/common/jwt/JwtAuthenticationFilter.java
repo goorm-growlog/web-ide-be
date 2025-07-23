@@ -5,7 +5,15 @@ import java.util.List;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.growlog.webide.domain.users.entity.Users;
+import com.growlog.webide.domain.users.repository.UserRepository;
+import com.growlog.webide.global.common.exception.CustomException;
+import com.growlog.webide.global.common.exception.ErrorCode;
+import com.growlog.webide.global.security.CustomUserDetailService;
+import com.growlog.webide.global.security.UserPrincipal;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -16,6 +24,7 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	private final JwtTokenProvider jwtTokenProvider;
+	private final UserRepository userRepository;
 
 	@Override
 	protected void doFilterInternal(HttpServletRequest request,
@@ -28,9 +37,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		if (token != null && jwtTokenProvider.validateToken(token)) {
 			Long userId = jwtTokenProvider.getUserId(token);
 
-			// CustomUserDetails 없이 userId만 principal로 저장
+			Users user = userRepository.findById(userId)
+				.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+			UserPrincipal userPrincipal = new UserPrincipal(user);
+
 			UsernamePasswordAuthenticationToken authentication =
-				new UsernamePasswordAuthenticationToken(userId, null, List.of());
+				new UsernamePasswordAuthenticationToken(userPrincipal, null, null);
 
 			SecurityContextHolder.getContext().setAuthentication(authentication);
 		}

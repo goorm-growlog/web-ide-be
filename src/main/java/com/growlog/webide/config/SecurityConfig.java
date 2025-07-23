@@ -11,8 +11,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.global.common.jwt.JwtAuthenticationFilter;
 import com.growlog.webide.global.common.jwt.JwtTokenProvider;
+import com.growlog.webide.global.security.CustomUserDetailService;
 
 @Configuration
 public class SecurityConfig {
@@ -27,8 +29,11 @@ public class SecurityConfig {
 	};
 
 	@Bean
-	public SecurityFilterChain filterChain(HttpSecurity http,
-		JwtTokenProvider jwtTokenProvider) throws Exception {
+	public SecurityFilterChain filterChain(
+		HttpSecurity http,
+		JwtTokenProvider jwtTokenProvider,
+		UserRepository userRepository
+	) throws Exception {
 
 		http
 			.cors(withDefaults())
@@ -45,34 +50,11 @@ public class SecurityConfig {
 				).permitAll()
 				.anyRequest().authenticated()
 			)
-			.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider),
+			.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, userRepository),
 				UsernamePasswordAuthenticationFilter.class)
 			.formLogin(form -> form.disable())
 			.httpBasic(basic -> basic.disable());
 
 		return http.build();
 	}
-	/*@Bean
-	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-		http
-			.csrf(csrf -> csrf.disable()) // CSRF 비활성화
-			.authorizeHttpRequests(auth -> auth
-				.requestMatchers(
-					"/swagger-ui/**",
-					"/v3/api-docs/**",
-					"api-docs/**",
-					"/swagger-resources/**",
-					"/webjars/**"
-				).permitAll() // Swagger 허용
-				.requestMatchers(
-					"/auth/email/**",         // 이메일 인증
-					"/auth/reset-password",   // 비밀번호 재설정
-					"/users/signup",          // 회원가입
-					"/auth/login"           // 로그인 (토큰 발급용)
-				).permitAll()
-				.anyRequest().authenticated() // 나머지는 인증 필요
-			)
-			.formLogin(form -> form.disable()); // 기본 로그인 페이지 비활성화 (JWT 기반이면 보통 disable)
-		return http.build();
-	}*/
 }

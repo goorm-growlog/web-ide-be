@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.growlog.webide.domain.auth.repository.EmailVerificationRepository;
 import com.growlog.webide.domain.users.dto.UserInfoDto;
@@ -14,14 +15,20 @@ import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
+import com.growlog.webide.global.image.ImageUploadService;
 
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class UserService {
 	@Autowired
-	private UserRepository userRepository;
+	private final UserRepository userRepository;
+
+	private final ImageUploadService imageUploadService;
 
 	@Autowired
 	private EmailVerificationRepository emailVerificationRepository;
@@ -50,14 +57,14 @@ public class UserService {
 		return userRepository.save(user);
 	}
 
-	public void updateName(String newName, Authentication auth) {
-		Users user = getUserFromAuth(auth);
+	public void updateName(String newName, Long userId) {
+		Users user = findUserById(userId);
 		user.setName(newName);
 		userRepository.save(user);
 	}
 
-	public void updatePassword(String currentPassword, String newPassword, Authentication auth) {
-		Users user = getUserFromAuth(auth);
+	public void updatePassword(String currentPassword, String newPassword, Long userId) {
+		Users user = findUserById(userId);
 		if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
 			throw new CustomException(ErrorCode.INVALID_PASSWORD);
 		}
@@ -65,33 +72,36 @@ public class UserService {
 		userRepository.save(user);
 	}
 
-	public boolean verifyPassword(String password, Authentication auth) {
-		Users user = getUserFromAuth(auth);
+	public boolean verifyPassword(String password, Long userId) {
+		Users user = findUserById(userId);
 		return passwordEncoder.matches(password, user.getPassword());
 	}
 
-	public void deleteAccount(String password, Authentication auth) {
-		Users user = getUserFromAuth(auth);
+	public void deleteAccount(String password, Long userId) {
+		Users user = findUserById(userId);
 		if (!passwordEncoder.matches(password, user.getPassword())) {
 			throw new CustomException(ErrorCode.INVALID_PASSWORD);
 		}
-
-		// 사용자 삭제 처리
 		user.setDeletedAt(LocalDateTime.now());
 		userRepository.save(user);
 	}
 
-	private Users getUserFromAuth(Authentication auth) {
-		Long userId = Long.parseLong(auth.getName());
+	private Users findUserById(Long userId) {
 		return userRepository.findById(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 	}
 
 	public UserInfoDto getMyInfo(Long userId) {
-		Users user = userRepository.findById(userId)
-			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
+		Users user = findUserById(userId);
 		return UserInfoDto.from(user);
+	}
+
+	@Transactional
+	public String updateProfileImage(Long userId, MultipartFile file) {
+		Users user = findUserById(userId);
+		String imageUrl = imageUploadService.uploadProfileImage(file);
+		user.setProfileImageUrl(imageUrl);
+		return imageUrl;
 	}
 
 }
