@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.core.DockerClientImpl;
 import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.images.repository.ImageRepository;
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
@@ -45,8 +46,21 @@ public class WorkspaceManagerService {
 
 		// 2. 고유한 도커 볼륨 이름 생성 및 물리적 생성
 		String volumeName = "project-vol-" + UUID.randomUUID();
-		dockerClient.createVolumeCmd().withName(volumeName).exec();
-		log.info("Docker volume create: {}", volumeName);
+		try {
+			dockerClient.createVolumeCmd().withName(volumeName).exec();
+			log.info("Docker volume create: {}", volumeName);
+
+			dockerClient.listVolumesCmd().exec().getVolumes().forEach(volume -> {
+				if (volume.getName().equals(volumeName)) {
+					System.out.println("생성된 볼륨 정보:");
+					System.out.println("  이름: " + volume.getName());
+					System.out.println("  드라이버: " + volume.getDriver());
+					System.out.println("  마운트 포인트: " + volume.getMountpoint());
+				}
+			});
+		} catch (Exception e) {
+			System.err.println("볼륨 생성 오류: " + e.getMessage());
+		}
 
 		// 3. Project 엔티티 생성 및 DB 저장
 		Project project = Project.builder()

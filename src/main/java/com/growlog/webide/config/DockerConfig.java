@@ -17,7 +17,10 @@ public class DockerConfig {
 	@Bean
 	public DockerClient dockerClient() {
 		// 1. 도커 설정 불러오기
-		DefaultDockerClientConfig config = DefaultDockerClientConfig.createDefaultConfigBuilder().build();
+		DefaultDockerClientConfig.Builder configBuilder = DefaultDockerClientConfig.createDefaultConfigBuilder();
+
+		configBuilder.withDockerHost("unix:///var/run/docker.sock");
+		DefaultDockerClientConfig config = configBuilder.build();
 
 		// 2. HTTP 클라이언트 설정
 		DockerHttpClient httpClient = new ApacheDockerHttpClient.Builder()
@@ -28,7 +31,10 @@ public class DockerConfig {
 			.responseTimeout(Duration.ofSeconds(45))
 			.build();
 
+		System.out.println(">> Docker Host: " + config.getDockerHost());
+
 		// 3. 도커 클라이언트 생성 및 반환
 		return DockerClientImpl.getInstance(config, httpClient);
+
 	}
 }
