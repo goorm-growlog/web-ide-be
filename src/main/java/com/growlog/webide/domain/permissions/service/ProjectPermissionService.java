@@ -19,7 +19,7 @@ public class ProjectPermissionService {
 	@Transactional(readOnly = true)
 	public MemberRole getMyRole(Long projectId, UserPrincipal userPrincipal) {
 		return projectMemberRepository
-			.findByProject_ProjectIdAndUser_UserId(projectId, userPrincipal.getUserId())
+			.findByProject_IdAndUser_UserId(projectId, userPrincipal.getUserId())
 			.map(pm -> pm.getRole())
 			.orElseThrow(()-> new CustomException(ErrorCode.NOT_A_MEMBER));
 	}
