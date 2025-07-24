@@ -5,15 +5,26 @@ package com.growlog.webide.domain.projects.service;
  * */
 
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.springframework.stereotype.Service;
 
 import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.api.async.ResultCallback;
+import com.github.dockerjava.api.command.CreateContainerResponse;
+import com.github.dockerjava.api.exception.NotFoundException;
+import com.github.dockerjava.api.model.Bind;
+import com.github.dockerjava.api.model.HostConfig;
+import com.github.dockerjava.api.model.PullResponseItem;
+import com.github.dockerjava.api.model.Volume;
 import com.github.dockerjava.core.DockerClientImpl;
 import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.images.repository.ImageRepository;
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
+import com.growlog.webide.domain.projects.dto.OpenProjectResponse;
+import com.growlog.webide.domain.projects.entity.ActiveInstance;
 import com.growlog.webide.domain.projects.entity.Project;
+import com.growlog.webide.domain.projects.entity.ProjectStatus;
 import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.domain.users.entity.User;
@@ -32,6 +43,7 @@ public class WorkspaceManagerService {
 	private final ProjectRepository projectRepository;
 	private final ActiveInstanceRepository activeInstanceRepository;
 	private final ImageRepository imageRepository;
+	// TODO: PortManager, LiveblocksService 등 주입
 
 	/*
 	1. 프로젝트 생성 (Create Project)
@@ -78,7 +90,99 @@ public class WorkspaceManagerService {
 	/*
 	2. 프로젝트 열기 (Open Project)
 	사용자를 위한 격리된 컨테이너 생성, ActiveInstance 기록
+	사용자가 특정 프로젝트를 열기 위해 API를 호출하면, 시스템은 해당 프로젝트의 공유 볼륨을 마운트한, 오직 그 사용자만을 위한
+	새로운 격리된 Docker 컨테이너를 동적으로 실행하고, 그 세션 정보를 DB에 기록한 후, 접속 정보를 사용자에게 돌려줍니다.
 	 */
+	public OpenProjectResponse openProject(Long projectId, User user) {
+		log.info("User '{}' is opening project '{}'", user.getUsername(), projectId);
+
+		// 1. 프로젝트 정보 및 사용할 이미지 조회
+		Project project = projectRepository.findById(projectId)
+			.orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
+
+		String volumeName = project.getStorageVolumeName();
+		String imageName = project.getImage().getDockerBaseImage();
+
+		// 2. 이미 해당 사용자의 활성 세션이 있는지 확인
+		activeInstanceRepository.findByUserAndProject(user, project).ifPresent(activeInstance -> {
+			throw new IllegalStateException("User already has and active session for this project.");
+		});
+
+		// TODO: PortManager 통해 사용 가능한 포트를 동적으로 할당 받아야 함
+		int assignedPort = 9001;
+
+		// Docker 이미지가 로컬에 존재하는지 확인하고, 없으면 pull
+		pullImageIfNotExists(imageName);
+
+		// 3. Docker 컨테이너 생성 및 실행 (docker run...)
+		// 3-1. 볼륨 마운트 설정 (-v 옵션)
+		HostConfig hostConfig = new HostConfig()
+			.withBinds(new Bind(volumeName, new Volume("/app")));
+
+		// 3-2. 컨테이너 생성
+		CreateContainerResponse container = dockerClient.createContainerCmd(imageName)
+			.withHostConfig(hostConfig)
+			.withTty(true)
+			.withCmd("/bin/sh") // 컨테이너 실행 시 기본 명령어
+			.exec();
+		String containerId = container.getId();
+
+		// 3-3. 컨테이너 시작
+		dockerClient.startContainerCmd(containerId).exec();
+		log.info("Container '{}' started", containerId);
+
+		// 4. 활성 세션 정보(ActiveInstance)를 DB에 기록
+		ActiveInstance instance = ActiveInstance.builder()
+			.project(project)
+			.user(user)
+			.containerId(containerId)
+			.webSocketPort(assignedPort)
+			.build();
+		activeInstanceRepository.save(instance);
+
+		// 5. 프로젝트 상태 변경
+		if (project.getStatus() == ProjectStatus.INACTIVE) {
+			project.activate();
+		}
+
+		// TODO: LiveblocksService 통해 실제 토큰 발급
+		String liveblocksToken = "dummy-liveblocks-token-for-" + user.getUsername();
+
+		return new OpenProjectResponse(projectId, containerId, assignedPort, liveblocksToken);
+	}
+
+	/**
+	 * 지정된 Docker 이미지가 로컬에 존재하지 않으면 Docker Hub에서 pull 합니다.
+	 * @param imageName 확인할 Docker 이미지 이름 (예: "openjdk:17-jdk-slim")
+	 */
+	private void pullImageIfNotExists(String imageName) {
+		try {
+			// 1. 이미지가 로컬에 있는지 먼저 검사합니다.
+			dockerClient.inspectImageCmd(imageName).exec();
+			log.info("Image '{}' already exists locally.", imageName);
+		} catch (NotFoundException e) {
+			// 2. NotFoundException이 발생하면 이미지가 없는 것이므로 pull을 시작합니다.
+			log.info("Image '{}' not found locally. Pulling from Docker Hub...", imageName);
+			try {
+				// pullImageCmd는 비동기로 동작하므로, 완료될 때까지 기다려야 합니다.
+				dockerClient.pullImageCmd(imageName)
+					.exec(new ResultCallback.Adapter<PullResponseItem>() {
+						@Override
+						public void onNext(PullResponseItem item) {
+							// pull 진행 상태를 로그로 남길 수 있습니다.
+							log.debug(item.getStatus());
+						}
+					}).awaitCompletion(5, TimeUnit.MINUTES); // 최대 5분까지 기다립니다.
+
+				log.info("Image '{}' pulled successfully.", imageName);
+			} catch (InterruptedException interruptedException) {
+				Thread.currentThread().interrupt();
+				log.error("Image pull for '{}' was interrupted.", imageName);
+				throw new RuntimeException("Image pull was interrupted", interruptedException);
+			}
+		}
+	}
+
 
 	/*
 	3. 프로젝트 닫기 (Close Project)

@@ -23,3 +23,5 @@ spring:
     init:
       mode: always
       platform: mysql
+      schema-locations: classpath:schema.sql
+      data-locations: classpath:data.sql
