@@ -14,9 +14,6 @@ import lombok.Setter;
 @Builder
 public class UserRegistrationRequestDto {
 
-	@Schema(description = "프로필 이미지", example = "example.jpg")
-	private String profileImageUrl;
-
 	@Schema(description = "이메일 주소", example = "hong@gmail.com")
 	private String email;
 

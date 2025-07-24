@@ -48,7 +48,6 @@ public class UserService {
 		}
 
 		Users user = Users.builder()
-			.profileImageUrl(requestDto.getProfileImageUrl())
 			.name(requestDto.getUsername())
 			.email(requestDto.getEmail())
 			.password(passwordEncoder.encode(requestDto.getPassword())) // 비밀번호 암호화
