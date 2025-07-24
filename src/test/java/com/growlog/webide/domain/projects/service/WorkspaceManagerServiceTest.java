@@ -11,7 +11,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static reactor.core.Disposables.never;
 
 import java.lang.reflect.Field;
 import java.util.Optional;
@@ -43,7 +42,7 @@ import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.entity.ProjectStatus;
 import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
-import com.growlog.webide.domain.users.entity.User;
+import com.growlog.webide.domain.users.entity.Users;
 
 @ExtendWith(MockitoExtension.class)
 class WorkspaceManagerServiceTest {
@@ -65,7 +64,7 @@ class WorkspaceManagerServiceTest {
 		// given (준비): 테스트에 필요한 객체와 Mock의 행동을 정의합니다.
 
 		// 1. 입력 데이터 준비
-		User testUser = User.builder().username("tester").build();
+		Users testUser = Users.builder().username("tester").build();
 		Long imageId = 1L;
 		CreateProjectRequest request = new CreateProjectRequest("Unit Test Project", "Description", imageId);
 
@@ -142,7 +141,7 @@ class WorkspaceManagerServiceTest {
 		// given
 		long projectId = 1L;
 		String fakeProjectName = "fakeProject";
-		User testUser = User.builder().username("tester").build();
+		Users testUser = Users.builder().username("tester").build();
 		String expectedImageName = "openjdk:17-jdk-slim";
 		String expectedVolumeName = "project-vol-test";
 		String fakeContainerId = "fake-container-id-12345";
@@ -221,7 +220,7 @@ class WorkspaceManagerServiceTest {
 		String fakeProjectName = "fakeProjectName";
 		String expectedVolumeName = "project-vol-test";
 		String fakeContainerId = "fake-container-id-12345";
-		User testUser = User.builder().id(1L).username("tester").build();
+		Users testUser = Users.builder().id(1L).username("tester").build();
 		Image fakeImage = Image.builder().dockerBaseImage("openjdk:17-jdk-slim").build();
 		Project fakeProject = Project.builder()
 			.projectName(fakeProjectName)
@@ -261,7 +260,7 @@ class WorkspaceManagerServiceTest {
 
 		// given
 		String containerId = "test-container-id-123";
-		User fakeUser = User.builder().username("tester").build();
+		Users fakeUser = Users.builder().username("tester").build();
 		Image fakeImage = Image.builder().imageName("java").build();
 		Project fakeProject = Project.builder()
 			.projectName("test-project")

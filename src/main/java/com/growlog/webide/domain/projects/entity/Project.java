@@ -7,7 +7,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import com.growlog.webide.domain.images.entity.Image;
-import com.growlog.webide.domain.users.entity.User;
+import com.growlog.webide.domain.users.entity.Users;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -40,7 +40,7 @@ public class Project {
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "create_user_id", nullable = false)
-	private User owner;
+	private Users owner;
 
 	@Column(nullable = false)
 	private String projectName;
@@ -67,7 +67,7 @@ public class Project {
 	private LocalDateTime updatedAt;
 
 	@Builder
-	public Project(User owner, String projectName, String storageVolumeName, Image image, String description) {
+	public Project(Users owner, String projectName, String storageVolumeName, Image image, String description) {
 		this.owner = owner;
 		this.projectName = projectName;
 		this.storageVolumeName = storageVolumeName;

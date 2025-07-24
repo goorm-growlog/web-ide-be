@@ -17,7 +17,6 @@ import com.github.dockerjava.api.model.Bind;
 import com.github.dockerjava.api.model.HostConfig;
 import com.github.dockerjava.api.model.PullResponseItem;
 import com.github.dockerjava.api.model.Volume;
-import com.github.dockerjava.core.DockerClientImpl;
 import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.images.repository.ImageRepository;
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
@@ -27,7 +26,7 @@ import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.entity.ProjectStatus;
 import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
-import com.growlog.webide.domain.users.entity.User;
+import com.growlog.webide.domain.users.entity.Users;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -49,7 +48,7 @@ public class WorkspaceManagerService {
 	1. 프로젝트 생성 (Create Project)
 	Docker 볼륨 생성, 프로젝트 메타데이터 DB에 저장
 	 */
-	public Project createProject(CreateProjectRequest request, User owner) {
+	public Project createProject(CreateProjectRequest request, Users owner) {
 		log.info("Create project '{}', user '{}'", request.getProjectName(), owner.getUsername());
 
 		// 1. 사용할 개발 환경 이미지 조회
@@ -93,7 +92,7 @@ public class WorkspaceManagerService {
 	사용자가 특정 프로젝트를 열기 위해 API를 호출하면, 시스템은 해당 프로젝트의 공유 볼륨을 마운트한, 오직 그 사용자만을 위한
 	새로운 격리된 Docker 컨테이너를 동적으로 실행하고, 그 세션 정보를 DB에 기록한 후, 접속 정보를 사용자에게 돌려줍니다.
 	 */
-	public OpenProjectResponse openProject(Long projectId, User user) {
+	public OpenProjectResponse openProject(Long projectId, Users user) {
 		log.info("User '{}' is opening project '{}'", user.getUsername(), projectId);
 
 		// 1. 프로젝트 정보 및 사용할 이미지 조회

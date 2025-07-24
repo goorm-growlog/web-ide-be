@@ -13,7 +13,7 @@ import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
 import com.growlog.webide.domain.projects.dto.OpenProjectResponse;
 import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.service.WorkspaceManagerService;
-import com.growlog.webide.domain.users.entity.User;
+import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,7 +36,7 @@ public class WorkspaceController {
 	public ResponseEntity<Project> createProject(
 		@RequestBody CreateProjectRequest request
 	) {
-		User owner = userRepository.findById(1L)
+		Users owner = userRepository.findById(1L)
 			.orElseThrow(() -> new IllegalArgumentException("Test user(1) not found."));
 
 		Project createdProject = workspaceManagerService.createProject(request, owner);
@@ -48,7 +48,7 @@ public class WorkspaceController {
 	public ResponseEntity<OpenProjectResponse> openProject(@PathVariable Long projectId) {
 		// TODO: 실제로 @AuthenticationPrincipal로 현재 로그인한 사용자 정보 불러와야 함
 		// 테스트 위해 1번 사용자 하드코딩
-		User user = userRepository.findById(1L)
+		Users user = userRepository.findById(1L)
 			.orElseThrow(() -> new IllegalArgumentException("Test user(1) not found."));
 
 		OpenProjectResponse response = workspaceManagerService.openProject(projectId, user);
@@ -67,4 +67,7 @@ public class WorkspaceController {
 		workspaceManagerService.closeProjectSession(containerId);
 		return ResponseEntity.noContent().build();
 	}
+
+	// TODO: 프로젝트 삭제
+	// TODO: 프로젝트 설정 수정
 }
