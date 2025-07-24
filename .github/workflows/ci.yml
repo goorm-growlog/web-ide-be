@@ -10,6 +10,27 @@ jobs:
   test:
     runs-on: ubuntu-latest  # GitHub 제공 우분투 환경에서 실행
 
+    services:
+      mysql:
+        image: mysql:8.0
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: webide
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DB_HOST: 127.0.0.1
+      DB_NAME: webide
+      DB_USER_NAME: root
+      DB_USER_PASSWORD: root
+
+
     steps:
       # 1. GitHub 코드 체크아웃
       - name: 🔄 Checkout source code
