@@ -105,7 +105,7 @@ public class WorkspaceManagerService {
 
 		// 2. 이미 해당 사용자의 활성 세션이 있는지 확인
 		activeInstanceRepository.findByUserAndProject(user, project).ifPresent(activeInstance -> {
-			throw new IllegalStateException("User already has and active session for this project.");
+			throw new IllegalStateException("User already has an active session for this project.");
 		});
 
 		// TODO: PortManager 통해 사용 가능한 포트를 동적으로 할당 받아야 함
@@ -189,4 +189,37 @@ public class WorkspaceManagerService {
 	사용자의 컨테이너를 중지/제거하고, ActiveInstance 삭제
 	컨테이너 ID 기반으로 동작함
 	 */
+	public void closeProjectSession(String containerId) {
+		log.info("Closing session for container '{}'", containerId);
+
+		// 1. 컨테이너 ID로 DB에서 ActiveInstance 정보 조회
+		ActiveInstance instance = activeInstanceRepository.findByContainerId(containerId)
+			.orElseThrow(() -> new IllegalArgumentException("ActiveInstance not found: " + containerId));
+
+		Project project = instance.getProject();
+
+		// 2. 물리적인 Docker 컨테이너를 중지하고 제거
+		// removeContainerIfExists(containerId);
+		try {
+			log.info("Stopping container '{}'", containerId);
+			dockerClient.stopContainerCmd(containerId).exec();
+			log.info("Removing container '{}'", containerId);
+			dockerClient.removeContainerCmd(containerId).exec();
+		} catch (NotFoundException e) {
+			log.warn("Container '{}' not found.", containerId);
+		} catch (Exception e) {
+			log.error("Error while removing container '{}': {}", containerId, e.getMessage());
+			throw new RuntimeException("Failed to remove container: " + containerId, e);
+		}
+
+		// 3. DB에서 ActiveInstance 레코드 삭제
+		activeInstanceRepository.delete(instance);
+		log.info("ActiveInstance deleted for container '{}'", containerId);
+
+		// 4. 이 세션이 해당 프로젝트의 마지막 세션이었는지 확인
+		if (activeInstanceRepository.countByProject(project) == 0) {
+			project.deactivate();
+			log.info("Project '{}' is now INACTIVE.", project.getProjectName());
+		}
+	}
 }

@@ -2,6 +2,7 @@ package com.growlog.webide.domain.projects.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,6 +17,8 @@ import com.growlog.webide.domain.users.entity.User;
 import com.growlog.webide.domain.users.repository.UserRepository;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
@@ -52,4 +55,16 @@ public class WorkspaceController {
 		return ResponseEntity.ok(response);
 	}
 
+
+	@Operation(summary = "프로젝트 닫기(컨테이너 종료)",
+		description = "컨테이너 ID에 해당하는 활성 세션을 종료하고 컨테이너를 삭제합니다.")
+	@ApiResponses({
+		@ApiResponse(responseCode = "204", description = "세션 종료 및 컨테이너 삭제 성공 (No Content)"),
+		@ApiResponse(responseCode = "404", description = "존재하지 않는 컨테이너 ID")
+	})
+	@DeleteMapping("/{containerId}")
+	public ResponseEntity<Void> closeProjectSession(@PathVariable String containerId) {
+		workspaceManagerService.closeProjectSession(containerId);
+		return ResponseEntity.noContent().build();
+	}
 }
