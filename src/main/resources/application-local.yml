@@ -8,12 +8,20 @@ spring:
 
   jpa:
     database: mysql
+    database-platform: org.hibernate.dialect.MySQLDialect
     open-in-view: true
     hibernate:
-      ddl-auto: create
+      ddl-auto: none
     show-sql: true
     properties:
       hibernate:
         format_sql: true
         show_sql: true
       dialect: org.hibernate.dialect.MySQL8InnoDBDialect
+
+  sql:
+    init:
+      mode: always
+      platform: mysql
+      schema-locations: classpath:schema.sql
+      data-locations: classpath:data.sql
