@@ -49,6 +49,9 @@ jobs:
           echo "DB_NAME=webide" >> .env
           echo "DB_USER_NAME=root" >> .env
           echo "DB_USER_PASSWORD=root" >> .env
+          echo "JWT_SECRET=mytestsecret" >> .env
+          echo "JWT_EXPIRATION=3600000" >> .env
+          echo "SPRING_PROFILES_ACTIVE=local" >> .env
           echo "MAIL_USERNAME=test@example.com" >> .env
           echo "MAIL_PASSWORD=secret" >> .env
           echo "MAIL_FROM=test@example.com" >> .env
