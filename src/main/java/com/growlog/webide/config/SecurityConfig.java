@@ -22,6 +22,8 @@ public class SecurityConfig {
 				.requestMatchers("/api/**").permitAll()
 				// Swagger UI 접근을 위한 경로들도 모두 허용합니다.
 				.requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+				// 💡 WebSocket 엔드포인트 허용
+				.requestMatchers("/ws/**").permitAll()
 				// 그 외의 모든 요청은 인증을 요구하도록 설정할 수 있습니다. (지금은 모든 것을 허용)
 				.anyRequest().permitAll()
 			);
