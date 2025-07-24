@@ -7,9 +7,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import com.growlog.webide.domain.users.entity.Users;
 
-import lombok.Getter;
-
-@Getter
 public class UserPrincipal implements UserDetails {
 	private final Long userId;
 	private final String email;

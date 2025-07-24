@@ -30,7 +30,10 @@ public enum ErrorCode {
 
 	// 회원 탈퇴 관련
 	INVALID_PASSWORD("INVALID_PASSWORD", "비밀번호가 일치하지 않습니다."),
-	UNAUTHORIZED_ACCESS("UNAUTHORIZED_ACCESS", "접근 권한이 없습니다.");
+	UNAUTHORIZED_ACCESS("UNAUTHORIZED_ACCESS", "접근 권한이 없습니다."),
+
+	//권한 관련
+	NOT_A_MEMBER("NOT_A_MEMBER", "프로젝트의 멤버가 아닙니다.");
 
 	private final String code;
 	private final String message;
