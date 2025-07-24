@@ -14,7 +14,10 @@ import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.exception.NotFoundException;
 import com.github.dockerjava.api.model.Bind;
+import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.HostConfig;
+import com.github.dockerjava.api.model.PortBinding;
+import com.github.dockerjava.api.model.Ports;
 import com.github.dockerjava.api.model.PullResponseItem;
 import com.github.dockerjava.api.model.Volume;
 import com.growlog.webide.domain.images.entity.Image;
@@ -42,6 +45,7 @@ public class WorkspaceManagerService {
 	private final ProjectRepository projectRepository;
 	private final ActiveInstanceRepository activeInstanceRepository;
 	private final ImageRepository imageRepository;
+	private final SessionScheduler sessionScheduler;
 	// TODO: PortManager, LiveblocksService 등 주입
 
 	/*
@@ -99,24 +103,28 @@ public class WorkspaceManagerService {
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
 
-		String volumeName = project.getStorageVolumeName();
-		String imageName = project.getImage().getDockerBaseImage();
+		// 해당 프로젝트의 삭제 작업이 예정되어 있으면 작업 취소
+		sessionScheduler.cancelDeletion(user.getId(), projectId);
 
 		// 2. 이미 해당 사용자의 활성 세션이 있는지 확인
 		activeInstanceRepository.findByUserAndProject(user, project).ifPresent(activeInstance -> {
 			throw new IllegalStateException("User already has an active session for this project.");
 		});
 
+		// 3. Docker 볼륨/이미지 정보 준비 및 포트 할당
+		String volumeName = project.getStorageVolumeName();
+		String imageName = project.getImage().getDockerBaseImage();
 		// TODO: PortManager 통해 사용 가능한 포트를 동적으로 할당 받아야 함
 		int assignedPort = 9001;
 
-		// Docker 이미지가 로컬에 존재하는지 확인하고, 없으면 pull
+		// 3-1. Docker 이미지가 로컬에 존재하는지 확인하고, 없으면 pull
 		pullImageIfNotExists(imageName);
 
-		// 3. Docker 컨테이너 생성 및 실행 (docker run...)
+		// 4. Docker 컨테이너 생성 및 실행 (docker run...)
 		// 3-1. 볼륨 마운트 설정 (-v 옵션)
 		HostConfig hostConfig = new HostConfig()
-			.withBinds(new Bind(volumeName, new Volume("/app")));
+			.withBinds(new Bind(volumeName, new Volume("/app")))
+			.withPortBindings(new PortBinding(Ports.Binding.bindPort(assignedPort), new ExposedPort(80)));
 
 		// 3-2. 컨테이너 생성
 		CreateContainerResponse container = dockerClient.createContainerCmd(imageName)
@@ -184,11 +192,24 @@ public class WorkspaceManagerService {
 
 
 	/*
-	3. 프로젝트 닫기 (Close Project)
-	사용자의 컨테이너를 중지/제거하고, ActiveInstance 삭제
-	컨테이너 ID 기반으로 동작함
+	3-1. 프로젝트 닫기 (Close Project)
+	세션 닫기 요청 처리
 	 */
 	public void closeProjectSession(String containerId) {
+
+		activeInstanceRepository.findByContainerId(containerId).ifPresent(instance -> {
+			sessionScheduler.scheduleDeletion(
+				instance.getContainerId(), instance.getUser().getId(), instance.getProject().getId()
+			);
+		});
+	}
+	/*
+	3-2. 컨테이너 삭제
+	사용자의 컨테이너를 중지/제거하고, ActiveInstance 삭제
+	 */
+
+	@Transactional
+	public void deleteContainer(String containerId) {
 		log.info("Closing session for container '{}'", containerId);
 
 		// 1. 컨테이너 ID로 DB에서 ActiveInstance 정보 조회
@@ -196,9 +217,9 @@ public class WorkspaceManagerService {
 			.orElseThrow(() -> new IllegalArgumentException("ActiveInstance not found: " + containerId));
 
 		Project project = instance.getProject();
+		int portToRelease = instance.getWebSocketPort();
 
 		// 2. 물리적인 Docker 컨테이너를 중지하고 제거
-		// removeContainerIfExists(containerId);
 		try {
 			log.info("Stopping container '{}'", containerId);
 			dockerClient.stopContainerCmd(containerId).exec();
@@ -215,7 +236,11 @@ public class WorkspaceManagerService {
 		activeInstanceRepository.delete(instance);
 		log.info("ActiveInstance deleted for container '{}'", containerId);
 
-		// 4. 이 세션이 해당 프로젝트의 마지막 세션이었는지 확인
+		// TODO: PortManager 통해 사용했던 포트 반납
+		// portManager.releasePort(portToRelease);
+		// log.info("Port {} released", portToRelease);
+
+		// 5. 이 세션이 해당 프로젝트의 마지막 세션이었는지 확인
 		if (activeInstanceRepository.countByProject(project) == 0) {
 			project.deactivate();
 			log.info("Project '{}' is now INACTIVE.", project.getProjectName());

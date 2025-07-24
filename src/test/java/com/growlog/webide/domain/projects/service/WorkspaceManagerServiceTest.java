@@ -7,7 +7,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -21,7 +21,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.util.ReflectionUtils;
 
@@ -57,6 +56,8 @@ class WorkspaceManagerServiceTest {
 	private ImageRepository imageRepository;
 	@Mock
 	private ActiveInstanceRepository activeInstanceRepository;
+	@Mock
+	private SessionScheduler sessionScheduler;
 
 	@Test
 	@DisplayName("프로젝트 생성 단위 테스트 - 성공 ")
@@ -213,6 +214,32 @@ class WorkspaceManagerServiceTest {
 	}
 
 	@Test
+	@DisplayName("프로젝트 열기 - 삭제 예약 취소 로직 호출 테스트")
+	void openProject_Cancel_Scheduled_Deletion() throws NoSuchFieldException {
+		// given
+		long projectId = 1L;
+		long userId = 1L;
+		Users testUser = Users.builder().username("tester").build();
+		setEntityId(testUser, userId);
+
+		Project fakeProject = Project.builder().build();
+		setEntityId(fakeProject, projectId);
+
+		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
+		when(activeInstanceRepository.findByUserAndProject(testUser, fakeProject))
+			.thenReturn(Optional.empty());
+
+		// when
+		try {
+			workspaceManagerService.openProject(projectId, testUser);
+		} catch (Exception e) {
+		}
+
+		// then
+		verify(sessionScheduler, times(1)).cancelDeletion(userId, projectId);
+	}
+
+	@Test
 	@DisplayName("프로젝트 열기(openProject) 단위 테스트 - 이미 세션이 존재하여 실패")
 	void openProject_Fail_SessionAlreadyExists() throws NoSuchFieldException {
 		// given
@@ -242,8 +269,8 @@ class WorkspaceManagerServiceTest {
 			.hasMessage("User already has an active session for this project.");
 
 		// save나 dockerClient 관련 메소드가 전혀 호출되지 않았는지 검증
-		verify(activeInstanceRepository, Mockito.never()).save(any());
-		verify(dockerClient, Mockito.never()).createContainerCmd(anyString());
+		verify(activeInstanceRepository, never()).save(any());
+		verify(dockerClient, never()).createContainerCmd(anyString());
 
 	}
 
@@ -255,10 +282,58 @@ class WorkspaceManagerServiceTest {
 	}
 
 	@Test
-	@DisplayName("프로젝트 닫기 단위 테스트 - 다른 사용자 남아있음")
+	@DisplayName("프로젝트 닫기 단위 테스트 - 삭제 예약 로직")
+	void closeProjectSession_Schedule_Deletion() throws NoSuchFieldException {
+		// given
+		String containerId = "test-container-123";
+		long userId = 1L;
+		long projectId = 1L;
+
+		Users fakeUser = Users.builder().build();
+		setEntityId(fakeUser, userId);
+		Project fakeProject = Project.builder().build();
+		setEntityId(fakeProject, projectId);
+
+		ActiveInstance fakeInstance = ActiveInstance.builder()
+			.containerId(containerId)
+			.user(fakeUser)
+			.project(fakeProject)
+			.build();
+
+		// 서비스 로직이 ActiveInstance를 찾을 수 있도록 Mocking
+		when(activeInstanceRepository.findByContainerId(containerId)).thenReturn(Optional.of(fakeInstance));
+
+		// when
+		workspaceManagerService.closeProjectSession(containerId);
+
+		// then
+		// SessionScheduler의 scheduleDeletion 메소드가 올바른 인자들로 호출되었는지 검증
+		ArgumentCaptor<String> containerIdCaptor = ArgumentCaptor.forClass(String.class);
+		ArgumentCaptor<Long> userIdCaptor = ArgumentCaptor.forClass(Long.class);
+		ArgumentCaptor<Long> projectIdCaptor = ArgumentCaptor.forClass(Long.class);
+
+		verify(sessionScheduler, times(1)).scheduleDeletion(
+			containerIdCaptor.capture(),
+			userIdCaptor.capture(),
+			projectIdCaptor.capture()
+		);
+
+		// 캡처된 인자들이 우리가 예상한 값과 일치하는지 확인
+		assertThat(containerIdCaptor.getValue()).isEqualTo(containerId);
+		assertThat(userIdCaptor.getValue()).isEqualTo(userId);
+		assertThat(projectIdCaptor.getValue()).isEqualTo(projectId);
+
+		// 이 메소드에서 더 이상 delete가 호출되지 않는지 확인
+		verify(activeInstanceRepository, never()).delete(any(ActiveInstance.class));
+		verify(dockerClient, never()).stopContainerCmd(anyString());
+	}
+
+	@Test
+	@DisplayName("프로젝트 닫기 단위 테스트 - 다른 사용자 남아있어 컨테이너 ACTIVE 유")
 	void closeProjectSession_Success_OtherRemain() {
 
 		// given
+		int portToRelease = 9001;
 		String containerId = "test-container-id-123";
 		Users fakeUser = Users.builder().username("tester").build();
 		Image fakeImage = Image.builder().imageName("java").build();
@@ -271,6 +346,7 @@ class WorkspaceManagerServiceTest {
 		ActiveInstance fakeInstance = ActiveInstance.builder()
 			.containerId(containerId)
 			.project(fakeProject)
+			.webSocketPort(portToRelease)
 			.user(fakeUser)
 			.build();
 
@@ -285,24 +361,29 @@ class WorkspaceManagerServiceTest {
 		when(dockerClient.removeContainerCmd(containerId)).thenReturn(mockRemoveCmd);
 
 		// when
-		workspaceManagerService.closeProjectSession(containerId);
+		workspaceManagerService.deleteContainer(containerId);
 
 		// then
-		assertThat(fakeProject.getStatus()).isNotEqualTo(ProjectStatus.INACTIVE);
-		verify(activeInstanceRepository, Mockito.times(1)).delete(fakeInstance);
+		assertThat(fakeProject.getStatus()).isEqualTo(ProjectStatus.ACTIVE);
+		verify(dockerClient, times(1)).stopContainerCmd(containerId);
+		verify(dockerClient, times(1)).removeContainerCmd(containerId);
+		verify(activeInstanceRepository, times(1)).delete(fakeInstance);
+		verify(activeInstanceRepository, times(1)).countByProject(fakeProject);
 	}
 
 	@Test
-	@DisplayName("프로젝트 닫기 단위 테스트 - 마지막 사용자")
+	@DisplayName("프로젝트 닫기 단위 테스트 - 마지막 사용자 종료하여 컨테이너 inactive")
 	void closeProjectSession_Success_LastUser() {
 		// given
 		String containerId = "test-container-123";
+		int portToRelease = 9001;
 		Project fakeProject = Project.builder().projectName("test-project").build();
 		fakeProject.activate(); // 초기 상태를 ACTIVE로 설정
 
 		ActiveInstance fakeInstance = ActiveInstance.builder()
 			.containerId(containerId)
 			.project(fakeProject)
+			.webSocketPort(portToRelease)
 			.build();
 
 		// 1. Repository Mock 설정
@@ -316,14 +397,16 @@ class WorkspaceManagerServiceTest {
 		when(dockerClient.removeContainerCmd(containerId)).thenReturn(mockRemoveCmd);
 
 		// when
-		workspaceManagerService.closeProjectSession(containerId);
+		workspaceManagerService.deleteContainer(containerId);
 
 		// then
 		assertThat(fakeProject.getStatus()).isEqualTo(ProjectStatus.INACTIVE);
 
-		// 프로젝트의 deactivate 메소드가 '정확히 1번 호출되었는지' 검증 (중요)
+		// 프로젝트의 deactivate 메소드가 '정확히 1번 호출되었는지' 검증
 		verify(activeInstanceRepository, times(1)).findByContainerId(containerId);
-		verify(activeInstanceRepository, times(1)).delete(fakeInstance);
 		verify(dockerClient, times(1)).stopContainerCmd(containerId);
+		verify(dockerClient, times(1)).removeContainerCmd(containerId);
+		verify(activeInstanceRepository, times(1)).delete(fakeInstance);
+		verify(activeInstanceRepository, times(1)).countByProject(fakeProject);
 	}
 }
