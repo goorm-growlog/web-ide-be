@@ -17,3 +17,7 @@ springdoc:
 
 docker:
   workspace-path: /workspace
+
+liveblocks:
+  secret-key: ${LIVEBLOCKS_SECRET_KEY}
+  salt: ${LIVEBLOCKS_ROOM_SALT}
