@@ -65,6 +65,12 @@ jobs:
             done
             echo "MySQL did not start in time" && exit 1
 
+      # ✅ Docker 환경 초기화
+      - name: 🐳 Setup Docker Test Environment
+        run: |
+          chmod +x ./scripts/setup-docker-env.sh
+          ./scripts/setup-docker-env.sh
+
       # 3. Gradle 빌드 및 테스트 실행
       - name: 🧪 Gradle Build & Test
         run: ./gradlew build       # compile, test 등 전체 빌드 수행

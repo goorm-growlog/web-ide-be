@@ -1,0 +1,20 @@
+# 개발용 설정 제외
+.devcontainer/
+devcontainer.json
+devcontainer.local.json
+
+# Git/IDE 관련
+.git
+.gitignore
+.vscode/
+.idea/
+*.iml
+
+# OS 및 임시 파일
+*.log
+*.swp
+.DS_Store
+Thumbs.db
+
+# 테스트 리소스 (선택)
+src/test/

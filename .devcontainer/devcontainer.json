@@ -7,5 +7,19 @@
 
   "service": "backend",
   "workspaceFolder": "/app",
-  "overrideCommand": false
+  "overrideCommand": false,
+
+  //  운영 서버에는 올라가지 않도록 주의
+  // ✅ Docker CLI 도구 설치
+  "features": {
+    "ghcr.io/devcontainers/features/docker-from-docker:1": {
+      "version": "latest"
+    }
+  },
+
+  "features": {
+    "ghcr.io/devcontainers/features/docker-from-docker:1": {
+      "version": "latest"
+    }
+  }
 }

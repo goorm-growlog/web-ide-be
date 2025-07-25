@@ -29,8 +29,8 @@ INSERT INTO projects (
     project_id,create_user_id, project_name, storage_volume_name, image_id, description, status, created_at, updated_at
 )
 VALUES
-    (1, 1, '프로젝트 A', 'volume-a', 1, '프로젝트 설명 A', 'ACTIVE', NOW(), NOW()),
-    (2, 1, '프로젝트 B', 'volume-b', 1, '프로젝트 설명 B', 'INACTIVE', NOW(), NOW());
+    (1, 1, '프로젝트 A', 'container-a', 1, '프로젝트 설명 A', 'ACTIVE', NOW(), NOW()),
+    (2, 1, '프로젝트 B', 'container-b', 1, '프로젝트 설명 B', 'INACTIVE', NOW(), NOW());
 
 -- ProjectMembers
 INSERT INTO project_members (project_id, user_id, role)

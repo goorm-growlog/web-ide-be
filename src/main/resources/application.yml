@@ -14,3 +14,6 @@ springdoc:
     disable-swagger-default-url: true
   api-docs:
     path: /api-docs  # OpenAPI ?? ??
+
+docker:
+  workspace-path: /workspace
