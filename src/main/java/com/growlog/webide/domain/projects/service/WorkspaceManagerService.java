@@ -4,10 +4,14 @@ package com.growlog.webide.domain.projects.service;
  *  프로젝트 생성부터 사용자의 세션(컨테이너) 관리, 종료까지 전체적인 생명주기를 조율하고 관리
  * */
 
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.context.annotation.Lazy;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
 
 import com.github.dockerjava.api.DockerClient;
@@ -23,6 +27,10 @@ import com.github.dockerjava.api.model.PortBinding;
 import com.github.dockerjava.api.model.Ports;
 import com.github.dockerjava.api.model.PullResponseItem;
 import com.github.dockerjava.api.model.Volume;
+import com.github.dockerjava.core.DefaultDockerClientConfig;
+import com.github.dockerjava.core.DockerClientImpl;
+import com.github.dockerjava.httpclient5.ApacheDockerHttpClient;
+import com.github.dockerjava.transport.DockerHttpClient;
 import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.images.repository.ImageRepository;
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
@@ -33,6 +41,7 @@ import com.growlog.webide.domain.projects.entity.ProjectStatus;
 import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.domain.users.entity.Users;
+import com.growlog.webide.factory.DockerClientFactory;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -43,16 +52,16 @@ import lombok.extern.slf4j.Slf4j;
 @Transactional
 public class WorkspaceManagerService {
 
-	private final DockerClient dockerClient;
+	private final DockerClientFactory dockerClientFactory;
 	private final ProjectRepository projectRepository;
 	private final ActiveInstanceRepository activeInstanceRepository;
 	private final ImageRepository imageRepository;
 	private final SessionScheduler sessionScheduler;
 
-	public WorkspaceManagerService(DockerClient dockerClient, ProjectRepository projectRepository,
+	public WorkspaceManagerService(DockerClientFactory dockerClientFactory, ProjectRepository projectRepository,
 		ActiveInstanceRepository activeInstanceRepository, ImageRepository imageRepository,
 		@Lazy SessionScheduler sessionScheduler) {
-		this.dockerClient = dockerClient;
+		this.dockerClientFactory = dockerClientFactory;
 		this.projectRepository = projectRepository;
 		this.activeInstanceRepository = activeInstanceRepository;
 		this.imageRepository = imageRepository;
@@ -67,6 +76,8 @@ public class WorkspaceManagerService {
 	 */
 	public Project createProject(CreateProjectRequest request, Users owner) {
 		log.info("Create project '{}', user '{}'", request.getProjectName(), owner.getUsername());
+
+		DockerClient dockerClient = dockerClientFactory.buildDockerClient();
 
 		// 1. 사용할 개발 환경 이미지 조회
 		Image image = imageRepository.findById(request.getImageId())
@@ -99,6 +110,12 @@ public class WorkspaceManagerService {
 			.image(image)
 			.build();
 
+		try {
+			dockerClient.close();
+		} catch (IOException e) {
+			log.warn("Error closing DockerClient", e);
+		}
+
 		return projectRepository.save(project);
 	}
 
@@ -125,22 +142,26 @@ public class WorkspaceManagerService {
 		});
 
 		// 3. Docker 볼륨/이미지 정보 준비 및 포트 할당
+		DockerClient dockerClient = dockerClientFactory.buildDockerClient();
+
 		String volumeName = project.getStorageVolumeName();
 		String imageName = project.getImage().getDockerBaseImage();
+		int randomPort = findAvailablePort();
 
 		ExposedPort internalPort = new ExposedPort(8080, InternetProtocol.TCP);
 		Ports portBindings = new Ports();
-		portBindings.bind(internalPort, Ports.Binding.empty());
+		portBindings.bind(internalPort, Ports.Binding.bindPort(randomPort));
 
 
 		// 3-1. Docker 이미지가 로컬에 존재하는지 확인하고, 없으면 pull
-		pullImageIfNotExists(imageName);
+		pullImageIfNotExists(dockerClient, imageName);
 
 		// 4. Docker 컨테이너 생성 및 실행 (docker run...)
 		// 3-1. 볼륨 마운트 설정 (-v 옵션)
 		HostConfig hostConfig = new HostConfig()
 			.withBinds(new Bind(volumeName, new Volume("/app")))
-			.withPortBindings(portBindings);
+			.withPortBindings(portBindings)
+			.withPublishAllPorts(true);
 
 		// 3-2. 컨테이너 생성
 		CreateContainerResponse container = dockerClient.createContainerCmd(imageName)
@@ -160,7 +181,7 @@ public class WorkspaceManagerService {
 		Ports.Binding[] bindings = inspectResponse.getNetworkSettings().getPorts().getBindings().get(internalPort);
 
 		if (bindings == null || bindings.length == 0) {
-			removeContainerIfExists(containerId);
+			removeContainerIfExists(dockerClient, containerId);
 			throw new RuntimeException("Could not find port bindings for container: " + containerId);
 		}
 		int assignedPort = Integer.parseInt(bindings[0].getHostPortSpec());
@@ -183,14 +204,29 @@ public class WorkspaceManagerService {
 		// TODO: LiveblocksService 통해 실제 토큰 발급
 		String liveblocksToken = "dummy-liveblocks-token-for-" + user.getUsername();
 
+		try {
+			dockerClient.close();
+		} catch (IOException e) {
+			log.warn("Error closing DockerClient", e);
+		}
+
 		return new OpenProjectResponse(projectId, containerId, assignedPort, liveblocksToken);
+	}
+
+	private int findAvailablePort() {
+		try (ServerSocket socket = new ServerSocket(0)) {
+			socket.setReuseAddress(true);
+			return socket.getLocalPort();
+		} catch (IOException e) {
+			throw new RuntimeException("Failed to find available port", e);
+		}
 	}
 
 	/**
 	 * 지정된 Docker 이미지가 로컬에 존재하지 않으면 Docker Hub에서 pull 합니다.
 	 * @param imageName 확인할 Docker 이미지 이름 (예: "openjdk:17-jdk-slim")
 	 */
-	private void pullImageIfNotExists(String imageName) {
+	private void pullImageIfNotExists(DockerClient dockerClient, String imageName) {
 		try {
 			// 1. 이미지가 로컬에 있는지 먼저 검사합니다.
 			dockerClient.inspectImageCmd(imageName).exec();
@@ -214,6 +250,12 @@ public class WorkspaceManagerService {
 				Thread.currentThread().interrupt();
 				log.error("Image pull for '{}' was interrupted.", imageName);
 				throw new RuntimeException("Image pull was interrupted", interruptedException);
+			} finally {
+				try {
+					dockerClient.close();
+				} catch (IOException ex) {
+					log.warn("Error closing DockerClient after pulling image", ex);
+				}
 			}
 		}
 	}
@@ -240,6 +282,8 @@ public class WorkspaceManagerService {
 	public void deleteContainer(String containerId) {
 		log.info("Closing session for container '{}'", containerId);
 
+		DockerClient dockerClient = dockerClientFactory.buildDockerClient();
+
 		// 1. 컨테이너 ID로 DB에서 ActiveInstance 정보 조회
 		ActiveInstance instance = activeInstanceRepository.findByContainerId(containerId)
 			.orElseThrow(() -> new IllegalArgumentException("ActiveInstance not found: " + containerId));
@@ -248,7 +292,7 @@ public class WorkspaceManagerService {
 		int portToRelease = instance.getWebSocketPort();
 
 		// 2. 물리적인 Docker 컨테이너를 중지하고 제거
-		removeContainerIfExists(containerId);
+		removeContainerIfExists(dockerClient, containerId);
 
 
 		// 3. DB에서 ActiveInstance 레코드 삭제
@@ -260,10 +304,16 @@ public class WorkspaceManagerService {
 			project.deactivate();
 			log.info("Project '{}' is now INACTIVE.", project.getProjectName());
 		}
+
+		try {
+			dockerClient.close();
+		} catch (IOException e) {
+			log.warn("Error closing DockerClient", e);
+		}
 	}
 
 	// 예외 상황에서 컨테이너 정리
-	public void removeContainerIfExists(String containerId) {
+	public void removeContainerIfExists(DockerClient dockerClient, String containerId) {
 		if (containerId == null || containerId.isBlank()) {
 			return;
 		}

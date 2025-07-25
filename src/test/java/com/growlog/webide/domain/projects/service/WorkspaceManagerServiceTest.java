@@ -2,20 +2,24 @@ package com.growlog.webide.domain.projects.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Fail.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.Optional;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,6 +54,7 @@ import com.growlog.webide.domain.projects.entity.ProjectStatus;
 import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.domain.users.entity.Users;
+import com.growlog.webide.factory.DockerClientFactory;
 
 @ExtendWith(MockitoExtension.class)
 class WorkspaceManagerServiceTest {
@@ -57,7 +62,9 @@ class WorkspaceManagerServiceTest {
 	@InjectMocks
 	private WorkspaceManagerService workspaceManagerService;
 	@Mock
-	private DockerClient dockerClient;
+	private DockerClientFactory dockerClientFactory;
+	@Mock
+	private DockerClient mockDockerClient;
 	@Mock
 	private ProjectRepository projectRepository;
 	@Mock
@@ -66,6 +73,11 @@ class WorkspaceManagerServiceTest {
 	private ActiveInstanceRepository activeInstanceRepository;
 	@Mock
 	private SessionScheduler sessionScheduler;
+
+	// @BeforeEach
+	// void setUp() {
+	// 	when(dockerClientFactory.buildDockerClient()).thenReturn(mockDockerClient);
+	// }
 
 	@Test
 	@DisplayName("프로젝트 생성 단위 테스트 - 성공 ")
@@ -88,8 +100,9 @@ class WorkspaceManagerServiceTest {
 
 		// DockerClient.createVolumeCmd...가 호출되면, 단순히 비어있는 응답을 반환하도록 설정
 		// (실제 Docker 명령이 실행되지 않도록 함)
+		when(dockerClientFactory.buildDockerClient()).thenReturn(mockDockerClient);
 		CreateVolumeCmd mockCreateVolumeCmd = mock(CreateVolumeCmd.class);
-		when(dockerClient.createVolumeCmd()).thenReturn(mockCreateVolumeCmd);
+		when(mockDockerClient.createVolumeCmd()).thenReturn(mockCreateVolumeCmd);
 		when(mockCreateVolumeCmd.withName(anyString())).thenReturn(mockCreateVolumeCmd);
 		when(mockCreateVolumeCmd.exec()).thenReturn(new CreateVolumeResponse());
 
@@ -120,7 +133,13 @@ class WorkspaceManagerServiceTest {
 		verify(imageRepository, times(1)).findById(imageId);
 
 		// dockerClient의 createVolumeCmd가 정확히 1번 호출되었는지 검증
-		verify(dockerClient, times(1)).createVolumeCmd();
+		verify(mockDockerClient, times(1)).createVolumeCmd();
+		try {
+			verify(mockDockerClient, times(1)).close();
+		} catch (IOException e) {
+			fail("IOException should not be thrown in mock close()");
+		}
+
 
 		// projectRepository의 save가 정확히 1번 호출되었는지 검증
 		verify(projectRepository, times(1)).save(any(Project.class));
@@ -174,8 +193,9 @@ class WorkspaceManagerServiceTest {
 			.thenAnswer(inv -> inv.getArgument(0));
 
 		// 2. DockerClient Mock 설정
+		when(dockerClientFactory.buildDockerClient()).thenReturn(mockDockerClient);
 		// 2-1. 이미지 확인(inspect)은 성공한다고 가정 (이미지가 로컬에 있음)
-		when(dockerClient.inspectImageCmd(anyString()))
+		when(mockDockerClient.inspectImageCmd(anyString()))
 			.thenReturn(mock(com.github.dockerjava.api.command.InspectImageCmd.class));
 
 		// 2-2. 컨테이너 생성(create) Mock 설정
@@ -183,7 +203,7 @@ class WorkspaceManagerServiceTest {
 		when(mockContainerResponse.getId()).thenReturn(fakeContainerId);
 
 		CreateContainerCmd mockCreateContainerCmd = mock(CreateContainerCmd.class);
-		when(dockerClient.createContainerCmd(expectedImageName)).thenReturn(mockCreateContainerCmd);
+		when(mockDockerClient.createContainerCmd(expectedImageName)).thenReturn(mockCreateContainerCmd);
 		when(mockCreateContainerCmd.withHostConfig(any())).thenReturn(mockCreateContainerCmd);
 		when(mockCreateContainerCmd.withExposedPorts(any(ExposedPort.class))).thenReturn(mockCreateContainerCmd);
 		when(mockCreateContainerCmd.withTty(anyBoolean())).thenReturn(mockCreateContainerCmd);
@@ -192,7 +212,7 @@ class WorkspaceManagerServiceTest {
 
 		// 2-3. 컨테이너 시작(start) Mock 설정
 		StartContainerCmd mockStartContainerCmd = mock(StartContainerCmd.class);
-		when(dockerClient.startContainerCmd(fakeContainerId)).thenReturn(mockStartContainerCmd);
+		when(mockDockerClient.startContainerCmd(fakeContainerId)).thenReturn(mockStartContainerCmd);
 
 		// 2-4. 컨테이너 검사(inspectContainerCmd) Mock 설정
 		InspectContainerResponse mockInspectResponse = mock(InspectContainerResponse.class);
@@ -209,7 +229,7 @@ class WorkspaceManagerServiceTest {
 
 		InspectContainerCmd mockInspectCmd = mock(InspectContainerCmd.class);
 		when(mockInspectCmd.exec()).thenReturn(mockInspectResponse);
-		when(dockerClient.inspectContainerCmd(fakeContainerId)).thenReturn(mockInspectCmd);
+		when(mockDockerClient.inspectContainerCmd(fakeContainerId)).thenReturn(mockInspectCmd);
 
 		// when
 		OpenProjectResponse response = workspaceManagerService.openProject(1L, testUser);
@@ -225,9 +245,14 @@ class WorkspaceManagerServiceTest {
 		// 2. Mock 객체 호출 검증
 		verify(projectRepository, times(1)).findById(anyLong());
 		verify(activeInstanceRepository, times(1)).findByUserAndProject(testUser, fakeProject);
-		verify(dockerClient, times(1)).createContainerCmd(expectedImageName);
-		verify(dockerClient, times(1)).startContainerCmd(fakeContainerId);
-		verify(dockerClient, times(1)).inspectContainerCmd(fakeContainerId);
+		verify(mockDockerClient, times(1)).createContainerCmd(expectedImageName);
+		verify(mockDockerClient, times(1)).startContainerCmd(fakeContainerId);
+		verify(mockDockerClient, times(1)).inspectContainerCmd(fakeContainerId);
+		try {
+			verify(mockDockerClient, times(1)).close();
+		} catch (IOException e) {
+			fail("IIException should not be thrown in mock close");
+		}
 
 		// 3. ActiveInstance가 올바른 정보로 저장되었는지 ArgumentCaptor로 검증
 		ArgumentCaptor<ActiveInstance> instanceCaptor = ArgumentCaptor.forClass(ActiveInstance.class);
@@ -289,7 +314,9 @@ class WorkspaceManagerServiceTest {
 
 		when(projectRepository.findById(anyLong())).thenReturn(Optional.of(fakeProject));
 		// 이번에는 findByUserAndProject가 비어있지 않은 Optional을 반환하도록 설정
-		when(activeInstanceRepository.findByUserAndProject(testUser, fakeProject))
+		// when(activeInstanceRepository.findByUserAndProject(testUser, fakeProject))
+		// 	.thenReturn(Optional.of(fakeInstance));
+		when(activeInstanceRepository.findByUserAndProject(any(Users.class), any(Project.class)))
 			.thenReturn(Optional.of(fakeInstance));
 
 		// when & then
@@ -300,7 +327,7 @@ class WorkspaceManagerServiceTest {
 
 		// save나 dockerClient 관련 메소드가 전혀 호출되지 않았는지 검증
 		verify(activeInstanceRepository, never()).save(any());
-		verify(dockerClient, never()).createContainerCmd(anyString());
+		verify(dockerClientFactory, never()).buildDockerClient();
 
 	}
 
@@ -355,7 +382,7 @@ class WorkspaceManagerServiceTest {
 
 		// 이 메소드에서 더 이상 delete가 호출되지 않는지 확인
 		verify(activeInstanceRepository, never()).delete(any(ActiveInstance.class));
-		verify(dockerClient, never()).stopContainerCmd(anyString());
+		verify(dockerClientFactory, never()).buildDockerClient();
 	}
 
 	@Test
@@ -385,20 +412,27 @@ class WorkspaceManagerServiceTest {
 		when(activeInstanceRepository.countByProject(fakeProject)).thenReturn(1L); // 아직 다른 사용자 잔류
 
 		// 2. DockerClient Mock 설정
+		when(dockerClientFactory.buildDockerClient()).thenReturn(mockDockerClient);
 		StopContainerCmd mockStopeCmd = mock(StopContainerCmd.class);
 		RemoveContainerCmd mockRemoveCmd = mock(RemoveContainerCmd.class);
-		when(dockerClient.stopContainerCmd(containerId)).thenReturn(mockStopeCmd);
-		when(dockerClient.removeContainerCmd(containerId)).thenReturn(mockRemoveCmd);
+		when(mockDockerClient.stopContainerCmd(containerId)).thenReturn(mockStopeCmd);
+		when(mockDockerClient.removeContainerCmd(containerId)).thenReturn(mockRemoveCmd);
 
 		// when
 		workspaceManagerService.deleteContainer(containerId);
 
 		// then
 		assertThat(fakeProject.getStatus()).isEqualTo(ProjectStatus.ACTIVE);
-		verify(dockerClient, times(1)).stopContainerCmd(containerId);
-		verify(dockerClient, times(1)).removeContainerCmd(containerId);
+		verify(mockDockerClient, times(1)).stopContainerCmd(containerId);
+		verify(mockDockerClient, times(1)).removeContainerCmd(containerId);
 		verify(activeInstanceRepository, times(1)).delete(fakeInstance);
 		verify(activeInstanceRepository, times(1)).countByProject(fakeProject);
+
+		try {
+			verify(mockDockerClient, times(1)).close();
+		} catch (IOException e) {
+			fail("IIException should not be thrown in mock close");
+		}
 	}
 
 	@Test
@@ -421,10 +455,11 @@ class WorkspaceManagerServiceTest {
 		when(activeInstanceRepository.countByProject(fakeProject)).thenReturn(0L); // 남은 사용자 없음
 
 		// 2. DockerClient Mock 설정
+		when(dockerClientFactory.buildDockerClient()).thenReturn(mockDockerClient);
 		StopContainerCmd mockStopCmd = mock(StopContainerCmd.class);
 		RemoveContainerCmd mockRemoveCmd = mock(RemoveContainerCmd.class);
-		when(dockerClient.stopContainerCmd(containerId)).thenReturn(mockStopCmd);
-		when(dockerClient.removeContainerCmd(containerId)).thenReturn(mockRemoveCmd);
+		when(mockDockerClient.stopContainerCmd(containerId)).thenReturn(mockStopCmd);
+		when(mockDockerClient.removeContainerCmd(containerId)).thenReturn(mockRemoveCmd);
 
 		// when
 		workspaceManagerService.deleteContainer(containerId);
@@ -434,9 +469,15 @@ class WorkspaceManagerServiceTest {
 
 		// 프로젝트의 deactivate 메소드가 '정확히 1번 호출되었는지' 검증
 		verify(activeInstanceRepository, times(1)).findByContainerId(containerId);
-		verify(dockerClient, times(1)).stopContainerCmd(containerId);
-		verify(dockerClient, times(1)).removeContainerCmd(containerId);
+		verify(mockDockerClient, times(1)).stopContainerCmd(containerId);
+		verify(mockDockerClient, times(1)).removeContainerCmd(containerId);
 		verify(activeInstanceRepository, times(1)).delete(fakeInstance);
 		verify(activeInstanceRepository, times(1)).countByProject(fakeProject);
+
+		try {
+			verify(mockDockerClient, times(1)).close();
+		} catch (IOException e) {
+			fail("IIException should not be thrown in mock close");
+		}
 	}
 }

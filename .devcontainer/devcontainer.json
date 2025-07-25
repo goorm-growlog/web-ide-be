@@ -17,13 +17,9 @@
     "DOCKER_CERT_PATH": "",
     "DOCKER_TLS_VERIFY": ""
   },
-  "customizations": {
-  "vscode": {
-    "extensions": [
-      "vscjava.vscode-spring-boot",
-      "vscjava.vscode-java-pack",
-      "redhat.vscode-yaml"
-    ]
+  "features": {
+    "ghcr.io/devcontainers/features/docker-from-docker:1": {
+      "version": "latest"
+    }
   }
-}
 }
