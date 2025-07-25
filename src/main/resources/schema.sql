@@ -17,11 +17,14 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- =================================================================
 CREATE TABLE `users` (
                          `user_id`       BIGINT          NOT NULL AUTO_INCREMENT COMMENT '사용자 ID (PK)',
-                         `username`      VARCHAR(255)    NOT NULL COMMENT '사용자 이름',
+                         `name`          VARCHAR(50)     NOT NULL COMMENT '사용자 이름',
+                         `email`         VARCHAR(100)    NOT NULL UNIQUE COMMENT '이메일',
+                         `password`      VARCHAR(255)    NOT NULL COMMENT '비밀번호',
+                         `profile_image_url` VARCHAR(255)    COMMENT '프로필 이미지',
                          `created_at`    DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성 일시',
                          `updated_at`    DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정 일시',
                          PRIMARY KEY (`user_id`),
-                         UNIQUE KEY `uk_users_username` (`username`)
+                         UNIQUE KEY `uk_users_username` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =================================================================

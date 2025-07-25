@@ -1,30 +1,59 @@
 package com.growlog.webide.domain.users.entity;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Entity
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Setter
+@NoArgsConstructor
 @AllArgsConstructor
-@Builder
-@Table(name = "users") // USER는 DB 예약어일 수 있으므로 "users"로 지정
+@Entity
+@Table(name = "users")
 public class Users {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	@Column(name = "user_id")
-	private Long id;
+	private Long userId;
 
-	@Column(nullable = false, unique = true)
-	private String username;
+	@Column(unique = true, nullable = false, length = 100)
+	private String email;
+
+	@Column(nullable = false)
+	private String password;
+
+	@Column(nullable = false, length = 50)
+	private String name;
+
+	private String profileImageUrl;
+
+	private LocalDateTime createdAt;
+
+	private LocalDateTime updatedAt;
+
+	// 저장 전에 자동 호출
+	@PrePersist
+	protected void onCreate() {
+		LocalDateTime now = LocalDateTime.now();
+		this.createdAt = now;
+		this.updatedAt = now;
+	}
+
+	// 수정 전에 자동 호출
+	@PreUpdate
+	protected void onUpdate() {
+		this.updatedAt = LocalDateTime.now();
+	}
+
 }

@@ -75,7 +75,7 @@ public class WorkspaceManagerService {
 	Docker 볼륨 생성, 프로젝트 메타데이터 DB에 저장
 	 */
 	public Project createProject(CreateProjectRequest request, Users owner) {
-		log.info("Create project '{}', user '{}'", request.getProjectName(), owner.getUsername());
+		log.info("Create project '{}', user '{}'", request.getProjectName(), owner.getName());
 
 		DockerClient dockerClient = dockerClientFactory.buildDockerClient();
 
@@ -127,14 +127,14 @@ public class WorkspaceManagerService {
 	새로운 격리된 Docker 컨테이너를 동적으로 실행하고, 그 세션 정보를 DB에 기록한 후, 접속 정보를 사용자에게 돌려줍니다.
 	 */
 	public OpenProjectResponse openProject(Long projectId, Users user) {
-		log.info("User '{}' is opening project '{}'", user.getUsername(), projectId);
+		log.info("User '{}' is opening project '{}'", user.getName(), projectId);
 
 		// 1. 프로젝트 정보 및 사용할 이미지 조회
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
 
 		// 해당 프로젝트의 삭제 작업이 예정되어 있으면 작업 취소
-		sessionScheduler.cancelDeletion(user.getId(), projectId);
+		sessionScheduler.cancelDeletion(user.getUserId(), projectId);
 
 		// 2. 이미 해당 사용자의 활성 세션이 있는지 확인
 		activeInstanceRepository.findByUserAndProject(user, project).ifPresent(activeInstance -> {
@@ -202,7 +202,7 @@ public class WorkspaceManagerService {
 		}
 
 		// TODO: LiveblocksService 통해 실제 토큰 발급
-		String liveblocksToken = "dummy-liveblocks-token-for-" + user.getUsername();
+		String liveblocksToken = "dummy-liveblocks-token-for-" + user.getName();
 
 		try {
 			dockerClient.close();
@@ -269,7 +269,7 @@ public class WorkspaceManagerService {
 
 		activeInstanceRepository.findByContainerId(containerId).ifPresent(instance -> {
 			sessionScheduler.scheduleDeletion(
-				instance.getContainerId(), instance.getUser().getId(), instance.getProject().getId()
+				instance.getContainerId(), instance.getUser().getUserId(), instance.getProject().getId()
 			);
 		});
 	}

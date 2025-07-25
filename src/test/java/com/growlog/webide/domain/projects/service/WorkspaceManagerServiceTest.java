@@ -85,7 +85,8 @@ class WorkspaceManagerServiceTest {
 		// given (준비): 테스트에 필요한 객체와 Mock의 행동을 정의합니다.
 
 		// 1. 입력 데이터 준비
-		Users testUser = Users.builder().username("tester").build();
+		Users testUser = new Users();
+		testUser.setName("test");
 		Long imageId = 1L;
 		CreateProjectRequest request = new CreateProjectRequest("Unit Test Project", "Description", imageId);
 
@@ -150,7 +151,7 @@ class WorkspaceManagerServiceTest {
 
 		Project capturedProject = projectArgumentCaptor.getValue();
 		assertThat(capturedProject.getProjectName()).isEqualTo("Unit Test Project");
-		assertThat(capturedProject.getOwner().getUsername()).isEqualTo("tester");
+		assertThat(capturedProject.getOwner().getName()).isEqualTo("test");
 	}
 
 	/*
@@ -170,7 +171,8 @@ class WorkspaceManagerServiceTest {
 		// given
 		long projectId = 1L;
 		String fakeProjectName = "fakeProject";
-		Users testUser = Users.builder().username("tester").build();
+		Users testUser = new Users();
+		testUser.setName("test");
 		String expectedImageName = "openjdk:17-jdk-slim";
 		String expectedVolumeName = "project-vol-test";
 		String fakeContainerId = "fake-container-id-12345";
@@ -274,8 +276,9 @@ class WorkspaceManagerServiceTest {
 		// given
 		long projectId = 1L;
 		long userId = 1L;
-		Users testUser = Users.builder().username("tester").build();
-		setEntityId(testUser, userId);
+		Users testUser = new Users();
+		testUser.setName("test");
+		testUser.setUserId(userId);
 
 		Project fakeProject = Project.builder().build();
 		setEntityId(fakeProject, projectId);
@@ -302,7 +305,8 @@ class WorkspaceManagerServiceTest {
 		String fakeProjectName = "fakeProjectName";
 		String expectedVolumeName = "project-vol-test";
 		String fakeContainerId = "fake-container-id-12345";
-		Users testUser = Users.builder().id(1L).username("tester").build();
+		Users testUser = new Users();
+		testUser.setName("test");
 		Image fakeImage = Image.builder().dockerBaseImage("openjdk:17-jdk-slim").build();
 		Project fakeProject = Project.builder()
 			.projectName(fakeProjectName)
@@ -346,8 +350,9 @@ class WorkspaceManagerServiceTest {
 		long userId = 1L;
 		long projectId = 1L;
 
-		Users fakeUser = Users.builder().build();
-		setEntityId(fakeUser, userId);
+		Users fakeUser = new Users();
+		fakeUser.setName("test");
+		fakeUser.setUserId(userId);
 		Project fakeProject = Project.builder().build();
 		setEntityId(fakeProject, projectId);
 
@@ -392,7 +397,8 @@ class WorkspaceManagerServiceTest {
 		// given
 		int portToRelease = 9001;
 		String containerId = "test-container-id-123";
-		Users fakeUser = Users.builder().username("tester").build();
+		Users fakeUser = new Users();
+		fakeUser.setName("test");
 		Image fakeImage = Image.builder().imageName("java").build();
 		Project fakeProject = Project.builder()
 			.projectName("test-project")
