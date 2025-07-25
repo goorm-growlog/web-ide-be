@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.DisplayName;
@@ -29,9 +30,16 @@ import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.CreateVolumeCmd;
 import com.github.dockerjava.api.command.CreateVolumeResponse;
+import com.github.dockerjava.api.command.InspectConfigCmd;
+import com.github.dockerjava.api.command.InspectContainerCmd;
+import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.api.command.RemoveContainerCmd;
 import com.github.dockerjava.api.command.StartContainerCmd;
 import com.github.dockerjava.api.command.StopContainerCmd;
+import com.github.dockerjava.api.model.ExposedPort;
+import com.github.dockerjava.api.model.InternetProtocol;
+import com.github.dockerjava.api.model.NetworkSettings;
+import com.github.dockerjava.api.model.Ports;
 import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.images.repository.ImageRepository;
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
@@ -135,6 +143,7 @@ class WorkspaceManagerServiceTest {
 	* 6. ActiveInstance 정보를 올바르게 생성하여 DB에 저장을 요청하는가?
 	* 7. Project의 상태를 ACTIVE로 변경하는가?
 	* 8. 최종적으로 올바른 OpenProjectResponse를 반환하는가?
+	* 9. 자동 포트 할당
 	* */
 	@Test
 	@DisplayName("프로젝트 열기 단위 테스트 - 성공 ")
@@ -146,6 +155,7 @@ class WorkspaceManagerServiceTest {
 		String expectedImageName = "openjdk:17-jdk-slim";
 		String expectedVolumeName = "project-vol-test";
 		String fakeContainerId = "fake-container-id-12345";
+		int assignedPortByDocker = 49152;
 
 		Image fakeImage = Image.builder().dockerBaseImage("openjdk:17-jdk-slim").build();
 		Project fakeProject = Project.builder()
@@ -175,6 +185,7 @@ class WorkspaceManagerServiceTest {
 		CreateContainerCmd mockCreateContainerCmd = mock(CreateContainerCmd.class);
 		when(dockerClient.createContainerCmd(expectedImageName)).thenReturn(mockCreateContainerCmd);
 		when(mockCreateContainerCmd.withHostConfig(any())).thenReturn(mockCreateContainerCmd);
+		when(mockCreateContainerCmd.withExposedPorts(any(ExposedPort.class))).thenReturn(mockCreateContainerCmd);
 		when(mockCreateContainerCmd.withTty(anyBoolean())).thenReturn(mockCreateContainerCmd);
 		when(mockCreateContainerCmd.withCmd(anyString())).thenReturn(mockCreateContainerCmd);
 		when(mockCreateContainerCmd.exec()).thenReturn(mockContainerResponse);
@@ -182,6 +193,23 @@ class WorkspaceManagerServiceTest {
 		// 2-3. 컨테이너 시작(start) Mock 설정
 		StartContainerCmd mockStartContainerCmd = mock(StartContainerCmd.class);
 		when(dockerClient.startContainerCmd(fakeContainerId)).thenReturn(mockStartContainerCmd);
+
+		// 2-4. 컨테이너 검사(inspectContainerCmd) Mock 설정
+		InspectContainerResponse mockInspectResponse = mock(InspectContainerResponse.class);
+		NetworkSettings mockNetworkSettings = mock(NetworkSettings.class);
+		Ports mockPorts = mock(Ports.class);
+		Ports.Binding mockBinding = mock(Ports.Binding.class);
+
+		when(mockBinding.getHostPortSpec()).thenReturn(String.valueOf(assignedPortByDocker));
+
+		ExposedPort internalPort = new ExposedPort(8080, InternetProtocol.TCP);
+		when(mockPorts.getBindings()).thenReturn(Map.of(internalPort, new Ports.Binding[]{mockBinding}));
+		when(mockNetworkSettings.getPorts()).thenReturn(mockPorts);
+		when(mockInspectResponse.getNetworkSettings()).thenReturn(mockNetworkSettings);
+
+		InspectContainerCmd mockInspectCmd = mock(InspectContainerCmd.class);
+		when(mockInspectCmd.exec()).thenReturn(mockInspectResponse);
+		when(dockerClient.inspectContainerCmd(fakeContainerId)).thenReturn(mockInspectCmd);
 
 		// when
 		OpenProjectResponse response = workspaceManagerService.openProject(1L, testUser);
@@ -192,15 +220,16 @@ class WorkspaceManagerServiceTest {
 		assertThat(response.getProjectId()).isEqualTo(projectId);
 		assertThat(fakeProject.getId()).isEqualTo(projectId);
 		assertThat(response.getContainerId()).isEqualTo(fakeContainerId);
-		assertThat(response.getWebSocketPort()).isEqualTo(9001); // 서비스 코드에 하드코딩된 임시 포트
+		assertThat(response.getWebSocketPort()).isEqualTo(assignedPortByDocker);
 
 		// 2. Mock 객체 호출 검증
 		verify(projectRepository, times(1)).findById(anyLong());
 		verify(activeInstanceRepository, times(1)).findByUserAndProject(testUser, fakeProject);
 		verify(dockerClient, times(1)).createContainerCmd(expectedImageName);
 		verify(dockerClient, times(1)).startContainerCmd(fakeContainerId);
+		verify(dockerClient, times(1)).inspectContainerCmd(fakeContainerId);
 
-		// 3. ActiveInstance가 올바른 정보로 저장되었는지 ArgumentCaptor로 검증 (심화)
+		// 3. ActiveInstance가 올바른 정보로 저장되었는지 ArgumentCaptor로 검증
 		ArgumentCaptor<ActiveInstance> instanceCaptor = ArgumentCaptor.forClass(ActiveInstance.class);
 		verify(activeInstanceRepository, times(1)).save(instanceCaptor.capture());
 
@@ -208,6 +237,7 @@ class WorkspaceManagerServiceTest {
 		assertThat(savedInstance.getProject()).isEqualTo(fakeProject);
 		assertThat(savedInstance.getUser()).isEqualTo(testUser);
 		assertThat(savedInstance.getContainerId()).isEqualTo(fakeContainerId);
+		assertThat(savedInstance.getWebSocketPort()).isEqualTo(assignedPortByDocker);
 
 		// 4. 프로젝트의 상태가 ACTIVE로 변경되었는지 검증
 		assertThat(fakeProject.getStatus()).isEqualTo(ProjectStatus.ACTIVE);
