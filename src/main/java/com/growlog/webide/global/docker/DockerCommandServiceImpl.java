@@ -20,11 +20,34 @@ public class DockerCommandServiceImpl implements DockerCommandService {
 	@Value("${docker.workspace-path}")
 	private String workspaceDir;
 
-	public String readFileContent(String containerName, String filePathInContainer) {
+	@Override
+	public String readFileFromVolume(String volumeName, String filePathInContainer) {
+		String fullPath = workspaceDir + "/" + filePathInContainer;
+		List<String> command = List.of(
+			"docker", "run", "--rm",
+			"-v", volumeName + ":" + workspaceDir,
+			"busybox", "cat", fullPath
+		);
+		return executeDockerCommand(command);
+	}
+
+	/*
+	 * 컨테이너 내부 파일 읽기 - activeinstance 기반
+	 * */
+	@Override
+	public String readFileContent(String containerId, String filePathInContainer) {
 
 		String fullPath = workspaceDir + "/" + filePathInContainer;
-		List<String> command = List.of("docker", "exec", containerName, "cat", fullPath);
+		List<String> command = List.of("docker", "exec", containerId, "cat", fullPath);
 
+		return executeDockerCommand(command);
+
+	}
+
+	/*
+	 * 공통  docker 명령 실행 함수
+	 * */
+	private String executeDockerCommand(List<String> command) {
 		try {
 			log.info("📦 실행할 Docker 명령어: {}", String.join(" ", command));
 
@@ -56,10 +79,13 @@ public class DockerCommandServiceImpl implements DockerCommandService {
 				return result;
 			}
 
+		} catch (CustomException ce) {
+			// 우리가 의도적으로 던진 에러는 그대로 유지
+			throw ce;
+
 		} catch (Exception e) {
 			log.error("❌ Docker 명령어 실행 중 예외 발생", e);
 			throw new CustomException(ErrorCode.DOCKER_COMMAND_FAILED);
 		}
 	}
-
 }

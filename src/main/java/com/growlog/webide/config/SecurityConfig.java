@@ -14,7 +14,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.global.common.jwt.JwtAuthenticationFilter;
 import com.growlog.webide.global.common.jwt.JwtTokenProvider;
-import com.growlog.webide.global.security.CustomUserDetailService;
 
 @Configuration
 public class SecurityConfig {

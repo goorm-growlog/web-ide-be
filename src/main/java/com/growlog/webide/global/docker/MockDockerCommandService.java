@@ -7,7 +7,14 @@ import org.springframework.stereotype.Component;
 @Profile("test")
 public class MockDockerCommandService implements DockerCommandService {
 	@Override
-	public String readFileContent(String containerName, String filePathInContainer) {
-		return "// Mock file content for " + filePathInContainer;
+	public String readFileContent(String containerId, String filePathInContainer) {
+		// 테스트 목적: 단순 고정 응답
+		return "Mock Content from container";
+	}
+
+	@Override
+	public String readFileFromVolume(String volumeName, String filePathInContainer) {
+		// 테스트 목적: 단순 고정 응답
+		return "Mock Content from volume";
 	}
 }
