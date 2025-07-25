@@ -84,4 +84,14 @@ public class Project {
 	public void deactivate() {
 		this.status = ProjectStatus.INACTIVE;
 	}
+
+	//== 정보 수정 ==//
+	public void updateDetails(String projectName, String description) {
+		if(projectName != null && !projectName.isBlank()) {
+			this.projectName = projectName;
+		}
+		if(description != null) {
+			this.description = description;
+		}
+	}
 }

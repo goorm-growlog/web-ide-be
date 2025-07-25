@@ -3,6 +3,7 @@ package com.growlog.webide.domain.projects.controller;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -11,6 +12,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
 import com.growlog.webide.domain.projects.dto.OpenProjectResponse;
+import com.growlog.webide.domain.projects.dto.ProjectResponse;
+import com.growlog.webide.domain.projects.dto.UpdateProjectRequest;
 import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.service.WorkspaceManagerService;
 import com.growlog.webide.domain.users.entity.Users;
@@ -70,4 +73,13 @@ public class WorkspaceController {
 
 	// TODO: 프로젝트 삭제
 	// TODO: 프로젝트 설정 수정
+
+	@Operation(summary = "프로젝트 정보 수정",
+		description = "프로젝트의 이름과 설명을 수정합니다.")
+	@PatchMapping("/{projectId}")
+	public ResponseEntity<ProjectResponse> updateProject(@PathVariable Long projectId, @RequestBody UpdateProjectRequest request){
+		//TODO: 인증된 사용자 정보로 권한 검사 필요
+		Project updatedProject = workspaceManagerService.updateProject(projectId, request);
+		return ResponseEntity.ok(ProjectResponse.from(updatedProject));
+	}
 }

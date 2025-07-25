@@ -35,6 +35,7 @@ import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.images.repository.ImageRepository;
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
 import com.growlog.webide.domain.projects.dto.OpenProjectResponse;
+import com.growlog.webide.domain.projects.dto.UpdateProjectRequest;
 import com.growlog.webide.domain.projects.entity.ActiveInstance;
 import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.entity.ProjectStatus;
@@ -43,6 +44,7 @@ import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.factory.DockerClientFactory;
 
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -329,4 +331,18 @@ public class WorkspaceManagerService {
 			throw new RuntimeException("Failed to remove container: " + containerId, e);
 		}
 	}
+
+	@Transactional
+	public Project updateProject(Long projectId, UpdateProjectRequest request) {
+		log.info("Updating project with ID: {}", projectId);
+
+		Project project = projectRepository.findById(projectId)
+			.orElseThrow(() -> new EntityNotFoundException("Project not found: " + projectId));
+
+		// checkPermission(currentUser, project.getOwner());
+
+		project.updateDetails(request.getProjectName(), request.getDescription());
+		return project;
+	}
+
 }
