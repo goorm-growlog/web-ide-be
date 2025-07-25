@@ -11,6 +11,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -54,6 +55,14 @@ public class Users {
 	@PreUpdate
 	protected void onUpdate() {
 		this.updatedAt = LocalDateTime.now();
+	}
+
+	@Builder
+	public Users(String email, String password, String name, String profileImageUrl) {
+		this.email = email;
+		this.password = password;
+		this.name = name;
+		this.profileImageUrl = profileImageUrl;
 	}
 
 }

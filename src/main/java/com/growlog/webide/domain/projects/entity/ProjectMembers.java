@@ -1,9 +1,11 @@
-package com.growlog.webide.domain.users.entity;
+package com.growlog.webide.domain.projects.entity;
 
-import com.growlog.webide.domain.projects.entity.Project;
+import com.growlog.webide.domain.users.entity.Users;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -28,19 +30,20 @@ public class ProjectMembers {
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "project_id")
-	private Project projectId;
+	private Project project;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "user_id")
-	private Users userId;
+	private Users user;
 
+	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private MemberRole role;
 
 	@Builder
-	public ProjectMembers(Project projectId, Users userId, MemberRole role) {
-		this.projectId = projectId;
-		this.userId = userId;
+	public ProjectMembers(Project project, Users user, MemberRole role) {
+		this.project = project;
+		this.user = user;
 		this.role = role;
 	}
 }
