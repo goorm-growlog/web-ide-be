@@ -30,7 +30,7 @@ public class LiveblocksController {
 		@AuthenticationPrincipal UserPrincipal user
 	) {
 		String roomId = roomIdGenerator.generateRoomId(projectId, filePath);
-		String token = liveblocksTokenService.generateToken(roomId, user.getUserId(),user.getName());
+		String token = liveblocksTokenService.generateToken(roomId, user.getUserId(), user.getName());
 
 		LiveblocksTokenResponseDto tokenResponseDto = new LiveblocksTokenResponseDto(token);
 		return ResponseEntity.ok(ApiResponse.ok(tokenResponseDto));

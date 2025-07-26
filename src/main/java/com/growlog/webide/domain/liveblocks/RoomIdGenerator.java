@@ -18,7 +18,7 @@ public class RoomIdGenerator {
 
 	// sha-256으로 해시해서 예측 불가능한 roomId로 바꿔 보안성 높임
 	public String generateRoomId(String projectId, String filePath) {
-		String raw = projectId + ":"+ filePath+":" +salt;
+		String raw = projectId + ":" + filePath + ":" + salt;
 		return "room-" + sha256Hex(raw);
 	}
 

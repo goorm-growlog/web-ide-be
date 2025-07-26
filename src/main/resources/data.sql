@@ -40,10 +40,10 @@ VALUES (1, 1, 'OWNER'),
        (2, 2, 'OWNER'),
        (2, 1, 'READ');
 
-INSERT INTO active_instances (instance_id,project_id, user_id, container_id, web_socket_port, connected_at)
+INSERT INTO active_instances (instance_id, project_id, user_id, container_id, web_socket_port, connected_at)
 VALUES
 --     (1, 1, 1, 'mock-container-id-001', 10000, NOW());
-       (1, 1, 1, 'container-a', 10000, NOW());
+(1, 1, 1, 'container-a', 10000, NOW());
 /*도커 명령어는 컨테이너 이름과 id 두 값을 모두 인식할 수 있어서 container_id에 컨테이너 이름을 넣어도 무사히 값을 찾아감*/
 
 
