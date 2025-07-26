@@ -10,22 +10,24 @@ import org.springframework.stereotype.Service;
 
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
+import com.growlog.webide.global.util.ProjectPathResolver;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class DockerCommandServiceImpl implements DockerCommandService {
 
-	@Value("${docker.workspace-path}")
-	private String workspaceDir;
+	private final ProjectPathResolver pathResolver;
 
 	@Override
 	public String readFileFromVolume(String volumeName, String filePathInContainer) {
-		String fullPath = workspaceDir + "/" + filePathInContainer;
+		String fullPath = pathResolver.getBaseDirectory() + "/" + filePathInContainer;
 		List<String> command = List.of(
 			"docker", "run", "--rm",
-			"-v", volumeName + ":" + workspaceDir,
+			"-v", volumeName + ":" + pathResolver.getBaseDirectory(),
 			"busybox", "cat", fullPath
 		);
 		return executeDockerCommand(command);
@@ -37,7 +39,7 @@ public class DockerCommandServiceImpl implements DockerCommandService {
 	@Override
 	public String readFileContent(String containerId, String filePathInContainer) {
 
-		String fullPath = workspaceDir + "/" + filePathInContainer;
+		String fullPath = pathResolver.getBaseDirectory() + "/" + filePathInContainer;
 		List<String> command = List.of("docker", "exec", containerId, "cat", fullPath);
 
 		return executeDockerCommand(command);
@@ -98,7 +100,7 @@ public class DockerCommandServiceImpl implements DockerCommandService {
 			.replace("$", "\\$") // 변수 치환 방지
 			.replace("`", "\\`");
 
-		String fullPath = workspaceDir + "/" + filePathInContainer;
+		String fullPath = pathResolver.getBaseDirectory() + "/" + filePathInContainer;
 
 		List<String> command = List.of(
 			"docker", "exec", containerId,

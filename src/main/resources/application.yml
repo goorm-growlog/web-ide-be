@@ -16,7 +16,7 @@ springdoc:
     path: /api-docs  # OpenAPI ?? ??
 
 docker:
-  workspace-path: /workspace
+  workspace-path: /app
 
 liveblocks:
   secret-key: ${LIVEBLOCKS_SECRET_KEY}
