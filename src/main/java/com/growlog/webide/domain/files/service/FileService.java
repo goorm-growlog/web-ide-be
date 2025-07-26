@@ -44,4 +44,19 @@ public class FileService {
 
 		return FileOpenResponseDto.of(projectId, relativePath, fileContent, true); // editable은 write 권한 체크 결과로 설정 가능
 	}
+
+	public void saveFile(Long projectId, String relativePath, String content, Long userId) {
+		Project project = projectRepository.findById(projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
+
+		permissionService.checkWriteAccess(project, userId);
+
+		ActiveInstance instance = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+
+		String containerId = instance.getContainerId();
+		dockerCommandService.writeFileContent(containerId, relativePath, content);
+
+		log.info("✅ 파일 저장 완료 - containerId: {}, path: {}", containerId, relativePath);
+	}
 }

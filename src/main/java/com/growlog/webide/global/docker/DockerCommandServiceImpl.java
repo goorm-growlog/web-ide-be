@@ -88,4 +88,24 @@ public class DockerCommandServiceImpl implements DockerCommandService {
 			throw new CustomException(ErrorCode.DOCKER_COMMAND_FAILED);
 		}
 	}
+
+	@Override
+	public void writeFileContent(String containerId, String filePathInContainer, String content) {
+		// 파일 내용을 safe하게 처리 (큰 따옴표, 줄바꿈 주의)
+		String escapedContent = content
+			.replace("\\", "\\\\")
+			.replace("\"", "\\\"")
+			.replace("$", "\\$") // 변수 치환 방지
+			.replace("`", "\\`");
+
+		String fullPath = workspaceDir + "/" + filePathInContainer;
+
+		List<String> command = List.of(
+			"docker", "exec", containerId,
+			"sh", "-c", "echo \"" + escapedContent + "\" > \"" + fullPath + "\""
+		);
+
+		executeDockerCommand(command); // 이미 구현된 공용 실행 함수
+	}
+
 }

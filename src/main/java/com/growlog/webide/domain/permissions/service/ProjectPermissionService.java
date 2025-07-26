@@ -36,4 +36,15 @@ public class ProjectPermissionService {
 			throw new CustomException(ErrorCode.NO_READ_PERMISSION);
 		}
 	}
+
+	@Transactional(readOnly = true)
+	public void checkWriteAccess(Project project, Long userId) {
+		MemberRole role = projectMemberRepository.findByProject_IdAndUser_UserId(project.getId(), userId)
+			.map(pm -> pm.getRole())
+			.orElseThrow(() -> new CustomException(ErrorCode.NOT_A_MEMBER));
+
+		if (!(role == MemberRole.WRITE || role == MemberRole.OWNER)) {
+			throw new CustomException(ErrorCode.NO_WRITE_PERMISSION);
+		}
+	}
 }

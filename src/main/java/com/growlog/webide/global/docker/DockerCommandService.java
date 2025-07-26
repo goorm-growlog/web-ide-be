@@ -8,4 +8,6 @@ public interface DockerCommandService {
 	// ✅ 컨테이너 기반 (ActiveInstance 용)
 	String readFileContent(String containerId, String filePathInContainer); //activeInstance 도입하여 사용자 단위로 실행된 컨테이너로 연결
 
+	void writeFileContent(String containerId, String filePathInContainer, String content);
+
 }
