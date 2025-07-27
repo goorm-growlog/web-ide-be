@@ -44,18 +44,12 @@ public class FileController {
 	@Operation(summary = "파일열기", description = "프로젝트 내 파일을 열어 내용을 반환한다.(경로는 컨테이너 작업 디렉토리 기준)")
 	@GetMapping("/{projectId}/file")
 	public ResponseEntity<ApiResponse<FileOpenResponseDto>> openFile(
-		@Parameter(description = "프로젝트 ID", example = "1")
-		@PathVariable Long projectId,
+		@Parameter(description = "프로젝트 ID", example = "1") @PathVariable Long projectId,
 
-		@Parameter(
-			description = """
-            파일 경로는 컨테이너의 루트 작업 디렉토리(`/app`) 기준.
-            예: "src/Main.java" → 실제 경로: "/app/src/Main.java"
-            """,
-			example = "src/Main.java"
-		)
-		@RequestParam String path,
-		@AuthenticationPrincipal UserPrincipal user) {
+		@Parameter(description = """
+			파일 경로는 컨테이너의 루트 작업 디렉토리(`/app`) 기준.
+			예: "src/Main.java" → 실제 경로: "/app/src/Main.java"
+			""", example = "src/Main.java") @RequestParam String path, @AuthenticationPrincipal UserPrincipal user) {
 
 		FileOpenResponseDto response = fileService.openFile(projectId, path, user.getUserId());
 		return ResponseEntity.ok(ApiResponse.ok(response));
@@ -74,25 +68,23 @@ public class FileController {
 	@Operation(summary = "파일 저장", description = "프로젝트 내 파일을 수정 및 저장한다. (경로는 컨테이너 작업 디렉토리 기준)")
 	@PutMapping("/{projectId}/file")
 	public ResponseEntity<ApiResponse<Map<String, String>>> saveFile(
-		@Parameter(description = "프로젝트 ID", example = "1")
-		@PathVariable Long projectId,
+		@Parameter(description = "프로젝트 ID", example = "1") @PathVariable Long projectId,
 
 		@io.swagger.v3.oas.annotations.parameters.RequestBody(
 			description = "저장할 파일 경로와 파일 내용",
 			required = true,
 			content = @io.swagger.v3.oas.annotations.media.Content(
-				schema = @Schema(
-					example = """
-                    {
-                      "path": "src/Main.java",
-                      "content": "public class Main { public static void main(String[] args) { System.out.println(\\"Updated!\\"); }}"
-                    }
-                    """
-				)
-			)
-		)
-		@RequestBody FileSaveRequestDto requestDto,
-		@AuthenticationPrincipal UserPrincipal user) {
+				schema = @Schema(example = """
+					{
+						"path": "src/Main.java",
+						"content":
+						"public class Main {
+							public static void main(String[] args) {
+								System.out.println(\\"Updated!\\");
+							}
+						}"
+					}
+					"""))) @RequestBody FileSaveRequestDto requestDto, @AuthenticationPrincipal UserPrincipal user) {
 		try {
 			fileService.saveFile(projectId, requestDto.getPath(), requestDto.getContent(), user.getUserId());
 			return ResponseEntity.ok(ApiResponse.ok(Map.of("message", "저장되었습니다.")));
@@ -102,8 +94,7 @@ public class FileController {
 				case PROJECT_NOT_FOUND -> HttpStatus.NOT_FOUND;
 				default -> HttpStatus.INTERNAL_SERVER_ERROR;
 			};
-			return ResponseEntity.status(status)
-				.body(ApiResponse.error(e.getErrorCode()));
+			return ResponseEntity.status(status).body(ApiResponse.error(e.getErrorCode()));
 		}
 
 	}
