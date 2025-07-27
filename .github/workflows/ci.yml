@@ -55,6 +55,15 @@ jobs:
           echo "MAIL_USERNAME=test@example.com" >> .env
           echo "MAIL_PASSWORD=secret" >> .env
           echo "MAIL_FROM=test@example.com" >> .env
+          echo "LIVEBLOCKS_ROOM_SALT=dummy-salt-for-test" >> .env
+          echo "LIVEBLOCKS_SECRET_KEY=dummy-key-for-test" >> .env
+
+        # 환경 변수 export (Spring Boot가 인식 가능하게)
+      - name: 🌱 Export .env values to environment
+        run: |
+          set -a
+          source .env
+          set +a
 
       - name: ⏳ Wait for MySQL to be healthy
         run: |
