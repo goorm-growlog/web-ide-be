@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import com.growlog.webide.global.common.jwt.JwtTokenProvider;
+import com.growlog.webide.global.security.UserPrincipal;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +44,9 @@ public class StompHandler implements ChannelInterceptor {
 		final String token = resolveToken(accessor);
 		if (jwtTokenProvider.validateToken(token)) {
 			final Authentication auth = jwtTokenProvider.getAuthentication(token);
+			UserPrincipal principal = (UserPrincipal)auth.getPrincipal();
+			Long userId = principal.getUserId();
+			accessor.getSessionAttributes().put("AUTHENTICATED", userId);
 			accessor.setUser(auth);
 		}
 	}

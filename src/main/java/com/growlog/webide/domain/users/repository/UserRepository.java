@@ -8,4 +8,6 @@ import com.growlog.webide.domain.users.entity.Users;
 
 public interface UserRepository extends JpaRepository<Users, Long> {
 	Optional<Users> findById(Long id);
+
+	Optional<Users> findByName(String name);
 }
