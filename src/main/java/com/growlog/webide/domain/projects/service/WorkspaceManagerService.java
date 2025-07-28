@@ -349,6 +349,44 @@ public class WorkspaceManagerService {
 		}
 	}
 
+	public void deleteProject(Long projectId) {
+		log.info("Deleting project with ID: {}", projectId);
+
+		// 1. DB에서 프로젝트 정보 조회
+		Project project = projectRepository.findById(projectId)
+			.orElseThrow(() -> new EntityNotFoundException("Project not found: " + projectId));
+
+		// TODO: 삭제하려는 사용자가 프로젝트의 소유자인지 확인하는 권한 검사
+		//  checkPermission(currentUser, project.getOwner());
+
+		if (activeInstanceRepository.countByProject(project) > 0) {
+			throw new IllegalStateException("Cannot delete project with active sessions running.");
+		}
+		String volumeName = project.getStorageVolumeName();
+
+		// 2. db에서 프로젝트 레코드 먼저 삭제
+		projectRepository.delete(project);
+		log.info("Project record deleted from DB for volume: {}", volumeName);
+
+		// 3. 물리적인 Docker 볼륨 삭제 (별도의 DockerClient 생성 및 사용)
+		DockerClient dockerClient = dockerClientFactory.buildDockerClient();
+		try {
+			dockerClient.removeVolumeCmd(volumeName).exec();
+			log.info("Docker volume '{}' successfully removed.", volumeName);
+		} catch (NotFoundException e) {
+			log.warn("Docker volume '{}' not found.", volumeName);
+		} catch (Exception e) {
+			log.error("Error removing docker volume '{}': {}", volumeName, e.getMessage());
+			throw new RuntimeException("Failed to remove volume: " + volumeName, e);
+		} finally {
+			try {
+				dockerClient.close();
+			} catch (IOException e) {
+				log.warn("Error closing DockerClient after deleting volume", e);
+			}
+		}
+	}
+
 	@Transactional
 	public Project updateProject(Long projectId, UpdateProjectRequest request) {
 		log.info("Updating project with ID: {}", projectId);

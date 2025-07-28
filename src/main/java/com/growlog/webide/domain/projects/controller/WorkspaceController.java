@@ -58,7 +58,6 @@ public class WorkspaceController {
 		return ResponseEntity.ok(response);
 	}
 
-
 	@Operation(summary = "프로젝트 닫기(컨테이너 종료)",
 		description = "컨테이너 ID에 해당하는 활성 세션을 종료하고 컨테이너를 삭제합니다.")
 	@ApiResponses({
@@ -73,8 +72,27 @@ public class WorkspaceController {
 		return ResponseEntity.noContent().build();
 	}
 
-	// TODO: 프로젝트 삭제
-	// TODO: 프로젝트 설정 수정
+	@Operation(summary = "프로젝트 삭제",
+		description = "프로젝트 정보와 Docker 볼륨을 삭제합니다.")
+	@ApiResponses({
+		@ApiResponse(responseCode = "204", description = "프로젝트 삭제 성공 (No Content)"),
+		@ApiResponse(responseCode = "404", description = "존재하지 않는 컨테이너 ID")
+	})
+	@DeleteMapping("/{projectId}")
+	public ResponseEntity<Void> deleteProject(@PathVariable Long projectId) {
+		// TODO: 실제로 @AuthenticationPrincipal로 현재 로그인한 사용자 정보 불러와야 함
+		workspaceManagerService.deleteProject(projectId);
+		return ResponseEntity.noContent().build();
+	}
+
+	// @Operation(summary = "프로젝트 정보 조회",
+	// description = "프로젝트의 상세 정보를 조회합니다")
+	// @GetMapping("{/projectId}")
+	// public ResponseEntity<ProjectResponse> getProject(@PathVariable Long projectId) {
+	// 	Project project = workspaceManagerService.
+	// 	return ResponseEntity.ok(ProjectResponse.from(project));
+	// }
+
 
 	@Operation(summary = "프로젝트 정보 수정",
 		description = "프로젝트의 이름과 설명을 수정합니다.")
