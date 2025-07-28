@@ -22,7 +22,7 @@ public class WebSocketEventListener {
 
 	@Transactional(readOnly = true)
 	@EventListener
-	public void WebSocketDisconnectListener(SessionDisconnectEvent event) {
+	public void webSocketDisconnectListener(SessionDisconnectEvent event) {
 		final StompHeaderAccessor accessor = MessageHeaderAccessor
 			.getAccessor(event.getMessage(), StompHeaderAccessor.class);
 
