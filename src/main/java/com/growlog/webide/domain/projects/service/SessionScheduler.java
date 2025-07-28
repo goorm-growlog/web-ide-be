@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 
@@ -13,10 +14,14 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class SessionScheduler {
 	private final TaskScheduler taskScheduler;
 	private final WorkspaceManagerService workspaceManagerService;
+
+	public SessionScheduler(TaskScheduler taskScheduler, @Lazy WorkspaceManagerService workspaceManagerService) {
+		this.taskScheduler = taskScheduler;
+		this.workspaceManagerService = workspaceManagerService;
+	}
 
 	// 예약된 작업을 저장할 Map
 	// Key: "user:{userId}:project:{projectId}", Value: ScheduledFuture
@@ -37,7 +42,7 @@ public class SessionScheduler {
 		cancelDeletion(taskKey);
 
 		// 예약 실행 시점 계산
-		Instant executionTime = Instant.now().plusSeconds(DELETION_DELAY_MINUTES);
+		Instant executionTime = Instant.now().plusSeconds(DELETION_DELAY_MINUTES*60);
 
 		// 실행할 작업(Task) 정의
 		Runnable deletionTask = () -> {
