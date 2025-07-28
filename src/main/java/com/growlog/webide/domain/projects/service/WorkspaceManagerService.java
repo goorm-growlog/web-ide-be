@@ -70,8 +70,6 @@ public class WorkspaceManagerService {
 		this.sessionScheduler = sessionScheduler;
 	}
 
-	// LiveblocksService 등 주입
-
 	/*
 	1. 프로젝트 생성 (Create Project)
 	Docker 볼륨 생성, 프로젝트 메타데이터 DB에 저장
@@ -212,7 +210,7 @@ public class WorkspaceManagerService {
 			log.warn("Error closing DockerClient", e);
 		}
 
-		return new OpenProjectResponse(projectId, containerId, assignedPort, liveblocksToken);
+		return new OpenProjectResponse(projectId, containerId, assignedPort);
 	}
 
 	private int findAvailablePort() {
