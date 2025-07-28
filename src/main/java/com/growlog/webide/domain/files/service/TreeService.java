@@ -7,6 +7,7 @@ import com.growlog.webide.global.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.File;
 import java.nio.file.Paths;
@@ -26,6 +27,7 @@ public class TreeService {
 	/**
 	 * 프로젝트 볼륨에서 전체 트리(Root 포함)를 DTO로 빌드하여 반환.
 	 */
+	@Transactional(readOnly = true)
 	public List<TreeNodeDto> buildTree(Long instanceId) {
 
 		ActiveInstance inst = instanceService.getActiveInstance(instanceId);
