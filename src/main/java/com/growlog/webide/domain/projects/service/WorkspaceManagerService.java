@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
@@ -146,12 +147,10 @@ public class WorkspaceManagerService {
 
 		String volumeName = project.getStorageVolumeName();
 		String imageName = project.getImage().getDockerBaseImage();
-		int randomPort = findAvailablePort();
 
 		ExposedPort internalPort = new ExposedPort(8080, InternetProtocol.TCP);
 		Ports portBindings = new Ports();
-		portBindings.bind(internalPort, Ports.Binding.bindPort(randomPort));
-
+		portBindings.bind(internalPort, Ports.Binding.empty());
 
 		// 3-1. Docker 이미지가 로컬에 존재하는지 확인하고, 없으면 pull
 		pullImageIfNotExists(dockerClient, imageName);
@@ -160,8 +159,7 @@ public class WorkspaceManagerService {
 		// 3-1. 볼륨 마운트 설정 (-v 옵션)
 		HostConfig hostConfig = new HostConfig()
 			.withBinds(new Bind(volumeName, new Volume("/app")))
-			.withPortBindings(portBindings)
-			.withPublishAllPorts(true);
+			.withPortBindings(portBindings);
 
 		// 3-2. 컨테이너 생성
 		CreateContainerResponse container = dockerClient.createContainerCmd(imageName)
@@ -176,16 +174,47 @@ public class WorkspaceManagerService {
 		dockerClient.startContainerCmd(containerId).exec();
 		log.info("Container '{}' started", containerId);
 
-		// 3-4. 실행된 컨테이너 검사해 실제로 할당된 포트 확인
-		InspectContainerResponse inspectResponse = dockerClient.inspectContainerCmd(containerId).exec();
-		Ports.Binding[] bindings = inspectResponse.getNetworkSettings().getPorts().getBindings().get(internalPort);
+		int assignedPort = -1;
+		int maxRetries = 5; // 최대 5번까지 재시도
+		long delayMillis = 200; // 매 시도 사이 0.2초 대기
 
-		if (bindings == null || bindings.length == 0) {
-			removeContainerIfExists(dockerClient, containerId);
-			throw new RuntimeException("Could not find port bindings for container: " + containerId);
+		for (int i = 0; i < maxRetries; i++) {
+			InspectContainerResponse inspectResponse = dockerClient.inspectContainerCmd(containerId).exec();
+			Ports.Binding[] bindings = inspectResponse.getNetworkSettings().getPorts().getBindings().get(internalPort);
+
+			if (bindings != null && bindings.length > 0 && bindings[0].getHostPortSpec() != null) {
+				assignedPort = Integer.parseInt(bindings[0].getHostPortSpec());
+				log.info("Attempt {}: Container '{}' assigned to host port: {}", i + 1, containerId, assignedPort);
+				break; // 성공! 루프를 빠져나감
+			}
+
+			log.warn("Attempt {}: Could not find port bindings yet for container '{}'. Retrying in {}ms...", i + 1, containerId, delayMillis);
+			try {
+				Thread.sleep(delayMillis); // 잠시 대기
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				// 대기 중 인터럽트가 발생하면, 정리하고 예외를 던짐
+				removeContainerIfExists(dockerClient, containerId);
+				throw new RuntimeException("Port binding check was interrupted for container: " + containerId, e);
+			}
 		}
-		int assignedPort = Integer.parseInt(bindings[0].getHostPortSpec());
-		log.info("Container '{}' assigned to host port: {}", containerId, assignedPort);
+
+		if (assignedPort == -1) {
+			// 최대 재시도 횟수(5번)를 모두 소진했는데도 포트를 찾지 못한 경우
+			removeContainerIfExists(dockerClient, containerId);
+			throw new RuntimeException("Could not find port bindings for container: " + containerId + " after " + maxRetries + " retries.");
+		}
+
+		// 3-4. 실행된 컨테이너 검사해 실제로 할당된 포트 확인
+		// InspectContainerResponse inspectResponse = dockerClient.inspectContainerCmd(containerId).exec();
+		// Ports.Binding[] bindings = inspectResponse.getNetworkSettings().getPorts().getBindings().get(internalPort);
+		//
+		// if (bindings == null || bindings.length == 0) {
+		// 	removeContainerIfExists(dockerClient, containerId);
+		// 	throw new RuntimeException("Could not find port bindings for container: " + containerId);
+		// }
+		// int assignedPort = Integer.parseInt(bindings[0].getHostPortSpec());
+		// log.info("Container '{}' assigned to host port: {}", containerId, assignedPort);
 
 		// 4. 활성 세션 정보(ActiveInstance)를 DB에 기록
 		ActiveInstance instance = ActiveInstance.builder()
@@ -201,9 +230,6 @@ public class WorkspaceManagerService {
 			project.activate();
 		}
 
-		// TODO: LiveblocksService 통해 실제 토큰 발급
-		String liveblocksToken = "dummy-liveblocks-token-for-" + user.getName();
-
 		try {
 			dockerClient.close();
 		} catch (IOException e) {
@@ -211,15 +237,6 @@ public class WorkspaceManagerService {
 		}
 
 		return new OpenProjectResponse(projectId, containerId, assignedPort);
-	}
-
-	private int findAvailablePort() {
-		try (ServerSocket socket = new ServerSocket(0)) {
-			socket.setReuseAddress(true);
-			return socket.getLocalPort();
-		} catch (IOException e) {
-			throw new RuntimeException("Failed to find available port", e);
-		}
 	}
 
 	/**
