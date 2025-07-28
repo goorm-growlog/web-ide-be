@@ -1,5 +1,15 @@
 package com.growlog.webide.domain.files.service;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+
 import com.growlog.webide.domain.files.dto.CreateFileRequest;
 import com.growlog.webide.domain.files.dto.MoveFileRequest;
 import com.growlog.webide.domain.files.dto.tree.TreeAddEventDto;
@@ -9,17 +19,9 @@ import com.growlog.webide.domain.files.dto.tree.WebSocketMessage;
 import com.growlog.webide.domain.projects.entity.ActiveInstance;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.stereotype.Service;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 
 @Service
 @RequiredArgsConstructor
@@ -67,7 +69,6 @@ public class FileService {
 			log.error("파일 생성 중 IO 예외 발생: {}", e.getMessage(), e);
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
-
 
 		// ✅ WebSocket 이벤트 푸시
 		WebSocketMessage msg = new WebSocketMessage(
@@ -147,15 +148,19 @@ public class FileService {
 		);
 	}
 
-	private boolean deleteRecursively(File f) {
-		if (f.isDirectory()) {
-			File[] children = f.listFiles();
-			if (children == null) return false; // ← 보호 코드 추가
+	private boolean deleteRecursively(File file) {
+		if (file.isDirectory()) {
+			File[] children = file.listFiles();
+			if (children == null) {
+				return false;
+			} // ← 보호 코드 추가
 
 			for (File c : children) {
-				if (!deleteRecursively(c)) return false;
+				if (!deleteRecursively(c)) {
+					return false;
+				}
 			}
 		}
-		return f.delete();
+		return file.delete();
 	}
 }

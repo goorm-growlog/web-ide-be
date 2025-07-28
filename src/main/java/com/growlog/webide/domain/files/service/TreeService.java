@@ -1,19 +1,21 @@
 package com.growlog.webide.domain.files.service;
 
-import com.growlog.webide.domain.files.dto.tree.TreeNodeDto;
-import com.growlog.webide.domain.projects.entity.ActiveInstance;
-import com.growlog.webide.global.common.exception.CustomException;
-import com.growlog.webide.global.common.exception.ErrorCode;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.growlog.webide.domain.files.dto.tree.TreeNodeDto;
+import com.growlog.webide.domain.projects.entity.ActiveInstance;
+import com.growlog.webide.global.common.exception.CustomException;
+import com.growlog.webide.global.common.exception.ErrorCode;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -53,7 +55,9 @@ public class TreeService {
 	private List<TreeNodeDto> buildNodes(File dir, String relPath) {
 		List<TreeNodeDto> nodes = new ArrayList<>();
 		File[] files = dir.listFiles();
-		if (files == null) return nodes;
+		if (files == null) {
+			return nodes;
+		}
 
 		for (File f : files) {
 			String path = relPath + "/" + f.getName();

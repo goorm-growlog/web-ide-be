@@ -6,8 +6,8 @@ services:
     volumes:
       - .:/app
       - /var/run/docker.sock:/var/run/docker.sock
-#    env_file:
-#      - .env
+    #    env_file:
+    #      - .env
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/${DB_NAME}?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=${DB_USER_NAME}

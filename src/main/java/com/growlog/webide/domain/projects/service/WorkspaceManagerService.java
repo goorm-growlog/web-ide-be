@@ -4,6 +4,11 @@ package com.growlog.webide.domain.projects.service;
  *  프로젝트 생성부터 사용자의 세션(컨테이너) 관리, 종료까지 전체적인 생명주기를 조율하고 관리
  * */
 
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+import org.springframework.stereotype.Service;
+
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.command.CreateContainerResponse;
@@ -22,13 +27,10 @@ import com.growlog.webide.domain.projects.entity.ProjectStatus;
 import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.domain.users.entity.User;
+
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -82,7 +84,6 @@ public class WorkspaceManagerService {
 
 		return projectRepository.save(project);
 	}
-
 
 	/*
 	2. 프로젝트 열기 (Open Project)
