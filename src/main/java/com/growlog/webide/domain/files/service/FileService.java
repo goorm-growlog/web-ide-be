@@ -149,7 +149,10 @@ public class FileService {
 
 	private boolean deleteRecursively(File f) {
 		if (f.isDirectory()) {
-			for (File c : f.listFiles()) {
+			File[] children = f.listFiles();
+			if (children == null) return false; // ← 보호 코드 추가
+
+			for (File c : children) {
 				if (!deleteRecursively(c)) return false;
 			}
 		}
