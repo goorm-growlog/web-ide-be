@@ -363,10 +363,11 @@ class WorkspaceManagerServiceTest {
 			.build();
 
 		// 서비스 로직이 ActiveInstance를 찾을 수 있도록 Mocking
-		when(activeInstanceRepository.findByContainerId(containerId)).thenReturn(Optional.of(fakeInstance));
-
+		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
+		when(activeInstanceRepository.findByUserAndProject(fakeUser, fakeProject)).thenReturn(
+			Optional.of(fakeInstance));
 		// when
-		workspaceManagerService.closeProjectSession(containerId);
+		workspaceManagerService.closeProjectSession(projectId, fakeUser);
 
 		// then
 		// SessionScheduler의 scheduleDeletion 메소드가 올바른 인자들로 호출되었는지 검증
