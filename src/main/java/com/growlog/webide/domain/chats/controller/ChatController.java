@@ -54,11 +54,7 @@ public class ChatController {
 		@Payload String content
 	) {
 		final Long userId = Long.parseLong(accessor.getSessionAttributes().get("AUTHENTICATED").toString());
-		ProjectMembers user = projectMemberRepository.findByProject_IdAndUser_UserId(projectId, userId)
-			.orElseThrow(() -> new IllegalArgumentException("이 프로젝트에 참여할 권한이 없습니다."));
 
-		String username = user.getUser().getName();
-
-		return chatService.talk(projectId, userId, username, content);
+		return chatService.talk(projectId, userId, content);
 	}
 }

@@ -30,9 +30,10 @@ public class ChatService {
 	}
 
 	@Transactional
-	public ChattingResponseDto talk(Long projectId, Long userId, String username, String content) {
+	public ChattingResponseDto talk(Long projectId, Long userId, String content) {
 		Project projectRef = projectRepository.getReferenceById(projectId);
 		Users userRef = userRepository.getReferenceById(userId);
+		String username = userRef.getName();
 		Chats chat = new Chats(projectRef, userRef, content);
 
 		chatRepository.save(chat);
