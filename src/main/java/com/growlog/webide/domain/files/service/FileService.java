@@ -17,7 +17,9 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 @Service
 @RequiredArgsConstructor
@@ -127,7 +129,10 @@ public class FileService {
 			throw new CustomException(ErrorCode.FILE_ALREADY_EXISTS);
 		}
 
-		if (!dst.getParentFile().mkdirs() || !src.renameTo(dst)) {
+		try {
+			Files.createDirectories(dst.getParentFile().toPath());
+			Files.move(src.toPath(), dst.toPath(), StandardCopyOption.REPLACE_EXISTING);
+		} catch (IOException e) {
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 
