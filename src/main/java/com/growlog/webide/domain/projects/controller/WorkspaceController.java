@@ -87,7 +87,7 @@ public class WorkspaceController {
 	}
 
 	@Operation(summary = "프로젝트 정보 조회",
-	description = "프로젝트의 상세 정보를 조회합니다")
+		description = "프로젝트의 상세 정보를 조회합니다")
 	@GetMapping("/{projectId}")
 	public ResponseEntity<ProjectResponse> getProject(@PathVariable Long projectId) {
 		Project project = workspaceManagerService.getProjectDetails(projectId);
@@ -98,8 +98,9 @@ public class WorkspaceController {
 	@Operation(summary = "프로젝트 정보 수정",
 		description = "프로젝트의 이름과 설명을 수정합니다.")
 	@PatchMapping("/{projectId}")
-	public ResponseEntity<ProjectResponse> updateProject(@PathVariable Long projectId, @RequestBody UpdateProjectRequest request){
-		//TODO: 인증된 사용자 정보로 권한 검사 필요
+	public ResponseEntity<ProjectResponse> updateProject(
+		@PathVariable Long projectId, @RequestBody UpdateProjectRequest request) {
+		// TODO: 인증된 사용자 정보로 권한 검사 필요
 		Project updatedProject = workspaceManagerService.updateProject(projectId, request);
 		return ResponseEntity.ok(ProjectResponse.from(updatedProject));
 	}

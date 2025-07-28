@@ -189,7 +189,9 @@ public class WorkspaceManagerService {
 				break; // 성공! 루프를 빠져나감
 			}
 
-			log.warn("Attempt {}: Could not find port bindings yet for container '{}'. Retrying in {}ms...", i + 1, containerId, delayMillis);
+			log.warn("""
+			Attempt {}: Could not find port bindings yet for container '{}'.
+			Retrying in {}ms...""", i + 1, containerId, delayMillis);
 			try {
 				Thread.sleep(delayMillis); // 잠시 대기
 			} catch (InterruptedException e) {
@@ -203,7 +205,8 @@ public class WorkspaceManagerService {
 		if (assignedPort == -1) {
 			// 최대 재시도 횟수(5번)를 모두 소진했는데도 포트를 찾지 못한 경우
 			removeContainerIfExists(dockerClient, containerId);
-			throw new RuntimeException("Could not find port bindings for container: " + containerId + " after " + maxRetries + " retries.");
+			throw new RuntimeException("""
+		Could not find port bindings for container: " + containerId + " after " + maxRetries + " retries.""");
 		}
 
 		// 3-4. 실행된 컨테이너 검사해 실제로 할당된 포트 확인

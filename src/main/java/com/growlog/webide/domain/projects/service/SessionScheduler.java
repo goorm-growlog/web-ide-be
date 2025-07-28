@@ -42,7 +42,7 @@ public class SessionScheduler {
 		cancelDeletion(taskKey);
 
 		// 예약 실행 시점 계산
-		Instant executionTime = Instant.now().plusSeconds(DELETION_DELAY_MINUTES*60);
+		Instant executionTime = Instant.now().plusSeconds(DELETION_DELAY_MINUTES * 60);
 
 		// 실행할 작업(Task) 정의
 		Runnable deletionTask = () -> {
