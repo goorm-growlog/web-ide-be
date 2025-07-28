@@ -9,7 +9,6 @@ import org.springframework.stereotype.Controller;
 
 import com.growlog.webide.domain.chats.dto.ChattingResponseDto;
 import com.growlog.webide.domain.chats.service.ChatService;
-import com.growlog.webide.domain.projects.entity.ProjectMembers;
 import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
@@ -42,6 +41,9 @@ public class ChatController {
 			.orElseThrow(() -> new IllegalArgumentException("이 프로젝트에 참여할 권한이 없습니다."));
 
 		final String username = user.getName();
+
+		accessor.getSessionAttributes().put("projectId", projectId);
+		log.info("accessor: {}", accessor);
 
 		return chatService.enter(projectId, username);
 	}

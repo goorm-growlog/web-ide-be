@@ -40,4 +40,13 @@ public class ChatService {
 
 		return new ChattingResponseDto(ChatType.TALK, projectId, username, content);
 	}
+
+	@Transactional(readOnly = true)
+	public ChattingResponseDto leave(Long projectId, Long userId) {
+		Users userRef = userRepository.getReferenceById(userId);
+		String username = userRef.getName();
+		String leaveMessage = username + "님이 퇴장했습니다.";
+
+		return new ChattingResponseDto(ChatType.LEAVE, projectId, username, leaveMessage);
+	}
 }
