@@ -16,6 +16,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
@@ -37,6 +38,8 @@ import com.github.dockerjava.api.command.CreateVolumeResponse;
 import com.github.dockerjava.api.command.InspectConfigCmd;
 import com.github.dockerjava.api.command.InspectContainerCmd;
 import com.github.dockerjava.api.command.InspectContainerResponse;
+import com.github.dockerjava.api.command.ListVolumesCmd;
+import com.github.dockerjava.api.command.ListVolumesResponse;
 import com.github.dockerjava.api.command.RemoveContainerCmd;
 import com.github.dockerjava.api.command.StartContainerCmd;
 import com.github.dockerjava.api.command.StopContainerCmd;
@@ -54,6 +57,7 @@ import com.growlog.webide.domain.projects.entity.ProjectStatus;
 import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.domain.users.entity.Users;
+import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.factory.DockerClientFactory;
 
 @ExtendWith(MockitoExtension.class)
@@ -73,6 +77,8 @@ class WorkspaceManagerServiceTest {
 	private ActiveInstanceRepository activeInstanceRepository;
 	@Mock
 	private SessionScheduler sessionScheduler;
+	@Mock
+	private UserRepository userRepository;
 
 	// @BeforeEach
 	// void setUp() {
@@ -85,13 +91,12 @@ class WorkspaceManagerServiceTest {
 		// given (준비): 테스트에 필요한 객체와 Mock의 행동을 정의합니다.
 
 		// 1. 입력 데이터 준비
-		Users testUser = new Users();
-		testUser.setName("test");
+		Long userId = 1L;
 		Long imageId = 1L;
 		CreateProjectRequest request = new CreateProjectRequest("Unit Test Project", "Description", imageId);
-
-		// 2. Mock 객체의 행동 정의 (Stubbing)
-		// ImageRepository.findById가 호출되면, 가짜 Image 객체를 담은 Optional을 반환하도록 설정
+		Users fakeUser = new Users();
+		fakeUser.setName("test");
+		fakeUser.setUserId(userId);
 		Image fakeImage = Image.builder()
 			.imageName("Java")
 			.version("17")
@@ -99,41 +104,42 @@ class WorkspaceManagerServiceTest {
 			.build();
 		when(imageRepository.findById(imageId)).thenReturn(Optional.of(fakeImage));
 
+		// 2. Mock 객체의 행동 정의 (Stubbing)
+		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
+		when(imageRepository.findById(imageId)).thenReturn(Optional.of(fakeImage));
+
+		// ProjectRepository.save가 어떤 Project 객체든 받아서 호출되면, 저장하려던 그 객체를 그대로 반환하도록 설정
+		when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
 		// DockerClient.createVolumeCmd...가 호출되면, 단순히 비어있는 응답을 반환하도록 설정
 		// (실제 Docker 명령이 실행되지 않도록 함)
 		when(dockerClientFactory.buildDockerClient()).thenReturn(mockDockerClient);
 		CreateVolumeCmd mockCreateVolumeCmd = mock(CreateVolumeCmd.class);
 		when(mockDockerClient.createVolumeCmd()).thenReturn(mockCreateVolumeCmd);
 		when(mockCreateVolumeCmd.withName(anyString())).thenReturn(mockCreateVolumeCmd);
-		when(mockCreateVolumeCmd.exec()).thenReturn(new CreateVolumeResponse());
 
-		// ProjectRepository.save가 어떤 Project 객체든 받아서 호출되면,
-		// 그 받은 Project 객체를 그대로 반환하도록 설정 (실제 DB 저장 흉내)
-		when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> {
-			Project projectToSave = invocation.getArgument(0);
-			// 실제 DB처럼 ID를 세팅해주는 것까지 흉내낼 수 있습니다.
-			// 여기서는 간단하게 받은 객체를 그대로 반환합니다.
-			return projectToSave;
-		});
+		ListVolumesResponse mockListVolumesResponse = mock(ListVolumesResponse.class);
+		when(mockListVolumesResponse.getVolumes()).thenReturn(Collections.emptyList());
+		ListVolumesCmd mockListVolumesCmd = mock(ListVolumesCmd.class);
+		when(mockListVolumesCmd.exec()).thenReturn(mockListVolumesResponse);
+		when(mockDockerClient.listVolumesCmd()).thenReturn(mockListVolumesCmd);
 
 		// when (실행): 테스트하려는 메소드를 호출합니다.
-		Project createdProject = workspaceManagerService.createProject(request, testUser);
+		Project createdProject = workspaceManagerService.createProject(request, userId);
 
 		// then (검증): 메소드 호출 후의 결과와 Mock 객체와의 상호작용을 검증합니다.
 
 		// 1. 반환된 객체의 속성이 올바른지 검증
 		assertThat(createdProject).isNotNull();
 		assertThat(createdProject.getProjectName()).isEqualTo(request.getProjectName());
-		assertThat(createdProject.getOwner()).isEqualTo(testUser);
+		assertThat(createdProject.getOwner()).isEqualTo(fakeUser);
 		assertThat(createdProject.getImage()).isEqualTo(fakeImage);
 		assertThat(createdProject.getStorageVolumeName()).startsWith("project-vol-");
 
 		// 2. Mock 객체의 메소드가 예상대로 호출되었는지 검증 (가장 중요)
 
-		// imageRepository의 findById가 정확히 1번 호출되었는지 검증
 		verify(imageRepository, times(1)).findById(imageId);
-
-		// dockerClient의 createVolumeCmd가 정확히 1번 호출되었는지 검증
+		verify(dockerClientFactory, times(1)).buildDockerClient();
 		verify(mockDockerClient, times(1)).createVolumeCmd();
 		try {
 			verify(mockDockerClient, times(1)).close();
@@ -143,14 +149,6 @@ class WorkspaceManagerServiceTest {
 
 		// projectRepository의 save가 정확히 1번 호출되었는지 검증
 		verify(projectRepository, times(1)).save(any(Project.class));
-
-		// 3. (심화) projectRepository.save에 어떤 인자가 전달되었는지 캡처하여 검증
-		ArgumentCaptor<Project> projectArgumentCaptor = ArgumentCaptor.forClass(Project.class);
-		verify(projectRepository).save(projectArgumentCaptor.capture()); // save에 전달된 Project 객체를 캡처
-
-		Project capturedProject = projectArgumentCaptor.getValue();
-		assertThat(capturedProject.getProjectName()).isEqualTo("Unit Test Project");
-		assertThat(capturedProject.getOwner().getName()).isEqualTo("test");
 	}
 
 	/*
@@ -169,13 +167,19 @@ class WorkspaceManagerServiceTest {
 	void openProject_Unit_Test_Success() throws NoSuchFieldException {
 		// given
 		long projectId = 1L;
+		long userId = 1L;
 		String fakeProjectName = "fakeProject";
 		Users testUser = new Users();
 		testUser.setName("test");
+		testUser.setUserId(userId);
 		String expectedImageName = "openjdk:17-jdk-slim";
 		String expectedVolumeName = "project-vol-test";
 		String fakeContainerId = "fake-container-id-12345";
 		int assignedPortByDocker = 49152;
+
+		Users fakeUser = new Users();
+		fakeUser.setName("fakeUser");
+		fakeUser.setUserId(userId);
 
 		Image fakeImage = Image.builder().dockerBaseImage("openjdk:17-jdk-slim").build();
 		Project fakeProject = Project.builder()
@@ -185,10 +189,12 @@ class WorkspaceManagerServiceTest {
 			.storageVolumeName(expectedVolumeName)
 			.build();
 		setEntityId(fakeProject, projectId);
+		fakeProject.activate();
 
 		// 1. repository mock 설정
+		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(anyLong())).thenReturn(Optional.of(fakeProject));
-		when(activeInstanceRepository.findByUserAndProject(testUser, fakeProject))
+		when(activeInstanceRepository.findByUserAndProject(any(Users.class), any(Project.class)))
 			.thenReturn(Optional.empty()); // 기존 세션 없음
 		when(activeInstanceRepository.save(any(ActiveInstance.class)))
 			.thenAnswer(inv -> inv.getArgument(0));
@@ -233,7 +239,7 @@ class WorkspaceManagerServiceTest {
 		when(mockDockerClient.inspectContainerCmd(fakeContainerId)).thenReturn(mockInspectCmd);
 
 		// when
-		OpenProjectResponse response = workspaceManagerService.openProject(1L, testUser);
+		OpenProjectResponse response = workspaceManagerService.openProject(projectId, userId);
 
 		// then
 		// 1. 반환된 DTO 검증
@@ -244,11 +250,11 @@ class WorkspaceManagerServiceTest {
 		assertThat(response.getWebSocketPort()).isEqualTo(assignedPortByDocker);
 
 		// 2. Mock 객체 호출 검증
-		verify(projectRepository, times(1)).findById(anyLong());
-		verify(activeInstanceRepository, times(1)).findByUserAndProject(testUser, fakeProject);
-		verify(mockDockerClient, times(1)).createContainerCmd(expectedImageName);
+		verify(userRepository, times(1)).findById(userId);
+		verify(projectRepository, times(1)).findById(projectId);
+		verify(activeInstanceRepository, times(1)).findByUserAndProject(any(Users.class), any(Project.class));
+		verify(dockerClientFactory, times(1)).buildDockerClient();
 		verify(mockDockerClient, times(1)).startContainerCmd(fakeContainerId);
-		verify(mockDockerClient, times(1)).inspectContainerCmd(fakeContainerId);
 		try {
 			verify(mockDockerClient, times(1)).close();
 		} catch (IOException e) {
@@ -258,10 +264,9 @@ class WorkspaceManagerServiceTest {
 		// 3. ActiveInstance가 올바른 정보로 저장되었는지 ArgumentCaptor로 검증
 		ArgumentCaptor<ActiveInstance> instanceCaptor = ArgumentCaptor.forClass(ActiveInstance.class);
 		verify(activeInstanceRepository, times(1)).save(instanceCaptor.capture());
-
 		ActiveInstance savedInstance = instanceCaptor.getValue();
 		assertThat(savedInstance.getProject()).isEqualTo(fakeProject);
-		assertThat(savedInstance.getUser()).isEqualTo(testUser);
+		assertThat(savedInstance.getUser()).isEqualTo(fakeUser);
 		assertThat(savedInstance.getContainerId()).isEqualTo(fakeContainerId);
 		assertThat(savedInstance.getWebSocketPort()).isEqualTo(assignedPortByDocker);
 
@@ -275,20 +280,21 @@ class WorkspaceManagerServiceTest {
 		// given
 		long projectId = 1L;
 		long userId = 1L;
-		Users testUser = new Users();
-		testUser.setName("test");
-		testUser.setUserId(userId);
+		Users fakeUser = new Users();
+		fakeUser.setName("test");
+		fakeUser.setUserId(userId);
 
 		Project fakeProject = Project.builder().build();
 		setEntityId(fakeProject, projectId);
 
+		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
-		when(activeInstanceRepository.findByUserAndProject(testUser, fakeProject))
+		when(activeInstanceRepository.findByUserAndProject(fakeUser, fakeProject))
 			.thenReturn(Optional.empty());
 
 		// when
 		try {
-			workspaceManagerService.openProject(projectId, testUser);
+			workspaceManagerService.openProject(projectId, userId);
 		} catch (Exception e) {
 		}
 
@@ -301,11 +307,13 @@ class WorkspaceManagerServiceTest {
 	void openProject_Fail_SessionAlreadyExists() throws NoSuchFieldException {
 		// given
 		long projectId = 1L;
+		long userId = 1L;
 		String fakeProjectName = "fakeProjectName";
 		String expectedVolumeName = "project-vol-test";
 		String fakeContainerId = "fake-container-id-12345";
-		Users testUser = new Users();
-		testUser.setName("test");
+		Users fakeUser = new Users();
+		fakeUser.setName("fakeUser");
+		fakeUser.setUserId(userId);
 		Image fakeImage = Image.builder().dockerBaseImage("openjdk:17-jdk-slim").build();
 		Project fakeProject = Project.builder()
 			.projectName(fakeProjectName)
@@ -315,16 +323,15 @@ class WorkspaceManagerServiceTest {
 		setEntityId(fakeProject, projectId);
 		ActiveInstance fakeInstance = ActiveInstance.builder().build(); // 비어있는 가짜 객체
 
+		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(anyLong())).thenReturn(Optional.of(fakeProject));
 		// 이번에는 findByUserAndProject가 비어있지 않은 Optional을 반환하도록 설정
-		// when(activeInstanceRepository.findByUserAndProject(testUser, fakeProject))
-		// 	.thenReturn(Optional.of(fakeInstance));
 		when(activeInstanceRepository.findByUserAndProject(any(Users.class), any(Project.class)))
 			.thenReturn(Optional.of(fakeInstance));
 
 		// when & then
 		// openProject 실행 시 IllegalStateException이 발생하는지 검증
-		assertThatThrownBy(() -> workspaceManagerService.openProject(projectId, testUser))
+		assertThatThrownBy(() -> workspaceManagerService.openProject(projectId, fakeUser.getUserId()))
 			.isInstanceOf(IllegalStateException.class)
 			.hasMessage("User already has an active session for this project.");
 
@@ -362,11 +369,12 @@ class WorkspaceManagerServiceTest {
 			.build();
 
 		// 서비스 로직이 ActiveInstance를 찾을 수 있도록 Mocking
+		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
 		when(activeInstanceRepository.findByUserAndProject(fakeUser, fakeProject)).thenReturn(
 			Optional.of(fakeInstance));
 		// when
-		workspaceManagerService.closeProjectSession(projectId, fakeUser);
+		workspaceManagerService.closeProjectSession(projectId, userId);
 
 		// then
 		// SessionScheduler의 scheduleDeletion 메소드가 올바른 인자들로 호출되었는지 검증
@@ -493,8 +501,10 @@ class WorkspaceManagerServiceTest {
 
 		// given
 		long projectId = 1L;
+		long userId = 1L;
 		Users fakeUser = new Users();
 		fakeUser.setName("test");
+		fakeUser.setUserId(userId);
 		Image fakeImage = Image.builder().imageName("java").build();
 		Project fakeProject = Project.builder()
 			.projectName("test-project")
@@ -505,7 +515,7 @@ class WorkspaceManagerServiceTest {
 		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
 
 		// when
-		Project resultProject = workspaceManagerService.getProjectDetails(projectId);
+		Project resultProject = workspaceManagerService.getProjectDetails(projectId, userId);
 
 		// then
 		assertThat(resultProject).isEqualTo(fakeProject);

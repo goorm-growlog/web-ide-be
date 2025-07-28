@@ -2,6 +2,7 @@ package com.growlog.webide.domain.projects.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -19,6 +20,7 @@ import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.service.WorkspaceManagerService;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
+import com.growlog.webide.global.security.UserPrincipal;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -33,29 +35,26 @@ import lombok.RequiredArgsConstructor;
 public class WorkspaceController {
 
 	private final WorkspaceManagerService workspaceManagerService;
-	private final UserRepository userRepository;
 
 	@Operation(summary = "프로젝트 생성", description = "새로운 프로젝트와 Docker 볼륨을 생성합니다.")
 	@PostMapping
-	public ResponseEntity<Project> createProject(
-		@RequestBody CreateProjectRequest request
+	public ResponseEntity<ProjectResponse> createProject(
+		@RequestBody CreateProjectRequest request,
+		@AuthenticationPrincipal UserPrincipal userPrincipal
 	) {
-		Users owner = userRepository.findById(1L)
-			.orElseThrow(() -> new IllegalArgumentException("Test user(1) not found."));
-
-		Project createdProject = workspaceManagerService.createProject(request, owner);
-		return ResponseEntity.status(HttpStatus.CREATED).body(createdProject);
+		ProjectResponse response = ProjectResponse.from(
+			workspaceManagerService.createProject(request, userPrincipal.getUserId()));
+		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 
 	@Operation(summary = "프로젝트 열기(컨테이너 실행)", description = "사용자를 위한 개인 컨테이너를 실행하고 접속 정보를 반환합니다.")
 	@PostMapping("/{projectId}/open")
-	public ResponseEntity<OpenProjectResponse> openProject(@PathVariable Long projectId) {
-		// TODO: 실제로 @AuthenticationPrincipal로 현재 로그인한 사용자 정보 불러와야 함
-		// 테스트 위해 1번 사용자 하드코딩
-		Users user = userRepository.findById(1L)
-			.orElseThrow(() -> new IllegalArgumentException("Test user(1) not found."));
-
-		OpenProjectResponse response = workspaceManagerService.openProject(projectId, user);
+	public ResponseEntity<OpenProjectResponse> openProject(
+		@PathVariable Long projectId,
+		@AuthenticationPrincipal UserPrincipal userPrincipal
+	) {
+		Long userId = userPrincipal.getUserId();
+		OpenProjectResponse response = workspaceManagerService.openProject(projectId, userId);
 		return ResponseEntity.ok(response);
 	}
 
@@ -66,10 +65,12 @@ public class WorkspaceController {
 		@ApiResponse(responseCode = "404", description = "존재하지 않는 컨테이너 ID")
 	})
 	@PostMapping("/{projectId}/close")
-	public ResponseEntity<Void> closeProjectSession(@PathVariable Long projectId) {
-		// Todo: 로그인한 사용자 정보 가져와야 함
-		Users user = userRepository.findById(1L).orElseThrow();
-		workspaceManagerService.closeProjectSession(projectId, user);
+	public ResponseEntity<Void> closeProjectSession(
+		@PathVariable Long projectId,
+		@AuthenticationPrincipal UserPrincipal userPrincipal
+	) {
+		Long userId = userPrincipal.getUserId();
+		workspaceManagerService.closeProjectSession(projectId, userId);
 		return ResponseEntity.noContent().build();
 	}
 
@@ -80,17 +81,22 @@ public class WorkspaceController {
 		@ApiResponse(responseCode = "404", description = "존재하지 않는 컨테이너 ID")
 	})
 	@DeleteMapping("/{projectId}")
-	public ResponseEntity<Void> deleteProject(@PathVariable Long projectId) {
-		// TODO: 실제로 @AuthenticationPrincipal로 현재 로그인한 사용자 정보 불러와야 함
-		workspaceManagerService.deleteProject(projectId);
+	public ResponseEntity<Void> deleteProject(
+		@PathVariable Long projectId,
+		@AuthenticationPrincipal UserPrincipal userPrincipal) {
+		Long userId = userPrincipal.getUserId();
+		workspaceManagerService.deleteProject(projectId, userId);
 		return ResponseEntity.noContent().build();
 	}
 
 	@Operation(summary = "프로젝트 정보 조회",
 		description = "프로젝트의 상세 정보를 조회합니다")
 	@GetMapping("/{projectId}")
-	public ResponseEntity<ProjectResponse> getProject(@PathVariable Long projectId) {
-		Project project = workspaceManagerService.getProjectDetails(projectId);
+	public ResponseEntity<ProjectResponse> getProject(
+		@PathVariable Long projectId,
+		@AuthenticationPrincipal UserPrincipal userPrincipal) {
+		Long userId = userPrincipal.getUserId();
+		Project project = workspaceManagerService.getProjectDetails(projectId, userId);
 		return ResponseEntity.ok(ProjectResponse.from(project));
 	}
 
@@ -99,9 +105,11 @@ public class WorkspaceController {
 		description = "프로젝트의 이름과 설명을 수정합니다.")
 	@PatchMapping("/{projectId}")
 	public ResponseEntity<ProjectResponse> updateProject(
-		@PathVariable Long projectId, @RequestBody UpdateProjectRequest request) {
-		// TODO: 인증된 사용자 정보로 권한 검사 필요
-		Project updatedProject = workspaceManagerService.updateProject(projectId, request);
+		@PathVariable Long projectId,
+		@RequestBody UpdateProjectRequest request,
+		@AuthenticationPrincipal UserPrincipal userPrincipal) {
+		Long userId = userPrincipal.getUserId();
+		Project updatedProject = workspaceManagerService.updateProject(projectId, request, userId);
 		return ResponseEntity.ok(ProjectResponse.from(updatedProject));
 	}
 }

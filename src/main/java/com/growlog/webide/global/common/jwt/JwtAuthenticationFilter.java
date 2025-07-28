@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.util.List;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.growlog.webide.domain.users.entity.Users;
@@ -20,8 +22,10 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
-@AllArgsConstructor
+@Component
+@RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	private final JwtTokenProvider jwtTokenProvider;
 	private final UserRepository userRepository;
@@ -42,8 +46,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 			UserPrincipal userPrincipal = new UserPrincipal(user);
 
-			UsernamePasswordAuthenticationToken authentication =
-				new UsernamePasswordAuthenticationToken(userPrincipal, null, null);
+			Authentication authentication = new UsernamePasswordAuthenticationToken(
+				userPrincipal, null, userPrincipal.getAuthorities()
+			);
+
+			// UsernamePasswordAuthenticationToken authentication =
+			// 	new UsernamePasswordAuthenticationToken(userPrincipal, null, null);
 
 			SecurityContextHolder.getContext().setAuthentication(authentication);
 		}

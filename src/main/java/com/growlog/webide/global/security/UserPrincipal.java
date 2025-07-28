@@ -1,8 +1,10 @@
 package com.growlog.webide.global.security;
 
 import java.util.Collection;
+import java.util.Collections;
 
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import com.growlog.webide.domain.users.entity.Users;
@@ -27,7 +29,8 @@ public class UserPrincipal implements UserDetails {
 
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
-		return null; // 권한이 필요하다면 여기에 추가
+
+		return Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")); // 권한이 필요하다면 여기에 추가
 	}
 
 	@Override
