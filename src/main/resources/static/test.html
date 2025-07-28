@@ -22,6 +22,12 @@
     <button id="subscribeBtn" disabled>2. Subscribe & Enter</button>
 </div>
 <hr>
+<div>
+    <label for="chatMessage">Message:</label>
+    <input type="text" id="chatMessage" size="50" placeholder="Enter message to send">
+    <button id="sendBtn" disabled>3. Send Talk</button>
+</div>
+<hr>
 <h2>Log</h2>
 <div id="log" style="border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll;"></div>
 
@@ -33,6 +39,8 @@
     const projectIdInput = document.getElementById('projectId');
     const jwtTokenInput = document.getElementById('jwtToken');
     const logDiv = document.getElementById('log');
+    const chatMessageInput = document.getElementById('chatMessage');
+    const sendBtn = document.getElementById('sendBtn');
 
     let stompClient = null;
 
@@ -70,8 +78,9 @@
             connectBtn.disabled = true;
             disconnectBtn.disabled = false;
             subscribeBtn.disabled = false;
-        }, function(error) {
+        }, function (error) {
             log('CONNECTION ERROR: ' + error);
+            sendBtn.disabled = true;
         });
     }
 
@@ -84,6 +93,7 @@
         connectBtn.disabled = false;
         disconnectBtn.disabled = true;
         subscribeBtn.disabled = true;
+        sendBtn.disabled = true;
     }
 
     // 토픽 구독 및 입장 메시지 전송 함수
@@ -104,12 +114,32 @@
 
         // 5. 입장 메시지를 서버로 보냅니다. (Body는 비워도 됩니다)
         stompClient.send(enterUrl, {}, "{}");
+        sendBtn.disabled = false;
+    }
+
+    function sendTalk() {
+        const projectId = projectIdInput.value;
+        const content = chatMessageInput.value;
+        const talkUrl = `/app/projects/${projectId}/chat/talk`;
+
+        if (!content.trim()) {
+            alert('메시지를 입력하세요!');
+            return;
+        }
+
+        log(`Sending message to: ${talkUrl} with content: "${content}"`);
+
+        // ✅ /chat/talk 경로로 메시지 본문(content)을 그대로 전송합니다.
+        stompClient.send(talkUrl, {}, content);
+
+        chatMessageInput.value = ''; // 메시지 입력 창 비우기
     }
 
     // 각 버튼에 클릭 이벤트를 연결합니다.
     connectBtn.addEventListener('click', connect);
     disconnectBtn.addEventListener('click', disconnect);
     subscribeBtn.addEventListener('click', subscribeAndEnter);
+    sendBtn.addEventListener('click', sendTalk);
 </script>
 </body>
 </html>
