@@ -30,10 +30,13 @@ import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
 import com.growlog.webide.domain.projects.dto.OpenProjectResponse;
 import com.growlog.webide.domain.projects.dto.UpdateProjectRequest;
 import com.growlog.webide.domain.projects.entity.ActiveInstance;
+import com.growlog.webide.domain.projects.entity.MemberRole;
 import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.entity.ProjectStatus;
 import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
+import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
+import com.growlog.webide.domain.users.entity.ProjectMembers;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.factory.DockerClientFactory;
@@ -53,22 +56,25 @@ public class WorkspaceManagerService {
 	private final ImageRepository imageRepository;
 	private final SessionScheduler sessionScheduler;
 	private final UserRepository userRepository;
+	private final ProjectMemberRepository projectMemberRepository;
 
 	public WorkspaceManagerService(DockerClientFactory dockerClientFactory, ProjectRepository projectRepository,
 		ActiveInstanceRepository activeInstanceRepository, ImageRepository imageRepository,
-		@Lazy SessionScheduler sessionScheduler, UserRepository userRepository) {
+		@Lazy SessionScheduler sessionScheduler, UserRepository userRepository, ProjectMemberRepository projectMemberRepository) {
 		this.dockerClientFactory = dockerClientFactory;
 		this.projectRepository = projectRepository;
 		this.activeInstanceRepository = activeInstanceRepository;
 		this.imageRepository = imageRepository;
 		this.sessionScheduler = sessionScheduler;
 		this.userRepository = userRepository;
+		this.projectMemberRepository = projectMemberRepository;
 	}
 
 	/*
 	1. 프로젝트 생성 (Create Project)
 	Docker 볼륨 생성, 프로젝트 메타데이터 DB에 저장
 	 */
+	@Transactional
 	public Project createProject(CreateProjectRequest request, Long userId) {
 		log.info("Create project '{}'", request.getProjectName());
 
@@ -111,8 +117,17 @@ public class WorkspaceManagerService {
 			.storageVolumeName(volumeName)
 			.image(image)
 			.build();
+		Project createdProject = projectRepository.save(project);
 
-		return projectRepository.save(project);
+		// 4. ProjectMembers 엔티티 생성 및 DB 저장
+		ProjectMembers member = ProjectMembers.builder()
+			.user(owner)
+			.role(MemberRole.OWNER)
+			.build();
+		projectMemberRepository.save(member);
+		createdProject.addProjectMember(member);
+
+		return createdProject;
 	}
 
 
@@ -123,7 +138,6 @@ public class WorkspaceManagerService {
 	새로운 격리된 Docker 컨테이너를 동적으로 실행하고, 그 세션 정보를 DB에 기록한 후, 접속 정보를 사용자에게 돌려줍니다.
 	 */
 	public OpenProjectResponse openProject(Long projectId, Long userId) {
-		// TODO: 프로젝트 멤버인지 확인 로직 필요
 		log.info("User '{}' is opening project '{}'", userId, projectId);
 
 		// 1. 프로젝트 정보 및 사용할 이미지 조회
@@ -131,6 +145,9 @@ public class WorkspaceManagerService {
 			.orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
+
+		projectMemberRepository.findByUserAndProject(user, project)
+			.orElseThrow(() -> new AccessDeniedException("User has no active session for this project."));
 
 		// 해당 프로젝트의 삭제 작업이 예정되어 있으면 작업 취소
 		sessionScheduler.cancelDeletion(user.getUserId(), projectId);
