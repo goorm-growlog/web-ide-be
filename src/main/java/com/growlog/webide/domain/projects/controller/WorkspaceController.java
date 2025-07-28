@@ -19,10 +19,7 @@ import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
 import com.growlog.webide.domain.projects.dto.OpenProjectResponse;
 import com.growlog.webide.domain.projects.dto.ProjectResponse;
 import com.growlog.webide.domain.projects.dto.UpdateProjectRequest;
-import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.service.WorkspaceManagerService;
-import com.growlog.webide.domain.users.entity.Users;
-import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.global.security.UserPrincipal;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,8 +42,7 @@ public class WorkspaceController {
 		@RequestBody CreateProjectRequest request,
 		@AuthenticationPrincipal UserPrincipal userPrincipal
 	) {
-		ProjectResponse response = ProjectResponse.from(
-			workspaceManagerService.createProject(request, userPrincipal.getUserId()));
+		ProjectResponse response = workspaceManagerService.createProject(request, userPrincipal.getUserId());
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 
@@ -99,10 +95,10 @@ public class WorkspaceController {
 		@PathVariable Long projectId,
 		@AuthenticationPrincipal UserPrincipal userPrincipal) {
 		Long userId = userPrincipal.getUserId();
-		Project project = workspaceManagerService.getProjectDetails(projectId, userId);
-		return ResponseEntity.ok(ProjectResponse.from(project));
-	}
+		ProjectResponse response = workspaceManagerService.getProjectDetails(projectId, userId);
 
+		return ResponseEntity.ok(response);
+	}
 
 	@Operation(summary = "프로젝트 정보 수정",
 		description = "프로젝트의 이름과 설명을 수정합니다.")
@@ -112,8 +108,9 @@ public class WorkspaceController {
 		@RequestBody UpdateProjectRequest request,
 		@AuthenticationPrincipal UserPrincipal userPrincipal) {
 		Long userId = userPrincipal.getUserId();
-		Project updatedProject = workspaceManagerService.updateProject(projectId, request, userId);
-		return ResponseEntity.ok(ProjectResponse.from(updatedProject));
+		ProjectResponse response = workspaceManagerService.updateProject(projectId, request, userId);
+
+		return ResponseEntity.ok(response);
 	}
 
 	@Operation(summary = "내 프로젝트 목록 조회",

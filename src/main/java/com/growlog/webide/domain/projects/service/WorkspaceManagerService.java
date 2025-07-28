@@ -79,7 +79,7 @@ public class WorkspaceManagerService {
 	Docker 볼륨 생성, 프로젝트 메타데이터 DB에 저장
 	 */
 	@Transactional
-	public Project createProject(CreateProjectRequest request, Long userId) {
+	public ProjectResponse createProject(CreateProjectRequest request, Long userId) {
 		log.info("Create project '{}'", request.getProjectName());
 
 		// 1. DB 조회
@@ -131,7 +131,7 @@ public class WorkspaceManagerService {
 		createdProject.addProjectMember(member);
 		projectMemberRepository.save(member);
 
-		return createdProject;
+		return ProjectResponse.from(createdProject, owner);
 	}
 
 	/*
@@ -410,9 +410,11 @@ public class WorkspaceManagerService {
 	}
 
 	@Transactional
-	public Project updateProject(Long projectId, UpdateProjectRequest request, Long userId) {
+	public ProjectResponse updateProject(Long projectId, UpdateProjectRequest request, Long userId) {
 		log.info("Updating project with ID: {}", projectId);
 
+		Users user = userRepository.findById(userId)
+			.orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new EntityNotFoundException("Project not found: " + projectId));
 
@@ -421,19 +423,18 @@ public class WorkspaceManagerService {
 		}
 
 		project.updateDetails(request.getProjectName(), request.getDescription());
-		return project;
+		return ProjectResponse.from(project, user);
 	}
 
-	public Project getProjectDetails(Long projectId, Long userId) {
+	public ProjectResponse getProjectDetails(Long projectId, Long userId) {
 		log.info("Getting project details for project with ID: {}", projectId);
 
+		Users user = userRepository.findById(userId)
+			.orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new EntityNotFoundException("Project not found: " + projectId));
-		if (!project.getOwner().getUserId().equals(userId)) {
-			throw new AccessDeniedException("User " + userId + " is not authorized to get project " + projectId);
-		}
 
-		return project;
+		return ProjectResponse.from(project, user);
 	}
 
 	public List<ProjectResponse> findProjectByUser(Long userId, String filterType) {
@@ -453,7 +454,7 @@ public class WorkspaceManagerService {
 		}
 
 		return members.stream()
-			.map(member -> ProjectResponse.from(member.getProject()))
+			.map(member -> ProjectResponse.from(member.getProject(), user))
 			.collect(Collectors.toList());
 	}
 

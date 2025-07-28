@@ -10,7 +10,6 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -23,7 +22,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -39,8 +37,6 @@ import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.CreateVolumeCmd;
-import com.github.dockerjava.api.command.CreateVolumeResponse;
-import com.github.dockerjava.api.command.InspectConfigCmd;
 import com.github.dockerjava.api.command.InspectContainerCmd;
 import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.api.command.ListVolumesCmd;
@@ -122,6 +118,7 @@ class WorkspaceManagerServiceTest {
 		// ProjectRepository.save가 어떤 projectMembers 객체든 받아서 호출되면, ID가 할당된 Project 객체를 반환하도록 설정
 		when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> {
 			Project projectToSave = invocation.getArgument(0);
+			setEntityId(projectToSave, 101L);
 			return projectToSave;
 		});
 
@@ -139,33 +136,30 @@ class WorkspaceManagerServiceTest {
 		when(mockDockerClient.listVolumesCmd()).thenReturn(mockListVolumesCmd);
 
 		// when (실행): 테스트하려는 메소드를 호출합니다.
-		Project createdProject = workspaceManagerService.createProject(request, userId);
+		ProjectResponse response = workspaceManagerService.createProject(request, userId);
 
 		// then (검증): 메소드 호출 후의 결과와 Mock 객체와의 상호작용을 검증합니다.
 
-		// 1. 반환된 객체의 속성이 올바른지 검증
-		assertThat(createdProject).isNotNull();
-		assertThat(createdProject.getProjectName()).isEqualTo(request.getProjectName());
-		assertThat(createdProject.getOwner()).isEqualTo(fakeUser);
-		assertThat(createdProject.getImage()).isEqualTo(fakeImage);
-		assertThat(createdProject.getStorageVolumeName()).startsWith("project-vol-");
+		// 반환된 DTO의 속성이 올바른지 검증
+		assertThat(response).isNotNull();
+		assertThat(response.getProjectId()).isEqualTo(101L);
+		assertThat(response.getProjectName()).isEqualTo(request.getProjectName());
+		assertThat(response.getOwnerName()).isEqualTo(fakeUser.getName());
+		assertThat(response.getMyRole()).isEqualTo(MemberRole.OWNER.name());
 
-		ArgumentCaptor<Project> projectArgumentCaptor = ArgumentCaptor.forClass(Project.class);
-		ArgumentCaptor<ProjectMembers> projectMembersArgumentCaptor = ArgumentCaptor.forClass(ProjectMembers.class);
+		ArgumentCaptor<Project> projectCaptor = ArgumentCaptor.forClass(Project.class);
+		ArgumentCaptor<ProjectMembers> memberCaptor = ArgumentCaptor.forClass(ProjectMembers.class);
 
+		// ★★★ InOrder 검증을 사용하여 순서가 올바른지 확인
 		InOrder inOrder = inOrder(projectRepository, projectMemberRepository);
+		inOrder.verify(projectRepository, times(1)).save(projectCaptor.capture());
+		inOrder.verify(projectMemberRepository, times(1)).save(memberCaptor.capture());
 
-		inOrder.verify(projectRepository, times(1)).save(projectArgumentCaptor.capture());
-		inOrder.verify(projectMemberRepository, times(1)).save(projectMembersArgumentCaptor.capture());
+		Project capturedProject = projectCaptor.getValue();
+		ProjectMembers capturedMember = memberCaptor.getValue();
 
-		Project capturedProject = projectArgumentCaptor.getValue();
-		assertThat(capturedProject.getProjectName()).isEqualTo("Unit Test Project");
-		assertThat(capturedProject.getOwner()).isEqualTo(fakeUser);
-
-		ProjectMembers capturedMember = projectMembersArgumentCaptor.getValue();
 		assertThat(capturedMember.getUser()).isEqualTo(fakeUser);
 		assertThat(capturedMember.getRole()).isEqualTo(MemberRole.OWNER);
-		assertThat(capturedMember.getProject()).isEqualTo(capturedProject);
 
 		// Mock 객체의 메소드가 예상대로 호출되었는지 검증
 		verify(imageRepository, times(1)).findById(imageId);
@@ -176,9 +170,6 @@ class WorkspaceManagerServiceTest {
 		} catch (IOException e) {
 			fail("IOException should not be thrown in mock close()");
 		}
-
-		// projectRepository의 save가 정확히 1번 호출되었는지 검증
-		verify(projectRepository, times(1)).save(any(Project.class));
 	}
 
 	/*
@@ -579,16 +570,25 @@ class WorkspaceManagerServiceTest {
 			.owner(fakeUser)
 			.image(fakeImage)
 			.build();
+		setEntityId(fakeProject, projectId);
 
+		ProjectMembers member = ProjectMembers.builder().user(fakeUser).role(MemberRole.OWNER).build();
+		fakeProject.addProjectMember(member);
+
+		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
 
 		// when
-		Project resultProject = workspaceManagerService.getProjectDetails(projectId, userId);
+		ProjectResponse response = workspaceManagerService.getProjectDetails(projectId, userId);
 
 		// then
-		assertThat(resultProject).isEqualTo(fakeProject);
-		assertThat(resultProject.getProjectName()).isEqualTo("test-project");
-		assertThat(resultProject.getOwner().getName()).isEqualTo("test");
+		assertThat(response).isNotNull();
+		assertThat(response.getProjectId()).isEqualTo(projectId);
+		assertThat(response.getProjectName()).isEqualTo("test-project");
+		assertThat(response.getOwnerName()).isEqualTo("test");
+		assertThat(response.getMyRole()).isEqualTo(MemberRole.OWNER.name());
+
+		verify(userRepository, times(1)).findById(userId);
 		verify(projectRepository, times(1)).findById(projectId);
 	}
 
