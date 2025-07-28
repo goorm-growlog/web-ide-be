@@ -15,4 +15,5 @@ public class OpenProjectResponse {
 	public String containerId;
 	private Integer webSocketPort;
 	private String liveblocksToken;
+	private Long instanceId;
 }
