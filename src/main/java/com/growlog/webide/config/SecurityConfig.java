@@ -39,7 +39,7 @@ public class SecurityConfig {
 			// HTTP 요청에 대한 인가 규칙 설정
 			.authorizeHttpRequests(authz -> authz
 				// ✅ 웹소켓 연결을 위한 /ws/** 경로는 인증 없이 허용
-				.requestMatchers("/ws/**", "/get-token").permitAll()
+				.requestMatchers("/ws/**", "/get-token", "/api/**").permitAll()
 
 				// 위 경로들을 제외한 나머지 모든 요청은 인증 필요
 				.anyRequest().authenticated()

@@ -62,5 +62,21 @@ public class DataInitializer implements CommandLineRunner {
 			.role(MemberRole.OWNER)
 			.build();
 		projectMemberRepository.save(member);
+
+		Project testProject2 = Project.builder()
+			.projectName("Another Project 2")
+			.storageVolumeName("another-project-volume-2")
+			.owner(testUser)
+			.image(testImage)
+			.build();
+		projectRepository.save(testProject2);
+
+		// 6. 두 번째 프로젝트에 동일한 사용자를 멤버로 추가
+		ProjectMembers member2 = ProjectMembers.builder()
+			.project(testProject2)
+			.user(testUser)
+			.role(MemberRole.OWNER)
+			.build();
+		projectMemberRepository.save(member2);
 	}
 }

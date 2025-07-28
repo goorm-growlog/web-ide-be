@@ -49,4 +49,20 @@ public class Chats {
 		this.user = user;
 		this.content = content;
 	}
+
+	public Long getChatId() {
+		return chatId;
+	}
+
+	public Project getProject() {
+		return project;
+	}
+
+	public Users getUser() {
+		return user;
+	}
+
+	public String getContent() {
+		return content;
+	}
 }
