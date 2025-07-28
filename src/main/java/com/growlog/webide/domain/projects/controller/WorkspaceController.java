@@ -3,6 +3,7 @@ package com.growlog.webide.domain.projects.controller;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -85,13 +86,13 @@ public class WorkspaceController {
 		return ResponseEntity.noContent().build();
 	}
 
-	// @Operation(summary = "프로젝트 정보 조회",
-	// description = "프로젝트의 상세 정보를 조회합니다")
-	// @GetMapping("{/projectId}")
-	// public ResponseEntity<ProjectResponse> getProject(@PathVariable Long projectId) {
-	// 	Project project = workspaceManagerService.
-	// 	return ResponseEntity.ok(ProjectResponse.from(project));
-	// }
+	@Operation(summary = "프로젝트 정보 조회",
+	description = "프로젝트의 상세 정보를 조회합니다")
+	@GetMapping("/{projectId}")
+	public ResponseEntity<ProjectResponse> getProject(@PathVariable Long projectId) {
+		Project project = workspaceManagerService.getProjectDetails(projectId);
+		return ResponseEntity.ok(ProjectResponse.from(project));
+	}
 
 
 	@Operation(summary = "프로젝트 정보 수정",

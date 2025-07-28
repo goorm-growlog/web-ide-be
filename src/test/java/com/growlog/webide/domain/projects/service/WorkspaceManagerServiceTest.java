@@ -141,7 +141,6 @@ class WorkspaceManagerServiceTest {
 			fail("IOException should not be thrown in mock close()");
 		}
 
-
 		// projectRepository의 save가 정확히 1번 호출되었는지 검증
 		verify(projectRepository, times(1)).save(any(Project.class));
 
@@ -155,16 +154,16 @@ class WorkspaceManagerServiceTest {
 	}
 
 	/*
-	* 1. DB에서 Project 정보를 올바르게 조회하는가?
-	* 2. 중복된 활성 세션이 있는지 확인하는가?
-	* 3. 필요한 경우 Docker 이미지를 pull 하는 로직을 호출하는가?
-	* 4. 올바른 볼륨과 이미지 이름으로 Docker 컨테이너 생성을 요청하는가?
-	* 5. 생성된 컨테이너를 시작하는가?
-	* 6. ActiveInstance 정보를 올바르게 생성하여 DB에 저장을 요청하는가?
-	* 7. Project의 상태를 ACTIVE로 변경하는가?
-	* 8. 최종적으로 올바른 OpenProjectResponse를 반환하는가?
-	* 9. 자동 포트 할당
-	* */
+	 * 1. DB에서 Project 정보를 올바르게 조회하는가?
+	 * 2. 중복된 활성 세션이 있는지 확인하는가?
+	 * 3. 필요한 경우 Docker 이미지를 pull 하는 로직을 호출하는가?
+	 * 4. 올바른 볼륨과 이미지 이름으로 Docker 컨테이너 생성을 요청하는가?
+	 * 5. 생성된 컨테이너를 시작하는가?
+	 * 6. ActiveInstance 정보를 올바르게 생성하여 DB에 저장을 요청하는가?
+	 * 7. Project의 상태를 ACTIVE로 변경하는가?
+	 * 8. 최종적으로 올바른 OpenProjectResponse를 반환하는가?
+	 * 9. 자동 포트 할당
+	 * */
 	@Test
 	@DisplayName("프로젝트 열기 단위 테스트 - 성공 ")
 	void openProject_Unit_Test_Success() throws NoSuchFieldException {
@@ -225,7 +224,7 @@ class WorkspaceManagerServiceTest {
 		when(mockBinding.getHostPortSpec()).thenReturn(String.valueOf(assignedPortByDocker));
 
 		ExposedPort internalPort = new ExposedPort(8080, InternetProtocol.TCP);
-		when(mockPorts.getBindings()).thenReturn(Map.of(internalPort, new Ports.Binding[]{mockBinding}));
+		when(mockPorts.getBindings()).thenReturn(Map.of(internalPort, new Ports.Binding[] {mockBinding}));
 		when(mockNetworkSettings.getPorts()).thenReturn(mockPorts);
 		when(mockInspectResponse.getNetworkSettings()).thenReturn(mockNetworkSettings);
 
@@ -487,4 +486,32 @@ class WorkspaceManagerServiceTest {
 			fail("IIException should not be thrown in mock close");
 		}
 	}
+
+	@Test
+	@DisplayName("프로젝트 상세 정보 조회 성공")
+	void getProjectDetails_Success() throws NoSuchFieldException {
+
+		// given
+		long projectId = 1L;
+		Users fakeUser = new Users();
+		fakeUser.setName("test");
+		Image fakeImage = Image.builder().imageName("java").build();
+		Project fakeProject = Project.builder()
+			.projectName("test-project")
+			.owner(fakeUser)
+			.image(fakeImage)
+			.build();
+
+		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
+
+		// when
+		Project resultProject = workspaceManagerService.getProjectDetails(projectId);
+
+		// then
+		assertThat(resultProject).isEqualTo(fakeProject);
+		assertThat(resultProject.getProjectName()).isEqualTo("test-project");
+		assertThat(resultProject.getOwner().getName()).isEqualTo("test");
+		verify(projectRepository, times(1)).findById(projectId);
+	}
+
 }

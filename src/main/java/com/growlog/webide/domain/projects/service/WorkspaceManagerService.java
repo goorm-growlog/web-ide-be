@@ -36,6 +36,7 @@ import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.images.repository.ImageRepository;
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
 import com.growlog.webide.domain.projects.dto.OpenProjectResponse;
+import com.growlog.webide.domain.projects.dto.ProjectResponse;
 import com.growlog.webide.domain.projects.dto.UpdateProjectRequest;
 import com.growlog.webide.domain.projects.entity.ActiveInstance;
 import com.growlog.webide.domain.projects.entity.Project;
@@ -397,6 +398,15 @@ public class WorkspaceManagerService {
 		// checkPermission(currentUser, project.getOwner());
 
 		project.updateDetails(request.getProjectName(), request.getDescription());
+		return project;
+	}
+
+	public Project getProjectDetails(Long projectId) {
+		log.info("Getting project details for project with ID: {}", projectId);
+
+		Project project = projectRepository.findById(projectId)
+			.orElseThrow(() -> new EntityNotFoundException("Project not found: " + projectId));
+
 		return project;
 	}
 
