@@ -5,8 +5,10 @@ package com.growlog.webide.domain.projects.service;
  * */
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.access.AccessDeniedException;
@@ -28,6 +30,7 @@ import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.images.repository.ImageRepository;
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
 import com.growlog.webide.domain.projects.dto.OpenProjectResponse;
+import com.growlog.webide.domain.projects.dto.ProjectResponse;
 import com.growlog.webide.domain.projects.dto.UpdateProjectRequest;
 import com.growlog.webide.domain.projects.entity.ActiveInstance;
 import com.growlog.webide.domain.projects.entity.MemberRole;
@@ -60,7 +63,8 @@ public class WorkspaceManagerService {
 
 	public WorkspaceManagerService(DockerClientFactory dockerClientFactory, ProjectRepository projectRepository,
 		ActiveInstanceRepository activeInstanceRepository, ImageRepository imageRepository,
-		@Lazy SessionScheduler sessionScheduler, UserRepository userRepository, ProjectMemberRepository projectMemberRepository) {
+		@Lazy SessionScheduler sessionScheduler, UserRepository userRepository,
+		ProjectMemberRepository projectMemberRepository) {
 		this.dockerClientFactory = dockerClientFactory;
 		this.projectRepository = projectRepository;
 		this.activeInstanceRepository = activeInstanceRepository;
@@ -124,12 +128,11 @@ public class WorkspaceManagerService {
 			.user(owner)
 			.role(MemberRole.OWNER)
 			.build();
-		projectMemberRepository.save(member);
 		createdProject.addProjectMember(member);
+		projectMemberRepository.save(member);
 
 		return createdProject;
 	}
-
 
 	/*
 	2. 프로젝트 열기 (Open Project)
@@ -204,8 +207,8 @@ public class WorkspaceManagerService {
 			}
 
 			log.warn("""
-			Attempt {}: Could not find port bindings yet for container '{}'.
-			Retrying in {}ms...""", i + 1, containerId, delayMillis);
+				Attempt {}: Could not find port bindings yet for container '{}'.
+				Retrying in {}ms...""", i + 1, containerId, delayMillis);
 			try {
 				Thread.sleep(delayMillis); // 잠시 대기
 			} catch (InterruptedException e) {
@@ -220,7 +223,7 @@ public class WorkspaceManagerService {
 			// 최대 재시도 횟수(5번)를 모두 소진했는데도 포트를 찾지 못한 경우
 			removeContainerIfExists(dockerClient, containerId);
 			throw new RuntimeException("""
-		Could not find port bindings for container: " + containerId + " after " + maxRetries + " retries.""");
+				Could not find port bindings for container: " + containerId + " after " + maxRetries + " retries.""");
 		}
 
 		// 3-4. 실행된 컨테이너 검사해 실제로 할당된 포트 확인
@@ -295,7 +298,6 @@ public class WorkspaceManagerService {
 		}
 	}
 
-
 	/*
 	 * 3-1. 프로젝트 닫기 (Close Project): 세션 닫기 요청 처리
 	 */
@@ -332,7 +334,6 @@ public class WorkspaceManagerService {
 
 		// 2. 물리적인 Docker 컨테이너를 중지하고 제거
 		removeContainerIfExists(dockerClient, containerId);
-
 
 		// 3. DB에서 ActiveInstance 레코드 삭제
 		activeInstanceRepository.delete(instance);
@@ -433,6 +434,27 @@ public class WorkspaceManagerService {
 		}
 
 		return project;
+	}
+
+	public List<ProjectResponse> findProjectByUser(Long userId, String filterType) {
+		Users user = userRepository.findById(userId)
+			.orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
+
+		List<ProjectMembers> members;
+
+		if ("own".equalsIgnoreCase(filterType)) {
+			members = projectMemberRepository.findByUserAndRole(user, MemberRole.OWNER);
+		} else if ("joined".equalsIgnoreCase(filterType)) {
+			members = projectMemberRepository.findByUser(user).stream()
+				.filter(member -> member.getRole() != MemberRole.OWNER)
+				.collect(Collectors.toList());
+		} else {
+			members = projectMemberRepository.findByUser(user);
+		}
+
+		return members.stream()
+			.map(member -> ProjectResponse.from(member.getProject()))
+			.collect(Collectors.toList());
 	}
 
 }

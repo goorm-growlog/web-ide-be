@@ -18,8 +18,10 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -54,6 +56,7 @@ import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.images.repository.ImageRepository;
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
 import com.growlog.webide.domain.projects.dto.OpenProjectResponse;
+import com.growlog.webide.domain.projects.dto.ProjectResponse;
 import com.growlog.webide.domain.projects.entity.ActiveInstance;
 import com.growlog.webide.domain.projects.entity.MemberRole;
 import com.growlog.webide.domain.projects.entity.Project;
@@ -118,7 +121,7 @@ class WorkspaceManagerServiceTest {
 
 		// ProjectRepository.save가 어떤 projectMembers 객체든 받아서 호출되면, ID가 할당된 Project 객체를 반환하도록 설정
 		when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> {
-				Project projectToSave = invocation.getArgument(0);
+			Project projectToSave = invocation.getArgument(0);
 			return projectToSave;
 		});
 
@@ -589,4 +592,113 @@ class WorkspaceManagerServiceTest {
 		verify(projectRepository, times(1)).findById(projectId);
 	}
 
+	@Test
+	@DisplayName("프로젝트 목록 단위 테스트 - all")
+	void getProjectList_all() throws NoSuchFieldException {
+		// given
+		Users fakeUser = new Users();
+		fakeUser.setName("test");
+		fakeUser.setUserId(1L);
+
+		Users fakeUser2 = new Users();
+		fakeUser2.setName("test2");
+		fakeUser2.setUserId(2L);
+
+		Project ownedProject = Project.builder().projectName("ownedProject").owner(fakeUser).build();
+		setEntityId(ownedProject, 1L);
+		Project joinedProject = Project.builder().projectName("joinedProject").owner(fakeUser2).build();
+		setEntityId(joinedProject, 2L);
+		ProjectMembers owner = ProjectMembers.builder().user(fakeUser).role(MemberRole.OWNER).build();
+		ProjectMembers member = ProjectMembers.builder().user(fakeUser).role(MemberRole.READ).build();
+		ownedProject.addProjectMember(owner);
+		joinedProject.addProjectMember(member);
+
+		when(userRepository.findById(fakeUser.getUserId())).thenReturn(Optional.of(fakeUser));
+		when(projectMemberRepository.findByUser(fakeUser))
+			.thenReturn(List.of(owner, member));
+		// when
+		List<ProjectResponse> result = workspaceManagerService.findProjectByUser(fakeUser.getUserId(), null);
+
+		// then
+		assertThat(result).hasSize(2);
+		List<Long> resultProjectIds = result.stream().map(ProjectResponse::getProjectId).collect(Collectors.toList());
+		assertThat(resultProjectIds).containsExactlyInAnyOrder(ownedProject.getId(), joinedProject.getId());
+
+		verify(projectMemberRepository, never()).findByUserAndRole(any(Users.class), any(MemberRole.class));
+		verify(projectMemberRepository, times(1)).findByUser(fakeUser);
+	}
+
+	@Test
+	@DisplayName("내 프로젝트 목록 단위 테스트 - own")
+	void getProjectList_own() throws NoSuchFieldException {
+		// given
+		Users fakeUser = new Users();
+		fakeUser.setName("test");
+		fakeUser.setUserId(1L);
+
+		Users fakeUser2 = new Users();
+		fakeUser2.setName("test2");
+		fakeUser2.setUserId(2L);
+
+		Project ownedProject = Project.builder().projectName("ownedProject").owner(fakeUser).build();
+		setEntityId(ownedProject, 1L);
+		Project joinedProject = Project.builder().projectName("joinedProject").owner(fakeUser2).build();
+		setEntityId(joinedProject, 2L);
+
+		ProjectMembers owner = ProjectMembers.builder().user(fakeUser).role(MemberRole.OWNER).build();
+		ProjectMembers member = ProjectMembers.builder().user(fakeUser).role(MemberRole.READ).build();
+		ownedProject.addProjectMember(owner);
+		joinedProject.addProjectMember(member);
+
+		when(userRepository.findById(fakeUser.getUserId())).thenReturn(Optional.of(fakeUser));
+		when(projectMemberRepository.findByUserAndRole(fakeUser, MemberRole.OWNER))
+			.thenReturn(List.of(owner));
+		// when
+		List<ProjectResponse> result = workspaceManagerService.findProjectByUser(fakeUser.getUserId(), "own");
+
+		// then
+		assertThat(result).hasSize(1);
+		assertThat(result.get(0).getProjectId()).isEqualTo(ownedProject.getId());
+		assertThat(result.get(0).getProjectName()).isEqualTo("ownedProject");
+
+		verify(projectMemberRepository, times(1)).findByUserAndRole(fakeUser, MemberRole.OWNER);
+		verify(projectMemberRepository, never()).findByUser(any(Users.class));
+	}
+
+	@Test
+	@DisplayName("내 프로젝트 목록 단위 테스트 - joined")
+	void getProjectList_joined() throws NoSuchFieldException {
+		// given
+		Users fakeUser = new Users();
+		fakeUser.setName("test");
+		fakeUser.setUserId(1L);
+
+		Users fakeUser2 = new Users();
+		fakeUser2.setName("test2");
+		fakeUser2.setUserId(2L);
+
+		Project ownedProject = Project.builder().projectName("ownedProject").owner(fakeUser).build();
+		setEntityId(ownedProject, 1L);
+		Project joinedProject = Project.builder().projectName("joinedProject").owner(fakeUser2).build();
+		setEntityId(joinedProject, 2L);
+
+		ProjectMembers owner = ProjectMembers.builder().user(fakeUser).role(MemberRole.OWNER).build();
+		ProjectMembers member = ProjectMembers.builder().user(fakeUser).role(MemberRole.READ).build();
+		ownedProject.addProjectMember(owner);
+		joinedProject.addProjectMember(member);
+
+		when(userRepository.findById(fakeUser.getUserId())).thenReturn(Optional.of(fakeUser));
+		when(projectMemberRepository.findByUser(fakeUser))
+			.thenReturn(List.of(owner, member));
+		// when
+		List<ProjectResponse> result = workspaceManagerService.findProjectByUser(fakeUser.getUserId(), "joined");
+
+		// then
+		assertThat(result).hasSize(1);
+		assertThat(result.get(0).getProjectId()).isEqualTo(joinedProject.getId());
+		assertThat(result.get(0).getProjectName()).isEqualTo("joinedProject");
+
+		verify(projectMemberRepository, never()).findByUserAndRole(any(Users.class), any(MemberRole.class));
+		verify(projectMemberRepository, times(1)).findByUser(fakeUser);
+	}
 }

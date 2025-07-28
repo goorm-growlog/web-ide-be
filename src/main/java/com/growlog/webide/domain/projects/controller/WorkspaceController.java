@@ -1,5 +1,7 @@
 package com.growlog.webide.domain.projects.controller;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -10,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
@@ -111,5 +114,19 @@ public class WorkspaceController {
 		Long userId = userPrincipal.getUserId();
 		Project updatedProject = workspaceManagerService.updateProject(projectId, request, userId);
 		return ResponseEntity.ok(ProjectResponse.from(updatedProject));
+	}
+
+	@Operation(summary = "내 프로젝트 목록 조회",
+		description = """
+			프로젝트 목록을 조회합니다. \n
+			- **?type=own** : 자신이 만든 프로젝트만 필터링합니다. \n
+			- **?type=joined** : 참여 중인 프로젝트만 필터링합니다. """)
+	@GetMapping
+	public ResponseEntity<List<ProjectResponse>> getProjectList(
+		@AuthenticationPrincipal UserPrincipal userPrincipal,
+		@RequestParam(required = false) String type) {
+		Long userId = userPrincipal.getUserId();
+		List<ProjectResponse> projectList = workspaceManagerService.findProjectByUser(userId, type);
+		return ResponseEntity.ok(projectList);
 	}
 }

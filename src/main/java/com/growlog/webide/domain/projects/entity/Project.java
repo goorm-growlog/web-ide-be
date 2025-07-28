@@ -63,7 +63,7 @@ public class Project {
 	private ProjectStatus status;
 
 	@OneToMany(mappedBy = "project")
-	private List<ProjectMembers> members = new ArrayList<>();
+	private final List<ProjectMembers> members = new ArrayList<>();
 
 	@CreatedDate
 	@Column(name = "created_at", updatable = false)
@@ -104,7 +104,7 @@ public class Project {
 
 	//== 프로젝트 멤버 메소드 ==//
 	public void addProjectMember(ProjectMembers member) {
-			this.members.add(member);
-			member.setProject(this);
+		this.members.add(member);
+		member.setProject(this);
 	}
 }
