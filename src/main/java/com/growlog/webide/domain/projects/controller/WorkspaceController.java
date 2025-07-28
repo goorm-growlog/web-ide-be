@@ -65,9 +65,11 @@ public class WorkspaceController {
 		@ApiResponse(responseCode = "204", description = "세션 종료 및 컨테이너 삭제 성공 (No Content)"),
 		@ApiResponse(responseCode = "404", description = "존재하지 않는 컨테이너 ID")
 	})
-	@DeleteMapping("/{containerId}")
-	public ResponseEntity<Void> closeProjectSession(@PathVariable String containerId) {
-		workspaceManagerService.closeProjectSession(containerId);
+	@PostMapping("/{projectId}/close")
+	public ResponseEntity<Void> closeProjectSession(@PathVariable Long projectId) {
+		// Todo: 로그인한 사용자 정보 가져와야 함
+		Users user = userRepository.findById(1L).orElseThrow();
+		workspaceManagerService.closeProjectSession(projectId, user);
 		return ResponseEntity.noContent().build();
 	}
 

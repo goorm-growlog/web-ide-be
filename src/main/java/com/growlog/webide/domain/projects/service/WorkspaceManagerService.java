@@ -279,16 +279,18 @@ public class WorkspaceManagerService {
 
 
 	/*
-	3-1. 프로젝트 닫기 (Close Project)
-	세션 닫기 요청 처리
+	 * 3-1. 프로젝트 닫기 (Close Project): 세션 닫기 요청 처리
 	 */
-	public void closeProjectSession(String containerId) {
+	public void closeProjectSession(Long projectId, Users user) {
 
-		activeInstanceRepository.findByContainerId(containerId).ifPresent(instance -> {
-			sessionScheduler.scheduleDeletion(
-				instance.getContainerId(), instance.getUser().getUserId(), instance.getProject().getId()
-			);
-		});
+		Project project = projectRepository.findById(projectId).orElseThrow();
+		ActiveInstance instance = activeInstanceRepository.findByUserAndProject(user, project)
+			.orElseThrow(() -> new IllegalArgumentException(
+				"Active session not found for project " + projectId + "and user " + user));
+
+		String containerId = instance.getContainerId();
+
+		sessionScheduler.scheduleDeletion(containerId, user.getUserId(), projectId);
 	}
 	/*
 	3-2. 컨테이너 삭제

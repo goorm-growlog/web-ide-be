@@ -18,9 +18,9 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
 		String containerId = (String) session.getAttributes().get("containerId");
 
-		if (containerId != null) {
-			workspaceManagerService.closeProjectSession(containerId);
-		}
+		// if (containerId != null) {
+		// 	workspaceManagerService.closeProjectSession(containerId,);
+		// }
 	}
 
 }
