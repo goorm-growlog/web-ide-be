@@ -25,3 +25,19 @@ spring:
       platform: mysql
       schema-locations: classpath:schema.sql
       data-locations: classpath:data.sql
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+email:
+  from: ${MAIL_FROM} #커스텀 클래스에서 사용하는 값
+
+upload:
+  profile:
+    local-dir: uploads/profiles/

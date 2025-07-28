@@ -12,12 +12,10 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/${DB_NAME}?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=${DB_USER_NAME}
       - SPRING_DATASOURCE_PASSWORD=${DB_USER_PASSWORD}
-      - DOCKER_HOST=unix:///var/run/docker.sock
 
     working_dir: /app
     command:
       [ "tail", "-f", "/dev/null" ]
-    user: root
     depends_on:
       db:
         condition: service_healthy
