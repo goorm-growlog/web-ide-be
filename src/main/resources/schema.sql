@@ -23,8 +23,9 @@ CREATE TABLE `users` (
                          `profile_image_url` VARCHAR(255)    COMMENT '프로필 이미지',
                          `created_at`    DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성 일시',
                          `updated_at`    DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정 일시',
+                         `deleted_at`    DATETIME(6)     NULL COMMENT '삭제 일시',
                          PRIMARY KEY (`user_id`),
-                         UNIQUE KEY `uk_users_username` (`name`)
+                         UNIQUE KEY `uk_users_email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =================================================================
