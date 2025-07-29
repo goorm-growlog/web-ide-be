@@ -126,7 +126,6 @@ public class WorkspaceManagerService {
 		return ProjectResponse.from(createdProject, owner);
 	}
 
-
 	/*
 	2. 프로젝트 열기 (Open Project)
 	사용자를 위한 격리된 컨테이너 생성, ActiveInstance 기록
