@@ -59,6 +59,13 @@ dependencies {
     implementation 'com.github.docker-java:docker-java-transport-httpclient5:3.3.6'
     implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.3'
 //    implementation 'org.apache.httpcomponents.core5:httpcore5:5.2.4'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.2'
+
+    //java mail sender
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+    // AWS S3 SDK (v1 기준)
+    implementation 'com.amazonaws:aws-java-sdk-s3:1.12.590'
 }
 
 tasks.named('test') {

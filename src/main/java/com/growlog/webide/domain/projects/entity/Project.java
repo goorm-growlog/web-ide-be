@@ -1,13 +1,16 @@
 package com.growlog.webide.domain.projects.entity;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import com.growlog.webide.domain.images.entity.Image;
-import com.growlog.webide.domain.users.entity.User;
+import com.growlog.webide.domain.users.entity.ProjectMembers;
+import com.growlog.webide.domain.users.entity.Users;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -20,6 +23,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -40,7 +44,7 @@ public class Project {
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "create_user_id", nullable = false)
-	private User owner;
+	private Users owner;
 
 	@Column(nullable = false)
 	private String projectName;
@@ -58,6 +62,9 @@ public class Project {
 	@Column(nullable = false)
 	private ProjectStatus status;
 
+	@OneToMany(mappedBy = "project")
+	private final List<ProjectMembers> members = new ArrayList<>();
+
 	@CreatedDate
 	@Column(name = "created_at", updatable = false)
 	private LocalDateTime createdAt;
@@ -67,7 +74,7 @@ public class Project {
 	private LocalDateTime updatedAt;
 
 	@Builder
-	public Project(User owner, String projectName, String storageVolumeName, Image image, String description) {
+	public Project(Users owner, String projectName, String storageVolumeName, Image image, String description) {
 		this.owner = owner;
 		this.projectName = projectName;
 		this.storageVolumeName = storageVolumeName;
@@ -83,5 +90,21 @@ public class Project {
 
 	public void deactivate() {
 		this.status = ProjectStatus.INACTIVE;
+	}
+
+	//== 정보 수정 ==//
+	public void updateDetails(String projectName, String description) {
+		if (projectName != null && !projectName.isBlank()) {
+			this.projectName = projectName;
+		}
+		if (description != null) {
+			this.description = description;
+		}
+	}
+
+	//== 프로젝트 멤버 메소드 ==//
+	public void addProjectMember(ProjectMembers member) {
+		this.members.add(member);
+		member.setProject(this);
 	}
 }

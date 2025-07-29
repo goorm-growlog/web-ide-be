@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import com.growlog.webide.domain.users.entity.User;
+import com.growlog.webide.domain.users.entity.Users;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -43,7 +43,7 @@ public class ActiveInstance {
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "user_id", nullable = false)
-	private User user;
+	private Users user;
 
 	@Column(nullable = false, unique = true)
 	private String containerId;
@@ -56,7 +56,7 @@ public class ActiveInstance {
 	private LocalDateTime connectedAt;
 
 	@Builder
-	public ActiveInstance(Project project, User user, String containerId, Integer webSocketPort) {
+	public ActiveInstance(Project project, Users user, String containerId, Integer webSocketPort) {
 		this.project = project;
 		this.user = user;
 		this.containerId = containerId;
