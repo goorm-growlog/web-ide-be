@@ -18,4 +18,7 @@ public interface ActiveInstanceRepository extends JpaRepository<ActiveInstance, 
 
 	// 컨테이너 ID로 활성 세션 찾기
 	Optional<ActiveInstance> findByContainerId(String containerId);
+
+	// 프로젝트 아이디로 ActiveInstance 찾기
+	Optional<ActiveInstance> findByProject_Id(Long projectId);
 }

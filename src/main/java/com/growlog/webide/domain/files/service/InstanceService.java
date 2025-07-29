@@ -18,4 +18,9 @@ public class InstanceService {
 		return instanceRepository.findById(instanceId)
 			.orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 	}
+
+	public ActiveInstance getActiveInstanceByProjectId(Long projectId) {
+		return instanceRepository.findByProject_Id(projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.INSTANCE_NOT_FOUND));
+	}
 }

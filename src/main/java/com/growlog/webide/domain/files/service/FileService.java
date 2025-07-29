@@ -34,11 +34,30 @@ public class FileService {
 	@Value("${docker.volume.host-path:/var/lib/docker/volumes}")
 	private String volumeHostPath;
 
-	public void createFileorDirectory(Long instanceId, CreateFileRequest request) {
-		ActiveInstance inst = instanceService.getActiveInstance(instanceId);
+	public void createFileorDirectory(Long projectId, CreateFileRequest request) {
+		log.info("=== FILE CREATE DEBUG START ===");
+		log.info("instanceId: {}, request: {}", projectId, request);
+
+		ActiveInstance inst = instanceService.getActiveInstanceByProjectId(projectId);
+		log.info("ActiveInstance found: {}", inst);
+		log.info("Project: {}, StorageVolumeName: {}",
+			inst.getProject().getId(),
+			inst.getProject().getStorageVolumeName());
+
 		String base = Paths.get(volumeHostPath, inst.getProject().getStorageVolumeName(), "_data").toString();
+		log.info("Base path: {}", base);
 		String rel = request.getPath().startsWith("/") ? request.getPath().substring(1) : request.getPath();
 		File target = new File(base, rel);
+		log.info("Target path: {}, exists: {}", target.getAbsolutePath(), target.exists());
+
+		// ✅ base 디렉토리 존재 확인 및 생성
+		File baseDir = new File(base);
+		log.info("Base directory exists: {}", baseDir.exists());
+		if (!baseDir.exists()) {
+			if (!baseDir.mkdirs()) {
+				throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
+			}
+		}
 
 		log.info("[DEBUG] base='{}', rel='{}', target='{}'",
 			base, rel, target.getAbsolutePath());
@@ -75,14 +94,15 @@ public class FileService {
 			"tree:add",
 			new TreeAddEventDto(request.getPath(), request.getType())
 		);
+		log.info("[WS ▶ add] sending tree:add → instanceId={}", inst.getId());
 		messagingTemplate.convertAndSend(
-			"/topic/instances/" + instanceId + "/tree",
+			"/topic/instances/" + inst.getId() + "/tree",
 			msg
 		);
 	}
 
-	public void deleteFileorDirectory(Long instanceId, String path) {
-		ActiveInstance inst = instanceService.getActiveInstance(instanceId);
+	public void deleteFileorDirectory(Long projectId, String path) {
+		ActiveInstance inst = instanceService.getActiveInstanceByProjectId(projectId);
 		String base = Paths.get(volumeHostPath, inst.getProject().getStorageVolumeName(), "_data").toString();
 		String rel = path.startsWith("/") ? path.substring(1) : path;
 		File target = new File(base, rel);
@@ -102,14 +122,14 @@ public class FileService {
 			new TreeRemoveEventDto(path)
 		);
 		messagingTemplate.convertAndSend(
-			"/topic/instances/" + instanceId + "/tree",
+			"/topic/instances/" + inst.getId() + "/tree",
 			msg
 		);
 
 	}
 
-	public void moveFileorDirectory(Long instanceId, MoveFileRequest request) {
-		ActiveInstance inst = instanceService.getActiveInstance(instanceId);
+	public void moveFileorDirectory(Long projectId, MoveFileRequest request) {
+		ActiveInstance inst = instanceService.getActiveInstanceByProjectId(projectId);
 		String base = Paths.get(volumeHostPath, inst.getProject().getStorageVolumeName(), "_data")
 			.toString();
 		String from = request.getFromPath().startsWith("/")
@@ -143,7 +163,7 @@ public class FileService {
 			new TreeMoveEventDto(request.getFromPath(), request.getToPath())
 		);
 		messagingTemplate.convertAndSend(
-			"/topic/instances/" + instanceId + "/tree",
+			"/topic/instances/" + inst.getId() + "/tree",
 			msg
 		);
 	}
