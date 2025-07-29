@@ -1,7 +1,7 @@
 plugins {
-    id 'java'
-    id 'org.springframework.boot' version '3.2.5'
-    id 'io.spring.dependency-management' version '1.1.7'
+	id 'java'
+	id 'org.springframework.boot' version '3.2.5'
+	id 'io.spring.dependency-management' version '1.1.7'
     id 'checkstyle'
 }
 
@@ -9,9 +9,9 @@ group = 'com.growlog'
 version = '0.0.1-SNAPSHOT'
 
 java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
 }
 
 checkstyle {
@@ -22,27 +22,27 @@ checkstyle {
 }
 
 configurations {
-    compileOnly {
-        extendsFrom annotationProcessor
-    }
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
 }
 
 repositories {
-    mavenCentral()
+	mavenCentral()
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-websocket'
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.security:spring-security-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.security:spring-security-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     // mysql
     runtimeOnly 'com.mysql:mysql-connector-j'
     //.env
@@ -53,21 +53,9 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
     // swagger
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
-    // Docker-java
-    implementation 'com.github.docker-java:docker-java-core:3.3.6'
-    implementation 'com.github.docker-java:docker-java-transport-httpclient5:3.3.6'
-    implementation 'org.apache.httpcomponents.client5:httpclient5:5.2.3'
-//    implementation 'org.apache.httpcomponents.core5:httpcore5:5.2.4'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.0.2'
-
-    //java mail sender
-    implementation 'org.springframework.boot:spring-boot-starter-mail'
-
-    // AWS S3 SDK (v1 기준)
-    implementation 'com.amazonaws:aws-java-sdk-s3:1.12.590'
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+	useJUnitPlatform()
 }
