@@ -1,7 +1,8 @@
 package com.growlog.webide.config;
 
-import static org.springframework.security.config.Customizer.withDefaults;
-
+import com.growlog.webide.domain.users.repository.UserRepository;
+import com.growlog.webide.global.common.jwt.JwtAuthenticationFilter;
+import com.growlog.webide.global.common.jwt.JwtTokenProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -13,11 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import com.growlog.webide.domain.users.repository.UserRepository;
-import com.growlog.webide.global.common.jwt.JwtAuthenticationFilter;
-import com.growlog.webide.global.common.jwt.JwtTokenProvider;
-
-import lombok.RequiredArgsConstructor;
+import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @EnableWebSecurity
@@ -56,6 +53,8 @@ public class SecurityConfig {
 				.requestMatchers("/api/**").permitAll()
 				// WebSocket 엔드포인트 허용
 				.requestMatchers("/ws/**").permitAll()
+				// 웹소켓 테스트 페이지 허용
+				.requestMatchers("/websockettest.html").permitAll()
 				// 인증 관련 경로 허용
 				.requestMatchers(
 					"/auth/email/**", // 인증 요청

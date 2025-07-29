@@ -4,28 +4,12 @@ package com.growlog.webide.domain.projects.service;
  *  프로젝트 생성부터 사용자의 세션(컨테이너) 관리, 종료까지 전체적인 생명주기를 조율하고 관리
  * */
 
-import java.io.IOException;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import org.springframework.context.annotation.Lazy;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.stereotype.Service;
-
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.api.exception.NotFoundException;
-import com.github.dockerjava.api.model.Bind;
-import com.github.dockerjava.api.model.ExposedPort;
-import com.github.dockerjava.api.model.HostConfig;
-import com.github.dockerjava.api.model.InternetProtocol;
-import com.github.dockerjava.api.model.Ports;
-import com.github.dockerjava.api.model.PullResponseItem;
-import com.github.dockerjava.api.model.Volume;
+import com.github.dockerjava.api.model.*;
 import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.images.repository.ImageRepository;
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
@@ -43,10 +27,18 @@ import com.growlog.webide.domain.users.entity.ProjectMembers;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.factory.DockerClientFactory;
-
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -62,9 +54,9 @@ public class WorkspaceManagerService {
 	private final ProjectMemberRepository projectMemberRepository;
 
 	public WorkspaceManagerService(DockerClientFactory dockerClientFactory, ProjectRepository projectRepository,
-		ActiveInstanceRepository activeInstanceRepository, ImageRepository imageRepository,
-		@Lazy SessionScheduler sessionScheduler, UserRepository userRepository,
-		ProjectMemberRepository projectMemberRepository) {
+								   ActiveInstanceRepository activeInstanceRepository, ImageRepository imageRepository,
+								   @Lazy SessionScheduler sessionScheduler, UserRepository userRepository,
+								   ProjectMemberRepository projectMemberRepository) {
 		this.dockerClientFactory = dockerClientFactory;
 		this.projectRepository = projectRepository;
 		this.activeInstanceRepository = activeInstanceRepository;
@@ -258,11 +250,12 @@ public class WorkspaceManagerService {
 			log.warn("Error closing DockerClient", e);
 		}
 
-		return new OpenProjectResponse(projectId, containerId, assignedPort);
+		return new OpenProjectResponse(projectId, containerId, assignedPort, instance.getId());
 	}
 
 	/**
 	 * 지정된 Docker 이미지가 로컬에 존재하지 않으면 Docker Hub에서 pull 합니다.
+	 *
 	 * @param imageName 확인할 Docker 이미지 이름 (예: "openjdk:17-jdk-slim")
 	 */
 	private void pullImageIfNotExists(DockerClient dockerClient, String imageName) {
