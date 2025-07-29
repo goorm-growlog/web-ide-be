@@ -12,6 +12,8 @@ import com.growlog.webide.domain.chats.service.ChatService;
 import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
+import com.growlog.webide.global.common.exception.CustomException;
+import com.growlog.webide.global.common.exception.ErrorCode;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -35,10 +37,10 @@ public class ChatController {
 		final Long userId = Long.parseLong(accessor.getSessionAttributes().get("AUTHENTICATED").toString());
 
 		final Users user = userRepository.findById(userId)
-			.orElseThrow(() -> new EntityNotFoundException("유저를 찾을 수 없습니다."));
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
 		projectMemberRepository.findByProject_IdAndUser_UserId(projectId, userId)
-			.orElseThrow(() -> new IllegalArgumentException("이 프로젝트에 참여할 권한이 없습니다."));
+			.orElseThrow(() -> new CustomException(ErrorCode.ACCESS_DENIED));
 
 		final String username = user.getName();
 

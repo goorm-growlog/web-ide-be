@@ -1,5 +1,8 @@
 package com.growlog.webide.domain.chats.config;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -37,6 +40,13 @@ public class StompHandler implements ChannelInterceptor {
 		if (StompCommand.CONNECT.equals(accessor.getCommand())) {
 			handleValidToken(accessor);
 		}
+
+		if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
+			if (isDuplicateSubscription(accessor)) {
+				log.warn("중복 구독 시도, 요청을 차단합니다.");
+				return null;
+			}
+		}
 		return message;
 	}
 
@@ -57,5 +67,18 @@ public class StompHandler implements ChannelInterceptor {
 			return bearerToken.substring(7);
 		}
 		return Strings.EMPTY;
+	}
+
+	private boolean isDuplicateSubscription(StompHeaderAccessor accessor) {
+		final Set<String> subscriptions = (Set<String>)accessor.getSessionAttributes()
+			.getOrDefault("SUBSCRIPTIONS", new HashSet<>());
+		final String destination = accessor.getDestination();
+		if (subscriptions.contains(destination)) {
+			return true;
+		} else {
+			subscriptions.add(destination);
+			accessor.getSessionAttributes().put("SUBSCRIPTIONS", subscriptions);
+			return false;
+		}
 	}
 }

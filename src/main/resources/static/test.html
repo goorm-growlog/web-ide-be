@@ -107,7 +107,7 @@
         // 4. 특정 토픽을 구독합니다.
         stompClient.subscribe(topicUrl, function (message) {
             const body = JSON.parse(message.body);
-            log(`MESSAGE RECEIVED: [${body.sender}] ${body.content}`);
+            log(`MESSAGE RECEIVED: [${body.username}] ${body.content}`);
         });
 
         log(`Sending enter message to: ${enterUrl}`);
