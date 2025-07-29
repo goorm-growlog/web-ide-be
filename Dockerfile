@@ -1,7 +1,6 @@
 # 1. 빌드용 Gradle 환경 제공
 # Gradle이 설치된 JDK 21 환경 기반으로 빌드용 이미지 설정
 FROM gradle:8.5.0-jdk21 AS builder
-RUN apt-get update && apt-get install -y docker.io
 
 # 2. 애플리케이션 코드 복사
 # 작업 디렉토리 설정(/app) 및 소스코드 복사(현재 디렉토리의 모든 파일(.)을 컨테이너의 /app 디렉토리로 복사)
