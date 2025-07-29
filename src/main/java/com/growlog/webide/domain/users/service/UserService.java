@@ -3,7 +3,6 @@ package com.growlog.webide.domain.users.service;
 import java.time.LocalDateTime;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,11 +28,9 @@ public class UserService {
 	private final UserRepository userRepository;
 
 	private final ImageUploadService imageUploadService;
-
+	private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 	@Autowired
 	private EmailVerificationRepository emailVerificationRepository;
-
-	private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
 	public Users registerMember(UserRegistrationRequestDto requestDto) {
 

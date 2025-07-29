@@ -37,34 +37,26 @@ import lombok.NoArgsConstructor;
 @Table(name = "projects")
 public class Project {
 
+	@OneToMany(mappedBy = "project")
+	private final List<ProjectMembers> members = new ArrayList<>();
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "project_id")
 	private long id;
-
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "create_user_id", nullable = false)
 	private Users owner;
-
 	@Column(nullable = false)
 	private String projectName;
-
 	@Column(nullable = false, unique = true)
 	private String storageVolumeName;
-
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "image_id", nullable = false)
 	private Image image;
-
 	private String description;
-
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private ProjectStatus status;
-
-	@OneToMany(mappedBy = "project")
-	private final List<ProjectMembers> members = new ArrayList<>();
-
 	@CreatedDate
 	@Column(name = "created_at", updatable = false)
 	private LocalDateTime createdAt;
