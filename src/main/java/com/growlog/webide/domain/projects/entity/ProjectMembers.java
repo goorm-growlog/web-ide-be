@@ -1,6 +1,5 @@
 package com.growlog.webide.domain.projects.entity;
 
-import com.growlog.webide.domain.users.entity.MemberRole;
 import com.growlog.webide.domain.users.entity.Users;
 
 import jakarta.persistence.Column;

@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.growlog.webide.domain.permissions.dto.RoleResponseDto;
 import com.growlog.webide.domain.permissions.service.ProjectPermissionService;
-import com.growlog.webide.domain.users.entity.MemberRole;
+import com.growlog.webide.domain.projects.entity.MemberRole;
 import com.growlog.webide.global.common.ApiResponse;
 import com.growlog.webide.global.security.UserPrincipal;
 
