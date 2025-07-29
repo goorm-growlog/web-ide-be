@@ -1,12 +1,11 @@
 package com.growlog.webide.domain.projects.repository;
 
-import java.util.Optional;
-
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import com.growlog.webide.domain.projects.entity.ActiveInstance;
 import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.users.entity.Users;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
 
 public interface ActiveInstanceRepository extends JpaRepository<ActiveInstance, Long> {
 
@@ -18,4 +17,7 @@ public interface ActiveInstanceRepository extends JpaRepository<ActiveInstance, 
 
 	// 컨테이너 ID로 활성 세션 찾기
 	Optional<ActiveInstance> findByContainerId(String containerId);
+
+	// 프로젝트 아이디로 ActiveInstance 찾기
+	Optional<ActiveInstance> findByProject_Id(Long projectId);
 }
