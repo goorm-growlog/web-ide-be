@@ -1,5 +1,7 @@
 package com.growlog.webide.domain.projects.controller;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -10,16 +12,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
 import com.growlog.webide.domain.projects.dto.OpenProjectResponse;
 import com.growlog.webide.domain.projects.dto.ProjectResponse;
 import com.growlog.webide.domain.projects.dto.UpdateProjectRequest;
-import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.service.WorkspaceManagerService;
-import com.growlog.webide.domain.users.entity.Users;
-import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.global.security.UserPrincipal;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,8 +42,7 @@ public class WorkspaceController {
 		@RequestBody CreateProjectRequest request,
 		@AuthenticationPrincipal UserPrincipal userPrincipal
 	) {
-		ProjectResponse response = ProjectResponse.from(
-			workspaceManagerService.createProject(request, userPrincipal.getUserId()));
+		ProjectResponse response = workspaceManagerService.createProject(request, userPrincipal.getUserId());
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
 
@@ -96,10 +95,10 @@ public class WorkspaceController {
 		@PathVariable Long projectId,
 		@AuthenticationPrincipal UserPrincipal userPrincipal) {
 		Long userId = userPrincipal.getUserId();
-		Project project = workspaceManagerService.getProjectDetails(projectId, userId);
-		return ResponseEntity.ok(ProjectResponse.from(project));
-	}
+		ProjectResponse response = workspaceManagerService.getProjectDetails(projectId, userId);
 
+		return ResponseEntity.ok(response);
+	}
 
 	@Operation(summary = "프로젝트 정보 수정",
 		description = "프로젝트의 이름과 설명을 수정합니다.")
@@ -109,7 +108,22 @@ public class WorkspaceController {
 		@RequestBody UpdateProjectRequest request,
 		@AuthenticationPrincipal UserPrincipal userPrincipal) {
 		Long userId = userPrincipal.getUserId();
-		Project updatedProject = workspaceManagerService.updateProject(projectId, request, userId);
-		return ResponseEntity.ok(ProjectResponse.from(updatedProject));
+		ProjectResponse response = workspaceManagerService.updateProject(projectId, request, userId);
+
+		return ResponseEntity.ok(response);
+	}
+
+	@Operation(summary = "내 프로젝트 목록 조회",
+		description = """
+			프로젝트 목록을 조회합니다. \n
+			- **?type=own** : 자신이 만든 프로젝트만 필터링합니다. \n
+			- **?type=joined** : 참여 중인 프로젝트만 필터링합니다. """)
+	@GetMapping
+	public ResponseEntity<List<ProjectResponse>> getProjectList(
+		@AuthenticationPrincipal UserPrincipal userPrincipal,
+		@RequestParam(required = false) String type) {
+		Long userId = userPrincipal.getUserId();
+		List<ProjectResponse> projectList = workspaceManagerService.findProjectByUser(userId, type);
+		return ResponseEntity.ok(projectList);
 	}
 }

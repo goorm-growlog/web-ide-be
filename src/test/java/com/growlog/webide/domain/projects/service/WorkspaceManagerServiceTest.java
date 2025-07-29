@@ -7,9 +7,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,25 +17,26 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.util.ReflectionUtils;
 
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.command.CreateContainerCmd;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.CreateVolumeCmd;
-import com.github.dockerjava.api.command.CreateVolumeResponse;
-import com.github.dockerjava.api.command.InspectConfigCmd;
 import com.github.dockerjava.api.command.InspectContainerCmd;
 import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.api.command.ListVolumesCmd;
@@ -51,11 +52,15 @@ import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.images.repository.ImageRepository;
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
 import com.growlog.webide.domain.projects.dto.OpenProjectResponse;
+import com.growlog.webide.domain.projects.dto.ProjectResponse;
 import com.growlog.webide.domain.projects.entity.ActiveInstance;
+import com.growlog.webide.domain.projects.entity.MemberRole;
 import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.entity.ProjectStatus;
 import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
+import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
+import com.growlog.webide.domain.users.entity.ProjectMembers;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.factory.DockerClientFactory;
@@ -79,6 +84,8 @@ class WorkspaceManagerServiceTest {
 	private SessionScheduler sessionScheduler;
 	@Mock
 	private UserRepository userRepository;
+	@Mock
+	private ProjectMemberRepository projectMemberRepository;
 
 	// @BeforeEach
 	// void setUp() {
@@ -108,8 +115,12 @@ class WorkspaceManagerServiceTest {
 		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(imageRepository.findById(imageId)).thenReturn(Optional.of(fakeImage));
 
-		// ProjectRepository.save가 어떤 Project 객체든 받아서 호출되면, 저장하려던 그 객체를 그대로 반환하도록 설정
-		when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> invocation.getArgument(0));
+		// ProjectRepository.save가 어떤 projectMembers 객체든 받아서 호출되면, ID가 할당된 Project 객체를 반환하도록 설정
+		when(projectRepository.save(any(Project.class))).thenAnswer(invocation -> {
+			Project projectToSave = invocation.getArgument(0);
+			setEntityId(projectToSave, 101L);
+			return projectToSave;
+		});
 
 		// DockerClient.createVolumeCmd...가 호출되면, 단순히 비어있는 응답을 반환하도록 설정
 		// (실제 Docker 명령이 실행되지 않도록 함)
@@ -125,19 +136,32 @@ class WorkspaceManagerServiceTest {
 		when(mockDockerClient.listVolumesCmd()).thenReturn(mockListVolumesCmd);
 
 		// when (실행): 테스트하려는 메소드를 호출합니다.
-		Project createdProject = workspaceManagerService.createProject(request, userId);
+		ProjectResponse response = workspaceManagerService.createProject(request, userId);
 
 		// then (검증): 메소드 호출 후의 결과와 Mock 객체와의 상호작용을 검증합니다.
 
-		// 1. 반환된 객체의 속성이 올바른지 검증
-		assertThat(createdProject).isNotNull();
-		assertThat(createdProject.getProjectName()).isEqualTo(request.getProjectName());
-		assertThat(createdProject.getOwner()).isEqualTo(fakeUser);
-		assertThat(createdProject.getImage()).isEqualTo(fakeImage);
-		assertThat(createdProject.getStorageVolumeName()).startsWith("project-vol-");
+		// 반환된 DTO의 속성이 올바른지 검증
+		assertThat(response).isNotNull();
+		assertThat(response.getProjectId()).isEqualTo(101L);
+		assertThat(response.getProjectName()).isEqualTo(request.getProjectName());
+		assertThat(response.getOwnerName()).isEqualTo(fakeUser.getName());
+		assertThat(response.getMyRole()).isEqualTo(MemberRole.OWNER.name());
 
-		// 2. Mock 객체의 메소드가 예상대로 호출되었는지 검증 (가장 중요)
+		ArgumentCaptor<Project> projectCaptor = ArgumentCaptor.forClass(Project.class);
+		ArgumentCaptor<ProjectMembers> memberCaptor = ArgumentCaptor.forClass(ProjectMembers.class);
 
+		// ★★★ InOrder 검증을 사용하여 순서가 올바른지 확인
+		InOrder inOrder = inOrder(projectRepository, projectMemberRepository);
+		inOrder.verify(projectRepository, times(1)).save(projectCaptor.capture());
+		inOrder.verify(projectMemberRepository, times(1)).save(memberCaptor.capture());
+
+		Project capturedProject = projectCaptor.getValue();
+		ProjectMembers capturedMember = memberCaptor.getValue();
+
+		assertThat(capturedMember.getUser()).isEqualTo(fakeUser);
+		assertThat(capturedMember.getRole()).isEqualTo(MemberRole.OWNER);
+
+		// Mock 객체의 메소드가 예상대로 호출되었는지 검증
 		verify(imageRepository, times(1)).findById(imageId);
 		verify(dockerClientFactory, times(1)).buildDockerClient();
 		verify(mockDockerClient, times(1)).createVolumeCmd();
@@ -146,9 +170,6 @@ class WorkspaceManagerServiceTest {
 		} catch (IOException e) {
 			fail("IOException should not be thrown in mock close()");
 		}
-
-		// projectRepository의 save가 정확히 1번 호출되었는지 검증
-		verify(projectRepository, times(1)).save(any(Project.class));
 	}
 
 	/*
@@ -169,9 +190,6 @@ class WorkspaceManagerServiceTest {
 		long projectId = 1L;
 		long userId = 1L;
 		String fakeProjectName = "fakeProject";
-		Users testUser = new Users();
-		testUser.setName("test");
-		testUser.setUserId(userId);
 		String expectedImageName = "openjdk:17-jdk-slim";
 		String expectedVolumeName = "project-vol-test";
 		String fakeContainerId = "fake-container-id-12345";
@@ -183,13 +201,16 @@ class WorkspaceManagerServiceTest {
 
 		Image fakeImage = Image.builder().dockerBaseImage("openjdk:17-jdk-slim").build();
 		Project fakeProject = Project.builder()
-			.owner(testUser)
+			.owner(fakeUser)
 			.projectName(fakeProjectName)
 			.image(fakeImage)
 			.storageVolumeName(expectedVolumeName)
 			.build();
 		setEntityId(fakeProject, projectId);
 		fakeProject.activate();
+
+		ProjectMembers member = ProjectMembers.builder().user(fakeUser).role(MemberRole.OWNER).build();
+		fakeProject.addProjectMember(member);
 
 		// 1. repository mock 설정
 		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
@@ -198,6 +219,8 @@ class WorkspaceManagerServiceTest {
 			.thenReturn(Optional.empty()); // 기존 세션 없음
 		when(activeInstanceRepository.save(any(ActiveInstance.class)))
 			.thenAnswer(inv -> inv.getArgument(0));
+		when(projectMemberRepository.findByUserAndProject(any(Users.class), any(Project.class)))
+			.thenReturn(Optional.of(member));
 
 		// 2. DockerClient Mock 설정
 		when(dockerClientFactory.buildDockerClient()).thenReturn(mockDockerClient);
@@ -255,6 +278,7 @@ class WorkspaceManagerServiceTest {
 		verify(activeInstanceRepository, times(1)).findByUserAndProject(any(Users.class), any(Project.class));
 		verify(dockerClientFactory, times(1)).buildDockerClient();
 		verify(mockDockerClient, times(1)).startContainerCmd(fakeContainerId);
+		verify(projectMemberRepository, times(1)).findByUserAndProject(fakeUser, fakeProject);
 		try {
 			verify(mockDockerClient, times(1)).close();
 		} catch (IOException e) {
@@ -287,10 +311,15 @@ class WorkspaceManagerServiceTest {
 		Project fakeProject = Project.builder().build();
 		setEntityId(fakeProject, projectId);
 
+		ProjectMembers member = ProjectMembers.builder().user(fakeUser).role(MemberRole.OWNER).build();
+		fakeProject.addProjectMember(member);
+
 		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
 		when(activeInstanceRepository.findByUserAndProject(fakeUser, fakeProject))
 			.thenReturn(Optional.empty());
+		when(projectMemberRepository.findByUserAndProject(fakeUser, fakeProject))
+			.thenReturn(Optional.of(member));
 
 		// when
 		try {
@@ -319,15 +348,18 @@ class WorkspaceManagerServiceTest {
 			.projectName(fakeProjectName)
 			.image(fakeImage)
 			.storageVolumeName(expectedVolumeName).build();
+		ProjectMembers member = ProjectMembers.builder().user(fakeUser).role(MemberRole.OWNER).build();
+		fakeProject.addProjectMember(member);
 
 		setEntityId(fakeProject, projectId);
 		ActiveInstance fakeInstance = ActiveInstance.builder().build(); // 비어있는 가짜 객체
 
 		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(anyLong())).thenReturn(Optional.of(fakeProject));
-		// 이번에는 findByUserAndProject가 비어있지 않은 Optional을 반환하도록 설정
 		when(activeInstanceRepository.findByUserAndProject(any(Users.class), any(Project.class)))
 			.thenReturn(Optional.of(fakeInstance));
+		when(projectMemberRepository.findByUserAndProject(any(Users.class), any(Project.class)))
+			.thenReturn(Optional.of(member));
 
 		// when & then
 		// openProject 실행 시 IllegalStateException이 발생하는지 검증
@@ -339,6 +371,33 @@ class WorkspaceManagerServiceTest {
 		verify(activeInstanceRepository, never()).save(any());
 		verify(dockerClientFactory, never()).buildDockerClient();
 
+	}
+
+	@Test
+	@DisplayName("프로젝트 열기 단위테스트 - 실패(멤버 아님)")
+	void openProject_Fail_NotMember() throws NoSuchFieldException {
+		// given
+		long projectId = 1L;
+		long userId = 1L;
+
+		Users fakeUser = new Users();
+		fakeUser.setName("fakeUser");
+		fakeUser.setUserId(userId);
+
+		Project fakeProject = Project.builder().build();
+		setEntityId(fakeProject, projectId);
+
+		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
+		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
+		when(projectMemberRepository.findByUserAndProject(fakeUser, fakeProject))
+			.thenReturn(Optional.empty());
+		// when&then
+		assertThatThrownBy(() -> workspaceManagerService.openProject(projectId, userId))
+			.isInstanceOf(AccessDeniedException.class)
+			.hasMessage("User has no active session for this project.");
+
+		verify(dockerClientFactory, never()).buildDockerClient();
+		verify(activeInstanceRepository, never()).save(any(ActiveInstance.class));
 	}
 
 	// 리플렉션을 사용하여 엔티티의 ID를 강제로 설정하는 헬퍼 메소드
@@ -511,17 +570,135 @@ class WorkspaceManagerServiceTest {
 			.owner(fakeUser)
 			.image(fakeImage)
 			.build();
+		setEntityId(fakeProject, projectId);
 
+		ProjectMembers member = ProjectMembers.builder().user(fakeUser).role(MemberRole.OWNER).build();
+		fakeProject.addProjectMember(member);
+
+		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
 
 		// when
-		Project resultProject = workspaceManagerService.getProjectDetails(projectId, userId);
+		ProjectResponse response = workspaceManagerService.getProjectDetails(projectId, userId);
 
 		// then
-		assertThat(resultProject).isEqualTo(fakeProject);
-		assertThat(resultProject.getProjectName()).isEqualTo("test-project");
-		assertThat(resultProject.getOwner().getName()).isEqualTo("test");
+		assertThat(response).isNotNull();
+		assertThat(response.getProjectId()).isEqualTo(projectId);
+		assertThat(response.getProjectName()).isEqualTo("test-project");
+		assertThat(response.getOwnerName()).isEqualTo("test");
+		assertThat(response.getMyRole()).isEqualTo(MemberRole.OWNER.name());
+
+		verify(userRepository, times(1)).findById(userId);
 		verify(projectRepository, times(1)).findById(projectId);
 	}
 
+	@Test
+	@DisplayName("프로젝트 목록 단위 테스트 - all")
+	void getProjectList_all() throws NoSuchFieldException {
+		// given
+		Users fakeUser = new Users();
+		fakeUser.setName("test");
+		fakeUser.setUserId(1L);
+
+		Users fakeUser2 = new Users();
+		fakeUser2.setName("test2");
+		fakeUser2.setUserId(2L);
+
+		Project ownedProject = Project.builder().projectName("ownedProject").owner(fakeUser).build();
+		setEntityId(ownedProject, 1L);
+		Project joinedProject = Project.builder().projectName("joinedProject").owner(fakeUser2).build();
+		setEntityId(joinedProject, 2L);
+		ProjectMembers owner = ProjectMembers.builder().user(fakeUser).role(MemberRole.OWNER).build();
+		ProjectMembers member = ProjectMembers.builder().user(fakeUser).role(MemberRole.READ).build();
+		ownedProject.addProjectMember(owner);
+		joinedProject.addProjectMember(member);
+
+		when(userRepository.findById(fakeUser.getUserId())).thenReturn(Optional.of(fakeUser));
+		when(projectMemberRepository.findByUser(fakeUser))
+			.thenReturn(List.of(owner, member));
+		// when
+		List<ProjectResponse> result = workspaceManagerService.findProjectByUser(fakeUser.getUserId(), null);
+
+		// then
+		assertThat(result).hasSize(2);
+		List<Long> resultProjectIds = result.stream().map(ProjectResponse::getProjectId).collect(Collectors.toList());
+		assertThat(resultProjectIds).containsExactlyInAnyOrder(ownedProject.getId(), joinedProject.getId());
+
+		verify(projectMemberRepository, never()).findByUserAndRole(any(Users.class), any(MemberRole.class));
+		verify(projectMemberRepository, times(1)).findByUser(fakeUser);
+	}
+
+	@Test
+	@DisplayName("내 프로젝트 목록 단위 테스트 - own")
+	void getProjectList_own() throws NoSuchFieldException {
+		// given
+		Users fakeUser = new Users();
+		fakeUser.setName("test");
+		fakeUser.setUserId(1L);
+
+		Users fakeUser2 = new Users();
+		fakeUser2.setName("test2");
+		fakeUser2.setUserId(2L);
+
+		Project ownedProject = Project.builder().projectName("ownedProject").owner(fakeUser).build();
+		setEntityId(ownedProject, 1L);
+		Project joinedProject = Project.builder().projectName("joinedProject").owner(fakeUser2).build();
+		setEntityId(joinedProject, 2L);
+
+		ProjectMembers owner = ProjectMembers.builder().user(fakeUser).role(MemberRole.OWNER).build();
+		ProjectMembers member = ProjectMembers.builder().user(fakeUser).role(MemberRole.READ).build();
+		ownedProject.addProjectMember(owner);
+		joinedProject.addProjectMember(member);
+
+		when(userRepository.findById(fakeUser.getUserId())).thenReturn(Optional.of(fakeUser));
+		when(projectMemberRepository.findByUserAndRole(fakeUser, MemberRole.OWNER))
+			.thenReturn(List.of(owner));
+		// when
+		List<ProjectResponse> result = workspaceManagerService.findProjectByUser(fakeUser.getUserId(), "own");
+
+		// then
+		assertThat(result).hasSize(1);
+		assertThat(result.get(0).getProjectId()).isEqualTo(ownedProject.getId());
+		assertThat(result.get(0).getProjectName()).isEqualTo("ownedProject");
+
+		verify(projectMemberRepository, times(1)).findByUserAndRole(fakeUser, MemberRole.OWNER);
+		verify(projectMemberRepository, never()).findByUser(any(Users.class));
+	}
+
+	@Test
+	@DisplayName("내 프로젝트 목록 단위 테스트 - joined")
+	void getProjectList_joined() throws NoSuchFieldException {
+		// given
+		Users fakeUser = new Users();
+		fakeUser.setName("test");
+		fakeUser.setUserId(1L);
+
+		Users fakeUser2 = new Users();
+		fakeUser2.setName("test2");
+		fakeUser2.setUserId(2L);
+
+		Project ownedProject = Project.builder().projectName("ownedProject").owner(fakeUser).build();
+		setEntityId(ownedProject, 1L);
+		Project joinedProject = Project.builder().projectName("joinedProject").owner(fakeUser2).build();
+		setEntityId(joinedProject, 2L);
+
+		ProjectMembers owner = ProjectMembers.builder().user(fakeUser).role(MemberRole.OWNER).build();
+		ProjectMembers member = ProjectMembers.builder().user(fakeUser).role(MemberRole.READ).build();
+		ownedProject.addProjectMember(owner);
+		joinedProject.addProjectMember(member);
+
+		when(userRepository.findById(fakeUser.getUserId())).thenReturn(Optional.of(fakeUser));
+		when(projectMemberRepository.findByUser(fakeUser))
+			.thenReturn(List.of(owner, member));
+		// when
+		List<ProjectResponse> result = workspaceManagerService.findProjectByUser(fakeUser.getUserId(), "joined");
+
+		// then
+		assertThat(result).hasSize(1);
+		assertThat(result.get(0).getProjectId()).isEqualTo(joinedProject.getId());
+		assertThat(result.get(0).getProjectName()).isEqualTo("joinedProject");
+
+		verify(projectMemberRepository, never()).findByUserAndRole(any(Users.class), any(MemberRole.class));
+		verify(projectMemberRepository, times(1)).findByUser(fakeUser);
+	}
 }

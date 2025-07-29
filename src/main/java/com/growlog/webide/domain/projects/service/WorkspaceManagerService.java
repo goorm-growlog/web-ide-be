@@ -5,8 +5,10 @@ package com.growlog.webide.domain.projects.service;
  * */
 
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.access.AccessDeniedException;
@@ -28,12 +30,16 @@ import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.images.repository.ImageRepository;
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
 import com.growlog.webide.domain.projects.dto.OpenProjectResponse;
+import com.growlog.webide.domain.projects.dto.ProjectResponse;
 import com.growlog.webide.domain.projects.dto.UpdateProjectRequest;
 import com.growlog.webide.domain.projects.entity.ActiveInstance;
+import com.growlog.webide.domain.projects.entity.MemberRole;
 import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.entity.ProjectStatus;
 import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
+import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
+import com.growlog.webide.domain.users.entity.ProjectMembers;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.factory.DockerClientFactory;
@@ -53,23 +59,27 @@ public class WorkspaceManagerService {
 	private final ImageRepository imageRepository;
 	private final SessionScheduler sessionScheduler;
 	private final UserRepository userRepository;
+	private final ProjectMemberRepository projectMemberRepository;
 
 	public WorkspaceManagerService(DockerClientFactory dockerClientFactory, ProjectRepository projectRepository,
 		ActiveInstanceRepository activeInstanceRepository, ImageRepository imageRepository,
-		@Lazy SessionScheduler sessionScheduler, UserRepository userRepository) {
+		@Lazy SessionScheduler sessionScheduler, UserRepository userRepository,
+		ProjectMemberRepository projectMemberRepository) {
 		this.dockerClientFactory = dockerClientFactory;
 		this.projectRepository = projectRepository;
 		this.activeInstanceRepository = activeInstanceRepository;
 		this.imageRepository = imageRepository;
 		this.sessionScheduler = sessionScheduler;
 		this.userRepository = userRepository;
+		this.projectMemberRepository = projectMemberRepository;
 	}
 
 	/*
 	1. 프로젝트 생성 (Create Project)
 	Docker 볼륨 생성, 프로젝트 메타데이터 DB에 저장
 	 */
-	public Project createProject(CreateProjectRequest request, Long userId) {
+	@Transactional
+	public ProjectResponse createProject(CreateProjectRequest request, Long userId) {
 		log.info("Create project '{}'", request.getProjectName());
 
 		// 1. DB 조회
@@ -111,10 +121,18 @@ public class WorkspaceManagerService {
 			.storageVolumeName(volumeName)
 			.image(image)
 			.build();
+		Project createdProject = projectRepository.save(project);
 
-		return projectRepository.save(project);
+		// 4. ProjectMembers 엔티티 생성 및 DB 저장
+		ProjectMembers member = ProjectMembers.builder()
+			.user(owner)
+			.role(MemberRole.OWNER)
+			.build();
+		createdProject.addProjectMember(member);
+		projectMemberRepository.save(member);
+
+		return ProjectResponse.from(createdProject, owner);
 	}
-
 
 	/*
 	2. 프로젝트 열기 (Open Project)
@@ -123,7 +141,6 @@ public class WorkspaceManagerService {
 	새로운 격리된 Docker 컨테이너를 동적으로 실행하고, 그 세션 정보를 DB에 기록한 후, 접속 정보를 사용자에게 돌려줍니다.
 	 */
 	public OpenProjectResponse openProject(Long projectId, Long userId) {
-		// TODO: 프로젝트 멤버인지 확인 로직 필요
 		log.info("User '{}' is opening project '{}'", userId, projectId);
 
 		// 1. 프로젝트 정보 및 사용할 이미지 조회
@@ -131,6 +148,9 @@ public class WorkspaceManagerService {
 			.orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
+
+		projectMemberRepository.findByUserAndProject(user, project)
+			.orElseThrow(() -> new AccessDeniedException("User has no active session for this project."));
 
 		// 해당 프로젝트의 삭제 작업이 예정되어 있으면 작업 취소
 		sessionScheduler.cancelDeletion(user.getUserId(), projectId);
@@ -187,8 +207,8 @@ public class WorkspaceManagerService {
 			}
 
 			log.warn("""
-			Attempt {}: Could not find port bindings yet for container '{}'.
-			Retrying in {}ms...""", i + 1, containerId, delayMillis);
+				Attempt {}: Could not find port bindings yet for container '{}'.
+				Retrying in {}ms...""", i + 1, containerId, delayMillis);
 			try {
 				Thread.sleep(delayMillis); // 잠시 대기
 			} catch (InterruptedException e) {
@@ -203,7 +223,7 @@ public class WorkspaceManagerService {
 			// 최대 재시도 횟수(5번)를 모두 소진했는데도 포트를 찾지 못한 경우
 			removeContainerIfExists(dockerClient, containerId);
 			throw new RuntimeException("""
-		Could not find port bindings for container: " + containerId + " after " + maxRetries + " retries.""");
+				Could not find port bindings for container: " + containerId + " after " + maxRetries + " retries.""");
 		}
 
 		// 3-4. 실행된 컨테이너 검사해 실제로 할당된 포트 확인
@@ -278,7 +298,6 @@ public class WorkspaceManagerService {
 		}
 	}
 
-
 	/*
 	 * 3-1. 프로젝트 닫기 (Close Project): 세션 닫기 요청 처리
 	 */
@@ -315,7 +334,6 @@ public class WorkspaceManagerService {
 
 		// 2. 물리적인 Docker 컨테이너를 중지하고 제거
 		removeContainerIfExists(dockerClient, containerId);
-
 
 		// 3. DB에서 ActiveInstance 레코드 삭제
 		activeInstanceRepository.delete(instance);
@@ -392,9 +410,11 @@ public class WorkspaceManagerService {
 	}
 
 	@Transactional
-	public Project updateProject(Long projectId, UpdateProjectRequest request, Long userId) {
+	public ProjectResponse updateProject(Long projectId, UpdateProjectRequest request, Long userId) {
 		log.info("Updating project with ID: {}", projectId);
 
+		Users user = userRepository.findById(userId)
+			.orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new EntityNotFoundException("Project not found: " + projectId));
 
@@ -403,19 +423,39 @@ public class WorkspaceManagerService {
 		}
 
 		project.updateDetails(request.getProjectName(), request.getDescription());
-		return project;
+		return ProjectResponse.from(project, user);
 	}
 
-	public Project getProjectDetails(Long projectId, Long userId) {
+	public ProjectResponse getProjectDetails(Long projectId, Long userId) {
 		log.info("Getting project details for project with ID: {}", projectId);
 
+		Users user = userRepository.findById(userId)
+			.orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new EntityNotFoundException("Project not found: " + projectId));
-		if (!project.getOwner().getUserId().equals(userId)) {
-			throw new AccessDeniedException("User " + userId + " is not authorized to get project " + projectId);
+
+		return ProjectResponse.from(project, user);
+	}
+
+	public List<ProjectResponse> findProjectByUser(Long userId, String filterType) {
+		Users user = userRepository.findById(userId)
+			.orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
+
+		List<ProjectMembers> members;
+
+		if ("own".equalsIgnoreCase(filterType)) {
+			members = projectMemberRepository.findByUserAndRole(user, MemberRole.OWNER);
+		} else if ("joined".equalsIgnoreCase(filterType)) {
+			members = projectMemberRepository.findByUser(user).stream()
+				.filter(member -> member.getRole() != MemberRole.OWNER)
+				.collect(Collectors.toList());
+		} else {
+			members = projectMemberRepository.findByUser(user);
 		}
 
-		return project;
+		return members.stream()
+			.map(member -> ProjectResponse.from(member.getProject(), user))
+			.collect(Collectors.toList());
 	}
 
 }
