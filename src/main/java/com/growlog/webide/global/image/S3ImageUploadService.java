@@ -16,7 +16,6 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 
 import lombok.RequiredArgsConstructor;
 
-
 @Service
 @Profile("prod")
 @RequiredArgsConstructor

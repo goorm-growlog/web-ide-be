@@ -30,7 +30,13 @@ public enum ErrorCode {
 
 	// 회원 탈퇴 관련
 	INVALID_PASSWORD("INVALID_PASSWORD", "비밀번호가 일치하지 않습니다."),
-	UNAUTHORIZED_ACCESS("UNAUTHORIZED_ACCESS", "접근 권한이 없습니다.");
+	UNAUTHORIZED_ACCESS("UNAUTHORIZED_ACCESS", "접근 권한이 없습니다."),
+
+	// 프로젝트/파일용 추가 에러
+	PROJECT_NOT_FOUND("PROJECT_NOT_FOUND", "해당 프로젝트를 찾을 수 없습니다."),
+	FILE_ALREADY_EXISTS("FILE_ALREADY_EXISTS", "해당 경로에 이미 파일 또는 폴더가 존재합니다."),
+	FILE_NOT_FOUND("FILE_NOT_FOUND", "파일 또는 폴더를 찾을 수 없습니다."),
+	FILE_OPERATION_FAILED("FILE_OPERATION_FAILED", "파일 처리 중 오류가 발생했습니다.");
 
 	private final String code;
 	private final String message;

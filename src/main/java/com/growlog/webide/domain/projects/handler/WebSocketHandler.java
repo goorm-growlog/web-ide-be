@@ -16,7 +16,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
 	@Override
 	public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
 
-		String containerId = (String) session.getAttributes().get("containerId");
+		String containerId = (String)session.getAttributes().get("containerId");
 
 		// if (containerId != null) {
 		// 	workspaceManagerService.closeProjectSession(containerId,);

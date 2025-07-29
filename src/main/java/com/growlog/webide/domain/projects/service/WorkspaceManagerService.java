@@ -257,11 +257,12 @@ public class WorkspaceManagerService {
 			log.warn("Error closing DockerClient", e);
 		}
 
-		return new OpenProjectResponse(projectId, containerId, assignedPort);
+		return new OpenProjectResponse(projectId, containerId, assignedPort, instance.getId());
 	}
 
 	/**
 	 * 지정된 Docker 이미지가 로컬에 존재하지 않으면 Docker Hub에서 pull 합니다.
+	 *
 	 * @param imageName 확인할 Docker 이미지 이름 (예: "openjdk:17-jdk-slim")
 	 */
 	private void pullImageIfNotExists(DockerClient dockerClient, String imageName) {
