@@ -17,4 +17,8 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMembers, L
 	List<ProjectMembers> findByUserAndRole(Users user, MemberRole role);
 
 	List<ProjectMembers> findByUser(Users user);
+
+	List<ProjectMembers> findByProject(Project project);
+
+	void deleteByProjectAndUser(Project project, Users user);
 }
