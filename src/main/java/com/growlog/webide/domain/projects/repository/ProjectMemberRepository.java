@@ -12,6 +12,8 @@ import com.growlog.webide.domain.users.entity.Users;
 
 public interface ProjectMemberRepository extends JpaRepository<ProjectMembers, Long> {
 
+	Optional<ProjectMembers> findByProject_IdAndUser_UserId(Long projectId, Long userId);
+
 	Optional<ProjectMembers> findByUserAndProject(Users user, Project project);
 
 	List<ProjectMembers> findByUserAndRole(Users user, MemberRole role);

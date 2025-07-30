@@ -24,6 +24,7 @@ public enum ErrorCode {
 	INVALID_AUTH_CODE("AUTH_401", "인증번호가 일치하지 않습니다."),
 	DELETED_USER("DELETED_USER", "삭제된 회원입니다."),
 	AUTH_INFO_NOT_FOUND("AUTH_INFO_NOT_FOUND", "인증 정보 조회에 실패했습니다."),
+	SHA256_NOT_CREATED("SHA256_NOT_CREATED", "SHA-256 Algorithm not available"),
 
 	// User 관련
 	USER_NOT_FOUND("USER_NOT_FOUND", "존재하지 않는 회원입니다."),
@@ -32,7 +33,19 @@ public enum ErrorCode {
 	INVALID_PASSWORD("INVALID_PASSWORD", "비밀번호가 일치하지 않습니다."),
 	UNAUTHORIZED_ACCESS("UNAUTHORIZED_ACCESS", "접근 권한이 없습니다."),
 
-	// 프로젝트/파일용 추가 에러
+	//권한 관련
+	NOT_A_MEMBER("NOT_A_MEMBER", "프로젝트의 멤버가 아닙니다."),
+	NO_READ_PERMISSION("NO_READ_PERMISSION", "읽기 권한이 없습니다."),
+	NO_WRITE_PERMISSION("NO_WRITE_PERMISSION", "쓰기 권한이 없습니다."),
+	NO_OWNER_PERMISSION("NO_OWNER_PERMISSION", "오너 권한이 없습니다."),
+
+	//도커 관련
+	DOCKER_COMMAND_FAILED("DOCKER_COMMAND_FAILED", "Docker 명령어 실행에 실패했습니다."),
+
+	//프로젝트/파일 관련
+	CONTAINER_NOT_FOUND("CONTAINER_NOT_FOUND", "컨테이너를 찾을 수 없습니다."),
+	ACTIVE_CONTAINER_NOT_FOUND("ACTIVE_CONTAINER_NOT_FOUND", "현재 활성화된 컨테이너를 찾을 수 없습니다."),
+	NOT_SUPPORT_LANGUAGE("NOT_SUPPORT_LANGUAGE", "지원하지 않는 언어입니다."),
 	PROJECT_NOT_FOUND("PROJECT_NOT_FOUND", "해당 프로젝트를 찾을 수 없습니다."),
 	FILE_ALREADY_EXISTS("FILE_ALREADY_EXISTS", "해당 경로에 이미 파일 또는 폴더가 존재합니다."),
 	FILE_NOT_FOUND("FILE_NOT_FOUND", "파일 또는 폴더를 찾을 수 없습니다."),

@@ -10,6 +10,8 @@ import com.growlog.webide.domain.users.entity.Users;
 
 public interface ActiveInstanceRepository extends JpaRepository<ActiveInstance, Long> {
 
+	Optional<ActiveInstance> findByUser_UserIdAndProject_Id(Long userId, Long projectId);
+
 	// 특정 사용자 활성 세션 찾기
 	Optional<ActiveInstance> findByUserAndProject(Users user, Project project);
 

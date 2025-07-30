@@ -9,22 +9,25 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import com.growlog.webide.domain.users.entity.Users;
 
-import lombok.Getter;
-
-@Getter
 public class UserPrincipal implements UserDetails {
 	private final Long userId;
 	private final String email;
 	private final String password;
+	private final String name;
 
 	public UserPrincipal(Users user) {
 		this.userId = user.getUserId();
 		this.email = user.getEmail();
 		this.password = user.getPassword();
+		this.name = user.getName();
 	}
 
 	public Long getUserId() {
 		return userId;
+	}
+
+	public String getName() {
+		return name;
 	}
 
 	@Override
