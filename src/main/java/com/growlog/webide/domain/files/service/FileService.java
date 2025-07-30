@@ -1,5 +1,10 @@
 package com.growlog.webide.domain.files.service;
 
+import java.io.File;
+
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+
 import com.growlog.webide.domain.files.dto.CreateFileRequest;
 import com.growlog.webide.domain.files.dto.FileOpenResponseDto;
 import com.growlog.webide.domain.files.dto.MoveFileRequest;
@@ -15,26 +20,22 @@ import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
 import com.growlog.webide.global.docker.DockerCommandService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.stereotype.Service;
-
-import java.io.File;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class FileService {
 
+	private static final String CONTAINER_BASE = "/app";
 	private final InstanceService instanceService;
 	private final SimpMessagingTemplate messagingTemplate;
 	private final ProjectRepository projectRepository;
 	private final DockerCommandService dockerCommandService;
 	private final ProjectPermissionService permissionService;
 	private final ActiveInstanceRepository activeInstanceRepository;
-
-	private static final String CONTAINER_BASE = "/app";
 
 	public void createFileorDirectory(Long projectId, CreateFileRequest request) {
 		ActiveInstance inst = instanceService.getActiveInstanceByProjectId(projectId);

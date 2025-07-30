@@ -11,14 +11,13 @@ import com.growlog.webide.global.common.exception.ErrorCode;
 @Component
 public class ProjectPathResolver { //프로젝트 언어별 기본 경로 관리 로직
 
-	@Value("${docker.workspace-path}")
-	private String baseWorkspaceDir;
-
 	private static final Map<String, String> languageMainFileMap = Map.of(
 		"java", "Main.java"/*,
 		"python", "main.py",
 		"cpp", "main.cpp"*/
 	);
+	@Value("${docker.workspace-path}")
+	private String baseWorkspaceDir;
 
 	/**
 	 * 언어별로 기본 메인 파일 경로를 반환합니다.
