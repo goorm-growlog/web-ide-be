@@ -1,10 +1,18 @@
 package com.growlog.webide.domain.projects.service;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.assertj.core.api.Fail.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Fail.fail;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -207,7 +215,7 @@ class WorkspaceManagerServiceTest {
 		// 1. repository mock 설정
 		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(anyLong())).thenReturn(Optional.of(fakeProject));
-		when(activeInstanceRepository.findByUserAndProject(any(Users.class), any(Project.class)))
+		when(activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId))
 			.thenReturn(Optional.empty()); // 기존 세션 없음
 		when(activeInstanceRepository.save(any(ActiveInstance.class)))
 			.thenAnswer(inv -> inv.getArgument(0));
@@ -267,7 +275,7 @@ class WorkspaceManagerServiceTest {
 		// 2. Mock 객체 호출 검증
 		verify(userRepository, times(1)).findById(userId);
 		verify(projectRepository, times(1)).findById(projectId);
-		verify(activeInstanceRepository, times(1)).findByUserAndProject(any(Users.class), any(Project.class));
+		verify(activeInstanceRepository, times(1)).findByUser_UserIdAndProject_Id(userId, projectId);
 		verify(dockerClientFactory, times(1)).buildDockerClient();
 		verify(mockDockerClient, times(1)).startContainerCmd(fakeContainerId);
 		verify(projectMemberRepository, times(1)).findByUserAndProject(fakeUser, fakeProject);
@@ -308,7 +316,7 @@ class WorkspaceManagerServiceTest {
 
 		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
-		when(activeInstanceRepository.findByUserAndProject(fakeUser, fakeProject))
+		when(activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId))
 			.thenReturn(Optional.empty());
 		when(projectMemberRepository.findByUserAndProject(fakeUser, fakeProject))
 			.thenReturn(Optional.of(member));
@@ -348,7 +356,7 @@ class WorkspaceManagerServiceTest {
 
 		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(anyLong())).thenReturn(Optional.of(fakeProject));
-		when(activeInstanceRepository.findByUserAndProject(any(Users.class), any(Project.class)))
+		when(activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId))
 			.thenReturn(Optional.of(fakeInstance));
 		when(projectMemberRepository.findByUserAndProject(any(Users.class), any(Project.class)))
 			.thenReturn(Optional.of(member));
@@ -422,7 +430,7 @@ class WorkspaceManagerServiceTest {
 		// 서비스 로직이 ActiveInstance를 찾을 수 있도록 Mocking
 		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
-		when(activeInstanceRepository.findByUserAndProject(fakeUser, fakeProject)).thenReturn(
+		when(activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)).thenReturn(
 			Optional.of(fakeInstance));
 		// when
 		workspaceManagerService.closeProjectSession(projectId, userId);

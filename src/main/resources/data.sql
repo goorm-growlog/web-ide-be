@@ -21,54 +21,28 @@ VALUES ('test_user', 'test@test.com', '$2a$12$wYwlA/Kof2KH2sJrbNaLXe4qpaux.LidOE
         NOW(), NOW()),
        ('test_user2', 'test2@test.com', '$2a$12$wYwlA/Kof2KH2sJrbNaLXe4qpaux.LidOEHZnLrM8boW7IyZSiHra',
         'https://kr.freepik.com/free-photo/beautiful-view-sunset-sea_3624503.htm#from_element=photos_discover&from_view=subhome',
-        NOW(), NOW()),
-       ('사용자1', 'test1@example.com', '$2a$10$pngHXjZ3FV/fB1P6GTBTgOysuGXyXs4/E8G2dUo5JuLFmMmnZt9kq',
-        'https://example.com/default-profile.png',
-        NOW(), NOW()), --비밀번호 :test
-       ('사용자2', 'test2@example.com', '$2a$10$pngHXjZ3FV/fB1P6GTBTgOysuGXyXs4/E8G2dUo5JuLFmMmnZt9kq',
-        'https://example.com/default-profile.png',
         NOW(), NOW());
---비밀번호 :test
 
 -- Images
 INSERT INTO images (image_id, image_name, version, docker_base_image, build_command, run_command, template_code,
                     created_at, updated_at)
-VALUES (1, 'Java', '17', 'openjdk:17-jdk-slim', 'javac Main.java', 'java Main',
+VALUES (1, 'java', '17', 'openjdk:17-jdk-slim', 'javac -cp src -d bin {filePath}', 'java -cp bin {className}',
         'public class Main { public static void main(String[] args) { System.out.println("Hello!"); } }',
         NOW(), NOW());
 
 -- Projects
 INSERT INTO projects (create_user_id, image_id, project_name, description, storage_volume_name, status, created_at,
                       updated_at)
-VALUES ((SELECT user_id FROM users WHERE email = 'test1@example.com'), 1, '프로젝트 A', '설명 A', 'container-a', 'ACTIVE',
-        NOW(), NOW()),
-       ((SELECT user_id FROM users WHERE email = 'test1@example.com'), 1, '프로젝트 B', '설명 B', 'container-b', 'INACTIVE',
-        NOW(), NOW()),
-       ((SELECT user_id FROM users WHERE email = 'test@test.com'), 1, 'test_project', 'test_project_description',
+VALUES ((SELECT user_id FROM users WHERE email = 'test@test.com'), 1, 'test_project', 'test_project_description',
         'project-vol-001', 'ACTIVE', NOW(), NOW()),
        ((SELECT user_id FROM users WHERE email = 'test2@test.com'), 1, 'test_project2', 'test_project2_description',
         'project-vol-002', 'ACTIVE', NOW(), NOW());
 
-
--- ProjectMembers
+-- 초기 프로젝트 멤버 데이터 삽입
 INSERT INTO project_members (project_id, user_id, role)
-VALUES ((SELECT project_id FROM projects WHERE project_name = '프로젝트 A'),
-        (SELECT user_id FROM users WHERE email = 'test1@example.com'), 'OWNER'),
-
-       ((SELECT project_id FROM projects WHERE project_name = '프로젝트 B'),
-        (SELECT user_id FROM users WHERE email = 'test2@example.com'), 'OWNER'),
-
-       ((SELECT project_id FROM projects WHERE project_name = '프로젝트 B'),
-        (SELECT user_id FROM users WHERE email = 'test1@example.com'), 'READ'),
-
-       ((SELECT project_id FROM projects WHERE project_name = 'test_project'),
+VALUES ((SELECT project_id FROM projects WHERE project_name = 'test_project'),
         (SELECT user_id FROM users WHERE email = 'test@test.com'), 'OWNER'),
 
        ((SELECT project_id FROM projects WHERE project_name = 'test_project2'),
         (SELECT user_id FROM users WHERE email = 'test2@test.com'), 'READ');
 
-INSERT INTO active_instances (project_id, user_id, container_id, web_socket_port, connected_at)
-VALUES ((SELECT project_id FROM projects WHERE project_name = '프로젝트 A'),
-        (SELECT user_id FROM users WHERE email = 'test1@example.com'),
-        'container-a', 10000, NOW());
-/*도커 명령어는 컨테이너 이름과 id 두 값을 모두 인식할 수 있어서 container_id에 컨테이너 이름을 넣어도 무사히 값을 찾아감*/
