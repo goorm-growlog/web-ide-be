@@ -84,4 +84,4 @@ jobs:
 
       # 3. Gradle 빌드 및 테스트 실행
       - name: 🧪 Gradle Build & Test
-        run: ./gradlew build       # compile, test 등 전체 빌드 수행
+        run: ./gradlew clean build       # compile, test 등 전체 빌드 수행
