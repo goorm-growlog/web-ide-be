@@ -1,9 +1,11 @@
 package com.growlog.webide.config;
 
-import static org.springframework.security.config.Customizer.*;
-
+import com.growlog.webide.domain.users.repository.UserRepository;
+import com.growlog.webide.global.common.jwt.JwtAuthenticationFilter;
+import com.growlog.webide.global.common.jwt.JwtTokenProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -13,12 +15,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import com.growlog.webide.domain.users.repository.UserRepository;
-import com.growlog.webide.global.common.jwt.JwtAuthenticationFilter;
-import com.growlog.webide.global.common.jwt.JwtTokenProvider;
+import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
 	private static final String[] SWAGGER_WHITELIST = {
