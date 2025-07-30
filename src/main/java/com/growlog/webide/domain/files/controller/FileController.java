@@ -113,17 +113,18 @@ public class FileController {
 			description = "저장할 파일 경로와 파일 내용",
 			required = true,
 			content = @io.swagger.v3.oas.annotations.media.Content(
-				schema = @Schema(example = """
-					{
-						"path": "src/Main.java",
-						"content":
-						"public class Main {
-							public static void main(String[] args) {
-								System.out.println(\\"Updated!\\");
-							}
-						}"
-					}
-					"""))) @RequestBody FileSaveRequestDto requestDto, @AuthenticationPrincipal UserPrincipal user) {
+				schema = @Schema(example = "{\n"
+					+ "  \"path\": \"src/Main.java\",\n"
+					+ "  \"content\": \"public class Main {\\n"
+					+ "    public static void main(String[] args) {\\n"
+					+ "      System.out.println(\\\"Updated!\\\");\\n"
+					+ "    }\\n"
+					+ "  }\"\n"
+					+ "}")
+			)
+		)
+		@RequestBody FileSaveRequestDto requestDto,
+		@AuthenticationPrincipal UserPrincipal user) {
 		try {
 			fileService.saveFile(projectId, requestDto.getPath(), requestDto.getContent(), user.getUserId());
 			return ResponseEntity.ok(ApiResponse.ok(Map.of("message", "저장되었습니다.")));
