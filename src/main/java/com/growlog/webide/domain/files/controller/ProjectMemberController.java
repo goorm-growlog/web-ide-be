@@ -18,9 +18,12 @@ import com.growlog.webide.domain.files.dto.UpdateMemberRoleRequestDto;
 import com.growlog.webide.domain.files.service.ProjectMemberService;
 import com.growlog.webide.global.common.ApiResponse;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+@Tag(name = "project-members", description = "프로젝트 멤버 관련 API 입니다.")
 @RestController
 @RequestMapping("/projects")
 @RequiredArgsConstructor
@@ -28,6 +31,7 @@ public class ProjectMemberController {
 
 	private final ProjectMemberService memberService;
 
+	@Operation(summary = "프로젝트 멤버 초대", description = "이메일로 프로젝트 멤버 초대(OWNER 전용)")
 	@PostMapping("/{projectId}/invite")
 	@PreAuthorize("@projectSecurityService.hasOwnerPermission(#projectId)")
 	public ApiResponse<List<String>> invite(
@@ -37,6 +41,7 @@ public class ProjectMemberController {
 		return memberService.inviteMembers(projectId, dto);
 	}
 
+	@Operation(summary = "프로젝트 멤버 조회", description = "프로젝트 내의 모든 유저 전체 조회")
 	@GetMapping("/{projectId}/members")
 	public ApiResponse<List<MemberDto>> listMembers(
 		@PathVariable Long projectId
@@ -44,6 +49,7 @@ public class ProjectMemberController {
 		return memberService.listMembers(projectId);
 	}
 
+	@Operation(summary = "프로젝트 멤버 권한 수정", description = "프로젝트 참여 멤버의 권한 수정(OWNER 전용)")
 	@PatchMapping("/{projectId}/members/{userId}")
 	@PreAuthorize("@projectSecurityService.hasOwnerPermission(#projectId)")
 	public ApiResponse<String> updateRole(
@@ -54,6 +60,7 @@ public class ProjectMemberController {
 		return memberService.updateMemberRole(projectId, userId, dto);
 	}
 
+	@Operation(summary = "프로젝트 멤버 삭제", description = "프로젝트 멤버 삭제(OWNER 전용)")
 	@DeleteMapping("/{projectId}/members/{userId}")
 	@PreAuthorize("@projectSecurityService.hasOwnerPermission(#projectId)")
 	public ApiResponse<String> remove(
