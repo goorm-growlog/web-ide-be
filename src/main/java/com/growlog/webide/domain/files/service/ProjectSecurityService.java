@@ -1,5 +1,9 @@
 package com.growlog.webide.domain.files.service;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+
 import com.growlog.webide.domain.projects.entity.MemberRole;
 import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.entity.ProjectMembers;
@@ -8,10 +12,8 @@ import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.global.security.UserPrincipal;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
@@ -30,7 +32,6 @@ public class ProjectSecurityService {
 		return userRole == MemberRole.OWNER;
 	}
 
-
 	private MemberRole getCurrentMemberRole(Long projectId) {
 		Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 		if (auth == null || !auth.isAuthenticated()) {
@@ -42,7 +43,7 @@ public class ProjectSecurityService {
 		if (!(prin instanceof UserPrincipal)) {
 			return null;
 		}
-		UserPrincipal userPrincipal = (UserPrincipal) prin;
+		UserPrincipal userPrincipal = (UserPrincipal)prin;
 
 		// 토큰에서 꺼낸 userId 사용
 		Long userId = userPrincipal.getUserId();
