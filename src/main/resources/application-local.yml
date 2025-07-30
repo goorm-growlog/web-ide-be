@@ -8,9 +8,10 @@ spring:
 
   jpa:
     database: mysql
+    database-platform: org.hibernate.dialect.MySQLDialect
     open-in-view: true
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     show-sql: true
     properties:
       hibernate:
@@ -21,6 +22,13 @@ spring:
   sql:
     init:
       mode: always  # ★ 항상 data.sql 실행
+
+  sql:
+    init:
+      mode: always
+      platform: mysql
+      schema-locations: classpath:schema.sql
+      data-locations: classpath:data.sql
 
   mail:
     host: smtp.gmail.com

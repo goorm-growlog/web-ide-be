@@ -33,6 +33,7 @@ public enum ErrorCode {
 	INVALID_PASSWORD("INVALID_PASSWORD", "비밀번호가 일치하지 않습니다."),
 	UNAUTHORIZED_ACCESS("UNAUTHORIZED_ACCESS", "접근 권한이 없습니다."),
 
+
 	//권한 관련
 	NOT_A_MEMBER("NOT_A_MEMBER", "프로젝트의 멤버가 아닙니다."),
 	NO_READ_PERMISSION("NO_READ_PERMISSION", "읽기 권한이 없습니다."),
@@ -42,12 +43,15 @@ public enum ErrorCode {
 	//도커 관련
 	DOCKER_COMMAND_FAILED("DOCKER_COMMAND_FAILED", "Docker 명령어 실행에 실패했습니다."),
 
-	//프로젝트 관련
-	PROJECT_NOT_FOUND("PROJECT_NOT_FOUND", "프로젝트를 찾을 수 없습니다."),
+	//프로젝트/파일 관련
 	CONTAINER_NOT_FOUND("CONTAINER_NOT_FOUND", "컨테이너를 찾을 수 없습니다."),
-	FILE_NOT_FOUND("FILE_NOT_FOUND", "파일을 찾을 수 없습니다."),
 	ACTIVE_CONTAINER_NOT_FOUND("ACTIVE_CONTAINER_NOT_FOUND", "현재 활성화된 컨테이너를 찾을 수 없습니다."),
 	NOT_SUPPORT_LANGUAGE("NOT_SUPPORT_LANGUAGE", "지원하지 않는 언어입니다.");
+	PROJECT_NOT_FOUND("PROJECT_NOT_FOUND", "해당 프로젝트를 찾을 수 없습니다."),
+	FILE_ALREADY_EXISTS("FILE_ALREADY_EXISTS", "해당 경로에 이미 파일 또는 폴더가 존재합니다."),
+	FILE_NOT_FOUND("FILE_NOT_FOUND", "파일 또는 폴더를 찾을 수 없습니다."),
+	FILE_OPERATION_FAILED("FILE_OPERATION_FAILED", "파일 처리 중 오류가 발생했습니다."),
+	INSTANCE_NOT_FOUND("INSTANCE_NOT_FOUND", "인스턴스를 찾을 수 없습니다.");
 
 	private final String code;
 	private final String message;

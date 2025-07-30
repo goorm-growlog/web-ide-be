@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Tree Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+</head>
+<body>
+<h1>WebSocket Tree Test</h1>
+<pre id="log"></pre>
+
+<script>
+    const instanceId = 1; // 🔥 실제 instanceId로 바꾸기
+
+    const sock = new SockJS("http://localhost:8080/ws");
+    const stompClient = Stomp.over(sock);
+
+    stompClient.connect({}, () => {
+        log("✅ Connected to WebSocket!");
+
+        stompClient.subscribe(`/topic/instances/${instanceId}/tree`, (msg) => {
+            const data = JSON.parse(msg.body);
+            log("📩 Received: " + JSON.stringify(data, null, 2));
+        });
+
+        stompClient.send(`/app/instances/${instanceId}/tree/init`, {}, {});
+    });
+
+    function log(message) {
+        const pre = document.getElementById("log");
+        pre.textContent += message + "\n";
+    }
+</script>
+</body>
+</html>

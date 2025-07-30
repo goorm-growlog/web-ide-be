@@ -15,74 +15,58 @@ FROM users;
 
 
 -- Users
-INSERT INTO users (user_id, email, password, name, created_at, updated_at)
-VALUES (1, 'test1@example.com', '$2a$10$pngHXjZ3FV/fB1P6GTBTgOysuGXyXs4/E8G2dUo5JuLFmMmnZt9kq', '사용자1', NOW(),
-        NOW()), --비밀번호 :test
-       (2, 'test2@example.com', '$2a$10$pngHXjZ3FV/fB1P6GTBTgOysuGXyXs4/E8G2dUo5JuLFmMmnZt9kq', '사용자2', NOW(), NOW());
---비밀번호 :test
+INSERT INTO users (name, email, password, profile_image_url, created_at, updated_at)
+VALUES ('test_user', 'test@test.com', '$2a$12$wYwlA/Kof2KH2sJrbNaLXe4qpaux.LidOEHZnLrM8boW7IyZSiHra',
+        'https://kr.freepik.com/free-photo/beautiful-view-sunset-sea_3624503.htm#from_element=photos_discover&from_view=subhome',
+         NOW(), NOW()),
+       ('test_user2', 'test2@test.com', '$2a$12$wYwlA/Kof2KH2sJrbNaLXe4qpaux.LidOEHZnLrM8boW7IyZSiHra',
+        'https://kr.freepik.com/free-photo/beautiful-view-sunset-sea_3624503.htm#from_element=photos_discover&from_view=subhome',
+         NOW(), NOW()),
+       ('사용자1', 'test1@example.com', '$2a$10$pngHXjZ3FV/fB1P6GTBTgOysuGXyXs4/E8G2dUo5JuLFmMmnZt9kq',
+        'https://example.com/default-profile.png', 
+        NOW(), NOW()), --비밀번호 :test
+       ('사용자2', 'test2@example.com', '$2a$10$pngHXjZ3FV/fB1P6GTBTgOysuGXyXs4/E8G2dUo5JuLFmMmnZt9kq',
+        'https://example.com/default-profile.png',
+        NOW(), NOW()); --비밀번호 :test
 
 -- Images
 INSERT INTO images (image_id, image_name, version, docker_base_image, build_command, run_command, template_code,
                     created_at, updated_at)
-VALUES (1, 'Java', '17', 'openjdk:21', 'javac Main.java', 'java Main',
+VALUES (1, 'Java', '17', 'openjdk:17-jdk-slim', 'javac Main.java', 'java Main',
         'public class Main { public static void main(String[] args) { System.out.println("Hello!"); } }',
         NOW(), NOW());
 
 -- Projects
-INSERT INTO projects (project_id, create_user_id, project_name, storage_volume_name, image_id, description, status,
-                      created_at, updated_at)
-VALUES (1, 1, '프로젝트 A', 'container-a', 1, '프로젝트 설명 A', 'ACTIVE', NOW(), NOW()),
-       (2, 1, '프로젝트 B', 'container-b', 1, '프로젝트 설명 B', 'INACTIVE', NOW(), NOW());
+INSERT INTO projects (create_user_id, image_id, project_name, description, storage_volume_name, status, created_at, updated_at)
+VALUES 
+  ((SELECT user_id FROM users WHERE email = 'test1@example.com'), 1, '프로젝트 A', '설명 A', 'container-a', 'ACTIVE', NOW(), NOW()),
+  ((SELECT user_id FROM users WHERE email = 'test1@example.com'), 1, '프로젝트 B', '설명 B', 'container-b', 'INACTIVE', NOW(), NOW()),
+  ((SELECT user_id FROM users WHERE email = 'test@test.com'), 1, 'test_project', 'test_project_description', 'project-vol-001', 'ACTIVE', NOW(), NOW()),
+  ((SELECT user_id FROM users WHERE email = 'test2@test.com'), 1, 'test_project2', 'test_project2_description', 'project-vol-002', 'ACTIVE', NOW(), NOW());
+
 
 -- ProjectMembers
 INSERT INTO project_members (project_id, user_id, role)
-VALUES (1, 1, 'OWNER'),
-       (2, 2, 'OWNER'),
-       (2, 1, 'READ');
+VALUES 
+  ((SELECT project_id FROM projects WHERE project_name = '프로젝트 A'),
+   (SELECT user_id FROM users WHERE email = 'test1@example.com'), 'OWNER'),
 
-INSERT INTO active_instances (instance_id, project_id, user_id, container_id, web_socket_port, connected_at)
-VALUES
---     (1, 1, 1, 'mock-container-id-001', 10000, NOW());
-(1, 1, 1, 'container-a', 10000, NOW());
-/*도커 명령어는 컨테이너 이름과 id 두 값을 모두 인식할 수 있어서 container_id에 컨테이너 이름을 넣어도 무사히 값을 찾아감*/
+  ((SELECT project_id FROM projects WHERE project_name = '프로젝트 B'),
+   (SELECT user_id FROM users WHERE email = 'test2@example.com'), 'OWNER'),
 
+  ((SELECT project_id FROM projects WHERE project_name = '프로젝트 B'),
+   (SELECT user_id FROM users WHERE email = 'test1@example.com'), 'READ'),
 
-/*
--- 이후에 생성 api 도입 시 코드
--- 초기화
-DELETE FROM project_members;
-DELETE FROM projects;
-DELETE FROM images;
-DELETE FROM users;
+  ((SELECT project_id FROM projects WHERE project_name = 'test_project'),
+   (SELECT user_id FROM users WHERE email = 'test@test.com'), 'OWNER'),
 
--- Users (user_id 생략)
-INSERT INTO users (email, password, name, created_at, updated_at)
-VALUES
-  ('test1@example.com', '$2a$10$GfUMmUq5NLom3aAqwV2M7u2g9SlpOJH09cwU5G7T0obz4pqxqumF2', '사용자1', NOW(), NOW()),
-  ('test2@example.com', '$2a$10$GfUMmUq5NLom3aAqwV2M7u2g9SlpOJH09cwU5G7T0obz4pqxqumF2', '사용자2', NOW(), NOW());
+  ((SELECT project_id FROM projects WHERE project_name = 'test_project2'),
+   (SELECT user_id FROM users WHERE email = 'test2@test.com'), 'READ');
 
--- Images (id 생략)
-INSERT INTO images (
-  image_name, version, docker_base_image, build_command, run_command, template_code, created_at, updated_at
-)
+INSERT INTO active_instances (project_id, user_id, container_id, web_socket_port, connected_at)
 VALUES (
-  'Java', '17', 'openjdk:21', 'javac Main.java', 'java Main',
-  'public class Main { public static void main(String[] args) { System.out.println("Hello!"); } }',
-  NOW(), NOW()
+  (SELECT project_id FROM projects WHERE project_name = '프로젝트 A'),
+  (SELECT user_id FROM users WHERE email = 'test1@example.com'),
+  'container-a', 10000, NOW()
 );
-
--- Projects (id 생략 + 외래키는 SELECT로)
-INSERT INTO projects (
-  create_user_id, project_name, storage_volume_name, image_id, description, status, created_at, updated_at
-)
-VALUES
-  (
-    (SELECT user_id FROM users WHERE email = 'test1@example.com'),
-    '프로젝트 A', 'volume-a',
-    (SELECT id FROM images WHERE image_name = 'Java'),
-    '프로젝트 설명 A', 'ACTIVE', NOW(), NOW()
-  ),
-  (
-    (SELECT user_id FROM users WHERE email = 'test1@example.com'),
-
-*/
+/*도커 명령어는 컨테이너 이름과 id 두 값을 모두 인식할 수 있어서 container_id에 컨테이너 이름을 넣어도 무사히 값을 찾아감*/

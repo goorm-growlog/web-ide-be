@@ -28,11 +28,9 @@ public class UserService {
 	private final UserRepository userRepository;
 
 	private final ImageUploadService imageUploadService;
-
+	private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 	@Autowired
 	private EmailVerificationRepository emailVerificationRepository;
-
-	private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
 	public Users registerMember(UserRegistrationRequestDto requestDto) {
 

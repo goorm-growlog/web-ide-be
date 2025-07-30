@@ -2,6 +2,9 @@ package com.growlog.webide.domain.projects.entity;
 
 import com.growlog.webide.domain.users.entity.Users;
 
+import com.growlog.webide.domain.projects.entity.MemberRole;
+import com.growlog.webide.domain.projects.entity.Project;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -17,12 +20,15 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "project_members")
 public class ProjectMembers {
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long projectMemberId;
