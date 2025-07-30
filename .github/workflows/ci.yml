@@ -55,6 +55,16 @@ jobs:
           echo "MAIL_USERNAME=test@example.com" >> .env
           echo "MAIL_PASSWORD=secret" >> .env
           echo "MAIL_FROM=test@example.com" >> .env
+          echo "LIVEBLOCKS_ROOM_SALT=dummy-salt-for-test" >> .env
+          echo "LIVEBLOCKS_SECRET_KEY=dummy-key-for-test" >> .env
+
+        # 환경 변수 export (Spring Boot가 인식 가능하게)
+      - name: 🌱 Export .env values to environment
+        run: |
+          set -a
+          source .env
+          set +a
+
 
       - name: ⏳ Wait for MySQL to be healthy
         run: |
@@ -65,6 +75,13 @@ jobs:
           done
           echo "MySQL did not start in time" && exit 1
 
+
+      # ✅ Docker 환경 초기화
+      - name: 🐳 Setup Docker Test Environment
+        run: |
+          chmod +x ./scripts/setup-docker-env.sh
+          ./scripts/setup-docker-env.sh
+
       # 3. Gradle 빌드 및 테스트 실행
       - name: 🧪 Gradle Build & Test
-        run: ./gradlew build       # compile, test 등 전체 빌드 수행
+        run: ./gradlew clean build       # compile, test 등 전체 빌드 수행

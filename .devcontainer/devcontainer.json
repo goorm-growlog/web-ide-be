@@ -6,6 +6,9 @@
   "service": "backend",
   "workspaceFolder": "/app",
   "overrideCommand": false,
+
+  //  운영 서버에는 올라가지 않도록 주의
+  // ✅ Docker CLI 도구 설치
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind,consistency=cached"
   ],
@@ -16,6 +19,7 @@
     "DOCKER_CERT_PATH": "",
     "DOCKER_TLS_VERIFY": ""
   },
+
   "features": {
     "ghcr.io/devcontainers/features/docker-from-docker:1": {
       "version": "latest"

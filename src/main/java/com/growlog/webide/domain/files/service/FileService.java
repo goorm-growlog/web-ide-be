@@ -11,14 +11,20 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import com.growlog.webide.domain.files.dto.CreateFileRequest;
+import com.growlog.webide.domain.files.dto.FileOpenResponseDto;
 import com.growlog.webide.domain.files.dto.MoveFileRequest;
 import com.growlog.webide.domain.files.dto.tree.TreeAddEventDto;
 import com.growlog.webide.domain.files.dto.tree.TreeMoveEventDto;
 import com.growlog.webide.domain.files.dto.tree.TreeRemoveEventDto;
 import com.growlog.webide.domain.files.dto.tree.WebSocketMessage;
+import com.growlog.webide.domain.permissions.service.ProjectPermissionService;
 import com.growlog.webide.domain.projects.entity.ActiveInstance;
+import com.growlog.webide.domain.projects.entity.Project;
+import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
+import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
+import com.growlog.webide.global.docker.DockerCommandService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +36,10 @@ public class FileService {
 
 	private final InstanceService instanceService;
 	private final SimpMessagingTemplate messagingTemplate;
+	private final ProjectRepository projectRepository;
+	private final DockerCommandService dockerCommandService;
+	private final ProjectPermissionService permissionService;
+	private final ActiveInstanceRepository activeInstanceRepository;
 
 	@Value("${docker.volume.host-path:/var/lib/docker/volumes}")
 	private String volumeHostPath;
@@ -182,5 +192,40 @@ public class FileService {
 			}
 		}
 		return file.delete();
+	}
+
+	public FileOpenResponseDto openFile(Long projectId, String relativePath, Long userId) {
+		Project project = projectRepository.findById(projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
+
+		// 권한 확인
+		permissionService.checkReadAccess(project, userId);
+
+		ActiveInstance instance = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+
+		String containerId = instance.getContainerId();
+
+		// 👉 로그 추가 (디버깅용)
+		log.info("📂 파일 열기 - containerId: {}, path: {}", containerId, relativePath);
+
+		String fileContent = dockerCommandService.readFileContent(containerId, relativePath);
+
+		return FileOpenResponseDto.of(projectId, relativePath, fileContent, true); // editable은 write 권한 체크 결과로 설정 가능
+	}
+
+	public void saveFile(Long projectId, String relativePath, String content, Long userId) {
+		Project project = projectRepository.findById(projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
+
+		permissionService.checkWriteAccess(project, userId);
+
+		ActiveInstance instance = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+
+		String containerId = instance.getContainerId();
+		dockerCommandService.writeFileContent(containerId, relativePath, content);
+
+		log.info("✅ 파일 저장 완료 - containerId: {}, path: {}", containerId, relativePath);
 	}
 }
