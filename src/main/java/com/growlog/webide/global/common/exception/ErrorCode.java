@@ -46,7 +46,7 @@ public enum ErrorCode {
 	//프로젝트/파일 관련
 	CONTAINER_NOT_FOUND("CONTAINER_NOT_FOUND", "컨테이너를 찾을 수 없습니다."),
 	ACTIVE_CONTAINER_NOT_FOUND("ACTIVE_CONTAINER_NOT_FOUND", "현재 활성화된 컨테이너를 찾을 수 없습니다."),
-	NOT_SUPPORT_LANGUAGE("NOT_SUPPORT_LANGUAGE", "지원하지 않는 언어입니다.");
+	NOT_SUPPORT_LANGUAGE("NOT_SUPPORT_LANGUAGE", "지원하지 않는 언어입니다."),
 	PROJECT_NOT_FOUND("PROJECT_NOT_FOUND", "해당 프로젝트를 찾을 수 없습니다."),
 	FILE_ALREADY_EXISTS("FILE_ALREADY_EXISTS", "해당 경로에 이미 파일 또는 폴더가 존재합니다."),
 	FILE_NOT_FOUND("FILE_NOT_FOUND", "파일 또는 폴더를 찾을 수 없습니다."),
