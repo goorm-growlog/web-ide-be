@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.users.entity.Users;
 
@@ -41,6 +42,7 @@ public class Chats {
 	private String content;
 
 	@CreatedDate
+	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Seoul")
 	@Column(name = "sent_at", updatable = false)
 	private LocalDateTime sentAt;
 
