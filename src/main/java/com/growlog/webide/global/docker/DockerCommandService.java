@@ -10,4 +10,5 @@ public interface DockerCommandService {
 
 	void writeFileContent(String containerId, String filePathInContainer, String content);
 
+	void execInContainer(String containerId, String shellCommand);
 }

@@ -1,15 +1,5 @@
 package com.growlog.webide.domain.files.service;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.stereotype.Service;
-
 import com.growlog.webide.domain.files.dto.CreateFileRequest;
 import com.growlog.webide.domain.files.dto.FileOpenResponseDto;
 import com.growlog.webide.domain.files.dto.MoveFileRequest;
@@ -25,9 +15,12 @@ import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
 import com.growlog.webide.global.docker.DockerCommandService;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+
+import java.io.File;
 
 @Service
 @RequiredArgsConstructor
@@ -41,61 +34,35 @@ public class FileService {
 	private final ProjectPermissionService permissionService;
 	private final ActiveInstanceRepository activeInstanceRepository;
 
-	@Value("${docker.volume.host-path:/var/lib/docker/volumes}")
-	private String volumeHostPath;
+	private static final String CONTAINER_BASE = "/app";
 
 	public void createFileorDirectory(Long projectId, CreateFileRequest request) {
-		log.info("=== FILE CREATE DEBUG START ===");
-		log.info("instanceId: {}, request: {}", projectId, request);
-
 		ActiveInstance inst = instanceService.getActiveInstanceByProjectId(projectId);
-		log.info("ActiveInstance found: {}", inst);
-		log.info("Project: {}, StorageVolumeName: {}",
-			inst.getProject().getId(),
-			inst.getProject().getStorageVolumeName());
-
-		String base = Paths.get(volumeHostPath, inst.getProject().getStorageVolumeName(), "_data").toString();
-		log.info("Base path: {}", base);
-		String rel = request.getPath().startsWith("/") ? request.getPath().substring(1) : request.getPath();
-		File target = new File(base, rel);
-		log.info("Target path: {}, exists: {}", target.getAbsolutePath(), target.exists());
-
-		// ✅ base 디렉토리 존재 확인 및 생성
-		File baseDir = new File(base);
-		log.info("Base directory exists: {}", baseDir.exists());
-		if (!baseDir.exists()) {
-			if (!baseDir.mkdirs()) {
-				throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
-			}
-		}
-
-		log.info("[DEBUG] base='{}', rel='{}', target='{}'",
-			base, rel, target.getAbsolutePath());
-
-		if (target.exists()) {
-			throw new CustomException(ErrorCode.FILE_ALREADY_EXISTS);
-		}
+		String cid = inst.getContainerId();
+		String rel = request.getPath().startsWith("/")
+			? request.getPath().substring(1)
+			: request.getPath();
+		String full = CONTAINER_BASE + "/" + rel;
 
 		try {
 			if ("file".equalsIgnoreCase(request.getType())) {
-				File parent = target.getParentFile();
-				if (!parent.exists() && !parent.mkdirs()) {
-					throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
-				}
-				if (!target.createNewFile()) {
-					throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
-				}
+				// 부모 폴더 생성
+				String parent = full.contains("/")
+					? full.substring(0, full.lastIndexOf('/'))
+					: CONTAINER_BASE;
+				dockerCommandService.execInContainer(cid, "mkdir -p \"" + parent + "\"");
+				// 빈 파일 만들기
+				dockerCommandService.execInContainer(cid, "touch \"" + full + "\"");
 
 			} else if ("folder".equalsIgnoreCase(request.getType())) {
-				if (!target.mkdirs()) {
-					throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
-				}
+				dockerCommandService.execInContainer(cid, "mkdir -p \"" + full + "\"");
 			} else {
 				throw new CustomException(ErrorCode.BAD_REQUEST);
 			}
-
-		} catch (IOException e) {
-			log.error("파일 생성 중 IO 예외 발생: {}", e.getMessage(), e);
+		} catch (CustomException ce) {
+			throw ce;
+		} catch (Exception e) {
+			log.error("컨테이너 내부 파일 생성 실패", e);
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 
@@ -113,16 +80,21 @@ public class FileService {
 
 	public void deleteFileorDirectory(Long projectId, String path) {
 		ActiveInstance inst = instanceService.getActiveInstanceByProjectId(projectId);
-		String base = Paths.get(volumeHostPath, inst.getProject().getStorageVolumeName(), "_data").toString();
+		String cid = inst.getContainerId();
+
 		String rel = path.startsWith("/") ? path.substring(1) : path;
-		File target = new File(base, rel);
 
-		if (!target.exists()) {
-			throw new CustomException(ErrorCode.FILE_NOT_FOUND);
-		}
+		String full = CONTAINER_BASE + "/" + rel;
 
-		boolean deleted = deleteRecursively(target);
-		if (!deleted) {
+		// exec rm -rf
+		try {
+			dockerCommandService.execInContainer(cid,
+				String.format("rm -rf \"%s\"", full)
+			);
+		} catch (CustomException ce) {
+			throw ce;
+		} catch (Exception e) {
+			log.error("컨테이너 내부 파일/디렉토리 삭제 실패", e);
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 
@@ -140,8 +112,8 @@ public class FileService {
 
 	public void moveFileorDirectory(Long projectId, MoveFileRequest request) {
 		ActiveInstance inst = instanceService.getActiveInstanceByProjectId(projectId);
-		String base = Paths.get(volumeHostPath, inst.getProject().getStorageVolumeName(), "_data")
-			.toString();
+		String cid = inst.getContainerId();
+
 		String from = request.getFromPath().startsWith("/")
 			? request.getFromPath().substring(1)
 			: request.getFromPath();
@@ -149,21 +121,26 @@ public class FileService {
 			? request.getToPath().substring(1)
 			: request.getToPath();
 
-		File src = new File(base, from);
+		String fullFrom = CONTAINER_BASE + "/" + from;
+		String fullTo = CONTAINER_BASE + "/" + to;
 
-		if (!src.exists()) {
-			throw new CustomException(ErrorCode.FILE_NOT_FOUND);
-		}
-
-		File dst = new File(base, to);
-		if (dst.exists()) {
-			throw new CustomException(ErrorCode.FILE_ALREADY_EXISTS);
-		}
+		String parent = fullTo.contains("/")
+			? fullTo.substring(0, fullTo.lastIndexOf('/'))
+			: CONTAINER_BASE;
 
 		try {
-			Files.createDirectories(dst.getParentFile().toPath());
-			Files.move(src.toPath(), dst.toPath(), StandardCopyOption.REPLACE_EXISTING);
-		} catch (IOException e) {
+			// (1) mkdir -p <parent>
+			dockerCommandService.execInContainer(cid,
+				String.format("mkdir -p \"%s\"", parent)
+			);
+			// (2) mv <fullFrom> <fullTo>
+			dockerCommandService.execInContainer(cid,
+				String.format("mv \"%s\" \"%s\"", fullFrom, fullTo)
+			);
+		} catch (CustomException ce) {
+			throw ce;
+		} catch (Exception e) {
+			log.error("컨테이너 내부 파일/디렉토리 이동 실패", e);
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 

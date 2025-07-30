@@ -23,4 +23,11 @@ public class MockDockerCommandService implements DockerCommandService {
 		System.out.printf("[Mock] 파일 저장됨 - containerId: %s, path: %s, content: %s%n",
 			containerId, filePathInContainer, content);
 	}
+
+	@Override
+	public void execInContainer(String containerId, String shellCommand) {
+		// 테스트 시에는 실제로 아무 동작하지 않도록 no-op 또는 로깅만 합니다.
+		System.out.printf("[Mock] execInContainer - containerId: %s, cmd: %s%n",
+			containerId, shellCommand);
+	}
 }
