@@ -21,4 +21,5 @@ VALUES (1, 1, 'test_project', 'test_project_description', 'project-vol-001', CUR
 -- 초기 프로젝트 멤버 데이터 삽입
 INSERT INTO project_members (project_id, user_id, role)
 VALUES (1, 1, 'OWNER'),
-       (2, 1, 'READ');
+       (2, 1, 'READ'),
+       (2, 2, 'WRITE');
