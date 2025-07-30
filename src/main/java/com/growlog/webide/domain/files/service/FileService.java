@@ -10,8 +10,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
-import com.growlog.webide.domain.files.dto.FileOpenResponseDto;
 import com.growlog.webide.domain.files.dto.CreateFileRequest;
+import com.growlog.webide.domain.files.dto.FileOpenResponseDto;
 import com.growlog.webide.domain.files.dto.MoveFileRequest;
 import com.growlog.webide.domain.files.dto.tree.TreeAddEventDto;
 import com.growlog.webide.domain.files.dto.tree.TreeMoveEventDto;
@@ -36,7 +36,7 @@ public class FileService {
 
 	private final InstanceService instanceService;
 	private final SimpMessagingTemplate messagingTemplate;
-  private final ProjectRepository projectRepository;
+	private final ProjectRepository projectRepository;
 	private final DockerCommandService dockerCommandService;
 	private final ProjectPermissionService permissionService;
 	private final ActiveInstanceRepository activeInstanceRepository;
@@ -193,8 +193,8 @@ public class FileService {
 		}
 		return file.delete();
 	}
-  
-  public FileOpenResponseDto openFile(Long projectId, String relativePath, Long userId) {
+
+	public FileOpenResponseDto openFile(Long projectId, String relativePath, Long userId) {
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
 
@@ -227,5 +227,5 @@ public class FileService {
 		dockerCommandService.writeFileContent(containerId, relativePath, content);
 
 		log.info("✅ 파일 저장 완료 - containerId: {}, path: {}", containerId, relativePath);
-  }
+	}
 }

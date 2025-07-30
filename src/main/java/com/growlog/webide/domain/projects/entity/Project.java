@@ -9,7 +9,6 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import com.growlog.webide.domain.images.entity.Image;
-import com.growlog.webide.domain.users.entity.ProjectMembers;
 import com.growlog.webide.domain.users.entity.Users;
 
 import jakarta.persistence.Column;
@@ -39,7 +38,7 @@ public class Project {
 
 	@OneToMany(mappedBy = "project")
 	private final List<ProjectMembers> members = new ArrayList<>();
-  
+
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "project_id")

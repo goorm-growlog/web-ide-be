@@ -19,9 +19,6 @@ spring:
         show_sql: true
       dialect: org.hibernate.dialect.MySQL8InnoDBDialect
     defer-datasource-initialization: true  # ★ SQL 실행 허용
-  sql:
-    init:
-      mode: always  # ★ 항상 data.sql 실행
 
   sql:
     init:

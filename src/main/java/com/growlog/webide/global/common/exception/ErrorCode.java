@@ -33,7 +33,6 @@ public enum ErrorCode {
 	INVALID_PASSWORD("INVALID_PASSWORD", "비밀번호가 일치하지 않습니다."),
 	UNAUTHORIZED_ACCESS("UNAUTHORIZED_ACCESS", "접근 권한이 없습니다."),
 
-
 	//권한 관련
 	NOT_A_MEMBER("NOT_A_MEMBER", "프로젝트의 멤버가 아닙니다."),
 	NO_READ_PERMISSION("NO_READ_PERMISSION", "읽기 권한이 없습니다."),
