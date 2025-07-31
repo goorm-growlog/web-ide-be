@@ -10,6 +10,7 @@ DROP TABLE IF EXISTS `project_members`;
 DROP TABLE IF EXISTS `projects`;
 DROP TABLE IF EXISTS `images`;
 DROP TABLE IF EXISTS `users`;
+DROP TABLE IF EXISTS `file_meta`;
 
 -- 제약조건을 다시 활성화합니다.
 SET
@@ -110,6 +111,31 @@ CREATE TABLE `active_instances`
     UNIQUE KEY `uk_active_instances_container_id` (`container_id`),
     CONSTRAINT `fk_active_instances_to_projects` FOREIGN KEY (`project_id`) REFERENCES `projects` (`project_id`) ON DELETE CASCADE,
     CONSTRAINT `fk_active_instances_to_users` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci;
+
+-- =================================================================
+-- 6. 'file_meta' 테이블 생성 (신규 추가)
+-- =================================================================
+CREATE TABLE `file_meta`
+(
+    `id`         BIGINT       NOT NULL AUTO_INCREMENT COMMENT '파일/폴더 메타데이터 ID (PK)',
+    `project_id` BIGINT       NOT NULL COMMENT '프로젝트 ID (FK)',
+    `name`       VARCHAR(255) NOT NULL COMMENT '파일/폴더 이름',
+    `path`       VARCHAR(512) NOT NULL COMMENT '전체 경로 (예: /src/Main.java)',
+    `type`       ENUM('file', 'folder') NOT NULL COMMENT '파일 또는 폴더',
+    `deleted`    BOOLEAN DEFAULT FALSE COMMENT '삭제 여부',
+
+    PRIMARY KEY (`id`),
+
+    -- 인덱싱: 프로젝트 내 경로 빠른 조회
+    UNIQUE KEY `uk_project_path` (`project_id`, `path`),
+
+    -- 외래키 연결
+    CONSTRAINT `fk_file_meta_to_projects`
+        FOREIGN KEY (`project_id`) REFERENCES `projects` (`project_id`)
+            ON DELETE CASCADE
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci;
