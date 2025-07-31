@@ -16,6 +16,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
+import com.growlog.webide.global.common.exception.CustomException;
+import com.growlog.webide.global.common.exception.ErrorCode;
 import com.growlog.webide.global.common.jwt.JwtTokenProvider;
 import com.growlog.webide.global.security.UserPrincipal;
 
@@ -32,6 +35,8 @@ public class StompHandler implements ChannelInterceptor {
 	public static final String BEARER = "Bearer ";
 	private final JwtTokenProvider jwtTokenProvider;
 
+	private final ProjectMemberRepository projectMemberRepository;
+
 	@Override
 	public Message<?> preSend(Message<?> message, MessageChannel channel) {
 		final StompHeaderAccessor accessor = MessageHeaderAccessor
@@ -42,12 +47,48 @@ public class StompHandler implements ChannelInterceptor {
 		}
 
 		if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
-			if (isDuplicateSubscription(accessor)) {
-				log.warn("중복 구독 시도, 요청을 차단합니다.");
+			try {
+				validateSubscription(accessor);
+
+				if (checkDuplicatedSubscribtion(accessor)) {
+					log.warn("중복 구독 시도, 요청을 차단합니다.");
+					return null;
+				}
+			} catch (CustomException e) {
+				log.warn("구독 요청 거부: code={}, message={}", e.getErrorCode().getCode(), e.getMessage());
 				return null;
 			}
 		}
 		return message;
+	}
+
+	private void validateSubscription(StompHeaderAccessor accessor) {
+		try {
+			final Long userId = Long.parseLong(accessor.getSessionAttributes().get("AUTHENTICATED").toString());
+			final String destination = accessor.getDestination();
+			final Long projectId = Long.parseLong(destination.split("/")[3]);
+
+			if (projectMemberRepository.findByProject_IdAndUser_UserId(projectId, userId).isEmpty()) {
+				log.warn("권한 없는 구독 시도, 요청을 차단합니다.");
+				throw new CustomException(ErrorCode.NOT_A_MEMBER);
+			}
+		} catch (Exception e) {
+			log.warn("잘못된 구독 요청: {}", e.getMessage());
+			throw new CustomException(ErrorCode.BAD_REQUEST);
+		}
+	}
+
+	private static boolean checkDuplicatedSubscribtion(StompHeaderAccessor accessor) {
+		final Set<String> subscriptions = (Set<String>)accessor.getSessionAttributes()
+			.getOrDefault("SUBSCRIPTIONS", new HashSet<>());
+		final String destination = accessor.getDestination();
+		if (subscriptions.contains(destination)) {
+			return true;
+		} else {
+			subscriptions.add(destination);
+			accessor.getSessionAttributes().put("SUBSCRIPTIONS", subscriptions);
+		}
+		return false;
 	}
 
 	private void handleValidToken(StompHeaderAccessor accessor) {
@@ -58,6 +99,11 @@ public class StompHandler implements ChannelInterceptor {
 			Long userId = principal.getUserId();
 			accessor.getSessionAttributes().put("AUTHENTICATED", userId);
 			accessor.setUser(auth);
+		} else {
+			log.warn("유효하지 않은 토큰입니다.");
+			CustomException authException = new CustomException(ErrorCode.INVALID_ACCESSTOKEN);
+			log.error("WebSocket 인증 실패:", authException);
+			throw authException;
 		}
 	}
 
@@ -67,18 +113,5 @@ public class StompHandler implements ChannelInterceptor {
 			return bearerToken.substring(7);
 		}
 		return Strings.EMPTY;
-	}
-
-	private boolean isDuplicateSubscription(StompHeaderAccessor accessor) {
-		final Set<String> subscriptions = (Set<String>)accessor.getSessionAttributes()
-			.getOrDefault("SUBSCRIPTIONS", new HashSet<>());
-		final String destination = accessor.getDestination();
-		if (subscriptions.contains(destination)) {
-			return true;
-		} else {
-			subscriptions.add(destination);
-			accessor.getSessionAttributes().put("SUBSCRIPTIONS", subscriptions);
-			return false;
-		}
 	}
 }
