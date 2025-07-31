@@ -3,12 +3,7 @@ package com.growlog.webide.global.common.jwt;
 import java.util.Base64;
 import java.util.Date;
 
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
-
-import com.growlog.webide.global.security.CustomUserDetailService;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import io.jsonwebtoken.Claims;
@@ -16,16 +11,12 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
 
 @Component
-@RequiredArgsConstructor
 public class JwtTokenProvider {
 
 	private String secretKey;
 	private long expiration;
-
-	private final CustomUserDetailService customUserDetailsService;
 
 	@PostConstruct
 	public void init() {
@@ -68,14 +59,5 @@ public class JwtTokenProvider {
 				.getBody()
 				.getSubject()
 		);
-	}
-
-	public Authentication getAuthentication(String token) {
-		UserDetails userPrincipal = getUserPrincipal(token);
-		return new UsernamePasswordAuthenticationToken(userPrincipal, "", userPrincipal.getAuthorities());
-	}
-
-	private UserDetails getUserPrincipal(String token) {
-		return customUserDetailsService.loadUserById(this.getUserId(token));
 	}
 }
