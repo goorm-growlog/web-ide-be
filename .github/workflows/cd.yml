@@ -49,6 +49,9 @@ jobs:
           sed -i "s|\${LIVEBLOCKS_SECRET_KEY}|${{ secrets.LIVEBLOCKS_SECRET_KEY }}|g" .env
           sed -i "s|\${DOCKER_USERNAME}|${{ secrets.DOCKER_USERNAME }}|g" .env
 
+      - name: 🔍 디버깅 .env 줄 번호 확인
+        run: cat -n .env
+
       #  Gradle 빌드 (코드 검증, 실패 시 Docker 빌드 & 배포 중단)
       - name: 🧪 Gradle Build (사전 확인용)
         run: |
