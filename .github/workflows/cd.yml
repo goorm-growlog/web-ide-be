@@ -35,22 +35,23 @@ jobs:
       - name: 📦 .env 파일 생성
         run: |
           cp .env.template .env
-          sed -i "s|${DB_USER_NAME}|${{ secrets.DB_USER_NAME }}|g" .env
-          sed -i "s|${DB_USER_PASSWORD}|${{ secrets.DB_USER_PASSWORD }}|g" .env
-          sed -i "s|${DB_ROOT_PASSWORD}|${{ secrets.DB_ROOT_PASSWORD }}|g" .env
-          sed -i "s|${RDS_ENDPOINT}|${{ secrets.RDS_ENDPOINT }}|g" .env
-          sed -i "s|${RDS_DB_USER_NAME}|${{ secrets.RDS_DB_USER_NAME }}|g" .env
-          sed -i "s|${RDS_DB_PASSWORD}|${{ secrets.RDS_DB_PASSWORD }}|g" .env
-          sed -i "s|${ACCESS_KEY}|${{ secrets.ACCESS_KEY }}|g" .env
-          sed -i "s|${SECRET_KEY}|${{ secrets.SECRET_KEY }}|g" .env
-          sed -i "s|${S3_BUCKET_NAME}|${{ secrets.S3_BUCKET_NAME }}|g" .env
-          sed -i "s|${JWT_SECRET}|${{ secrets.JWT_SECRET }}|g" .env
-          sed -i "s|${MAIL_USERNAME}|${{ secrets.MAIL_USERNAME }}|g" .env
-          sed -i "s|${MAIL_PASSWORD}|${{ secrets.MAIL_PASSWORD }}|g" .env
-          sed -i "s|${MAIL_FROM}|${{ secrets.MAIL_FROM }}|g" .env
-          sed -i "s|${LIVEBLOCKS_ROOM_SALT}|${{ secrets.LIVEBLOCKS_ROOM_SALT }}|g" .env
-          sed -i "s|${LIVEBLOCKS_SECRET_KEY}|${{ secrets.LIVEBLOCKS_SECRET_KEY }}|g" .env
-          sed -i "s|${DOCKER_USERNAME}|${{ secrets.DOCKER_USERNAME }}|g" .env
+          sed -i "s|\${DB_HOST}|${{ secrets.DB_HOST }}|g" .env
+          sed -i "s|\${DB_USER_NAME}|${{ secrets.DB_USER_NAME }}|g" .env
+          sed -i "s|\${DB_USER_PASSWORD}|${{ secrets.DB_USER_PASSWORD }}|g" .env
+          sed -i "s|\${DB_ROOT_PASSWORD}|${{ secrets.DB_ROOT_PASSWORD }}|g" .env
+          sed -i "s|\${RDS_ENDPOINT}|${{ secrets.RDS_ENDPOINT }}|g" .env
+          sed -i "s|\${RDS_DB_USER_NAME}|${{ secrets.RDS_DB_USER_NAME }}|g" .env
+          sed -i "s|\${RDS_DB_PASSWORD}|${{ secrets.RDS_DB_PASSWORD }}|g" .env
+          sed -i "s|\${ACCESS_KEY}|${{ secrets.ACCESS_KEY }}|g" .env
+          sed -i "s|\${SECRET_KEY}|${{ secrets.SECRET_KEY }}|g" .env
+          sed -i "s|\${S3_BUCKET_NAME}|${{ secrets.S3_BUCKET_NAME }}|g" .env
+          sed -i "s|\${JWT_SECRET}|${{ secrets.JWT_SECRET }}|g" .env
+          sed -i "s|\${MAIL_USERNAME}|${{ secrets.MAIL_USERNAME }}|g" .env
+          sed -i "s|\${MAIL_PASSWORD}|${{ secrets.MAIL_PASSWORD }}|g" .env
+          sed -i "s|\${MAIL_FROM}|${{ secrets.MAIL_FROM }}|g" .env
+          sed -i "s|\${LIVEBLOCKS_ROOM_SALT}|${{ secrets.LIVEBLOCKS_ROOM_SALT }}|g" .env
+          sed -i "s|\${LIVEBLOCKS_SECRET_KEY}|${{ secrets.LIVEBLOCKS_SECRET_KEY }}|g" .env
+          sed -i "s|\${DOCKER_USERNAME}|${{ secrets.DOCKER_USERNAME }}|g" .env
 
       - name: 🔍 디버깅 .env 줄 번호 확인
         run: cat -n .env
