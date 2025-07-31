@@ -52,8 +52,9 @@ public class TreeService {
 		addNodes(filePaths, "file", nodes, projectId);
 
 		nodes.forEach((path, node) -> {
-			if (path.isEmpty())
+			if (path.isEmpty()) {
 				return; // root
+			}
 
 			String parent = getParentPath(path);
 			TreeNodeDto parentNode = nodes.get(parent);
@@ -97,8 +98,9 @@ public class TreeService {
 
 	// 절대경로 → 상대경로 (예: /app/foo/bar → /foo/bar)
 	private String toRelPath(String absolutePath) {
-		if (!absolutePath.startsWith(CONTAINER_BASE))
+		if (!absolutePath.startsWith(CONTAINER_BASE)) {
 			return null;
+		}
 
 		String rel = absolutePath.substring(CONTAINER_BASE.length());
 		if (rel.isEmpty() || rel.equals("/")) {
@@ -113,8 +115,9 @@ public class TreeService {
 	// 부모 경로 추출
 	private String getParentPath(String path) {
 		int lastSlash = path.lastIndexOf('/');
-		if (lastSlash == -1)
+		if (lastSlash == -1) {
 			return null; // 최상위 노드
+		}
 		return path.substring(0, lastSlash);
 	}
 }
