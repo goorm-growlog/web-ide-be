@@ -30,7 +30,7 @@ public class DataInitializer implements CommandLineRunner {
 	public void run(String... args) throws Exception {
 		// 1. 테스트용 사용자 생성
 		Users testUser = Users.builder()
-			.email("test@test.com")
+			.email("test@gmail.com")
 			.password("password")
 			.name("MyTestUser")
 			.build();

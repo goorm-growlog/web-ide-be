@@ -28,6 +28,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 	 */
 	@Override
 	public void registerStompEndpoints(StompEndpointRegistry registry) {
+
+		// 순수 WebSocket 전용 (Postman에서 접속 가능)
+		//		registry.addEndpoint("/ws")
+		//			.setAllowedOriginPatterns("*");
+
 		// "/ws" 엔드포인트로 WebSocket handshake 허용, SockJS fallback 지원
 		registry.addEndpoint("/ws")
 			.setAllowedOriginPatterns("*") // CORS 허용 (운영시 제한 권장)

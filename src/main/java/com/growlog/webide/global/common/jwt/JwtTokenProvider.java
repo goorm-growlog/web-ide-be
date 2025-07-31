@@ -5,10 +5,10 @@ import java.util.Date;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import com.growlog.webide.global.security.CustomUserDetailService;
-import com.growlog.webide.global.security.UserPrincipal;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import io.jsonwebtoken.Claims;
@@ -60,22 +60,22 @@ public class JwtTokenProvider {
 		}
 	}
 
-	public String getUserId(String token) {
-		return Jwts.parserBuilder()
-			.setSigningKey(secretKey)
-			.build()
-			.parseClaimsJws(token)
-			.getBody()
-			.getSubject();
+	public Long getUserId(String token) {
+		return Long.parseLong(
+			Jwts.parser()
+				.setSigningKey(secretKey)
+				.parseClaimsJws(token)
+				.getBody()
+				.getSubject()
+		);
 	}
 
 	public Authentication getAuthentication(String token) {
-		UserPrincipal memberDetails = getUserPrincipal(token);
-		return new UsernamePasswordAuthenticationToken(memberDetails, "", memberDetails.getAuthorities());
+		UserDetails userPrincipal = getUserPrincipal(token);
+		return new UsernamePasswordAuthenticationToken(userPrincipal, "", userPrincipal.getAuthorities());
 	}
 
-	private UserPrincipal getUserPrincipal(String token) {
-		UserPrincipal memberDetails = customUserDetailsService.loadUserByUsername(this.getUserId(token));
-		return memberDetails;
+	private UserDetails getUserPrincipal(String token) {
+		return customUserDetailsService.loadUserById(this.getUserId(token));
 	}
 }

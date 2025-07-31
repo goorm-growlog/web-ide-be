@@ -37,3 +37,6 @@ out/
 .vscode/
 
 .env
+
+# 업로드 폴더 무시
+uploads/

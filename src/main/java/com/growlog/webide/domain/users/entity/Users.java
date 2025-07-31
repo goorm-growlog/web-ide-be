@@ -21,9 +21,9 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@Builder
 @Table(name = "users")
 public class Users {
-
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long userId;
@@ -43,6 +43,8 @@ public class Users {
 
 	private LocalDateTime updatedAt;
 
+	private LocalDateTime deletedAt;
+
 	// 저장 전에 자동 호출
 	@PrePersist
 	protected void onCreate() {
@@ -56,13 +58,4 @@ public class Users {
 	protected void onUpdate() {
 		this.updatedAt = LocalDateTime.now();
 	}
-
-	@Builder
-	public Users(String email, String password, String name, String profileImageUrl) {
-		this.email = email;
-		this.password = password;
-		this.name = name;
-		this.profileImageUrl = profileImageUrl;
-	}
-
 }

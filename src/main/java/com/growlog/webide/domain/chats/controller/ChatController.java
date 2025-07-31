@@ -40,7 +40,7 @@ public class ChatController {
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
 		projectMemberRepository.findByProject_IdAndUser_UserId(projectId, userId)
-			.orElseThrow(() -> new CustomException(ErrorCode.ACCESS_DENIED));
+			.orElseThrow(() -> new CustomException(ErrorCode.NOT_A_MEMBER));
 
 		final String username = user.getName();
 
