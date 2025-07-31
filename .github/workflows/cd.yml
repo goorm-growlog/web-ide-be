@@ -30,13 +30,6 @@ jobs:
           java-version: '21'       # 사용 중인 Java 버전
           distribution: 'temurin'  # OpenJDK 배포판 중 하나 (가장 많이 사용)
 
-      #  Gradle 빌드 (코드 검증, 실패 시 Docker 빌드 & 배포 중단)
-      - name: 🧪 Gradle Build (사전 확인용)
-        run: ./gradlew clean build       # build = compile + test까지 포함됨
-
-      # Docker Hub 로그인
-      - name: 🔐 Docker Hub 로그인
-        run: echo "${{ env.DOCKER_PASSWORD }}" | docker login -u "${{ env.DOCKER_USERNAME }}" --password-stdin
 
       # 📦 .env 파일 자동 생성 (.env.template 기반)
       - name: 📦 .env 파일 생성
@@ -55,6 +48,15 @@ jobs:
           sed -i "s|\${LIVEBLOCKS_ROOM_SALT}|${{ secrets.LIVEBLOCKS_ROOM_SALT }}|g" .env
           sed -i "s|\${LIVEBLOCKS_SECRET_KEY}|${{ secrets.LIVEBLOCKS_SECRET_KEY }}|g" .env
           sed -i "s|\${DOCKER_USERNAME}|${{ secrets.DOCKER_USERNAME }}|g" .env
+
+      #  Gradle 빌드 (코드 검증, 실패 시 Docker 빌드 & 배포 중단)
+      - name: 🧪 Gradle Build (사전 확인용)
+        run: ./gradlew clean build       # build = compile + test까지 포함됨
+
+      # Docker Hub 로그인
+      - name: 🔐 Docker Hub 로그인
+        run: echo "${{ env.DOCKER_PASSWORD }}" | docker login -u "${{ env.DOCKER_USERNAME }}" --password-stdin
+
 
       # 📂 .env 파일 EC2에 전송
       - name: 📂 EC2에 .env 전송
