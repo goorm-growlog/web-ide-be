@@ -30,4 +30,18 @@ public class MockDockerCommandService implements DockerCommandService {
 		System.out.printf("[Mock] execInContainer - containerId: %s, cmd: %s%n",
 			containerId, shellCommand);
 	}
+
+	@Override
+	public String execAndReturn(String containerId, String shellCommand) {
+		System.out.printf("[Mock] execAndReturn - containerId: %s, cmd: %s%n",
+			containerId, shellCommand);
+		// 테스트를 위한 가짜 파일 목록 반환 (예시)
+		return """
+			/app
+			/app/src
+			/app/src/Main.java
+			/app/README.md
+			""";
+	}
+
 }

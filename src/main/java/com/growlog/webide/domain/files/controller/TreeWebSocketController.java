@@ -7,6 +7,7 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.growlog.webide.domain.files.dto.tree.TreeNodeDto;
 import com.growlog.webide.domain.files.dto.tree.WebSocketMessage;
 import com.growlog.webide.domain.files.service.TreeService;
@@ -32,6 +33,13 @@ public class TreeWebSocketController {
 
 		List<TreeNodeDto> tree = treeService.buildTree(instanceId);
 		WebSocketMessage msg = new WebSocketMessage("tree:init", tree);
+
+		try {
+			String json = new ObjectMapper().writeValueAsString(msg); // 💡 여기
+			log.info("📤 보내는 메시지: {}", json);
+		} catch (Exception e) {
+			log.error("❌ 메시지 직렬화 실패", e);
+		}
 
 		messagingTemplate.convertAndSend(
 			"/topic/instances/" + instanceId + "/tree",
