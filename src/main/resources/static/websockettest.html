@@ -11,7 +11,7 @@
 <pre id="log"></pre>
 
 <script>
-    const instanceId = 1; // 🔥 실제 instanceId로 바꾸기
+    const instanceId = 2; // 🔥 실제 instanceId로 바꾸기
 
     const sock = new SockJS("http://localhost:8080/ws");
     const stompClient = Stomp.over(sock);
@@ -20,10 +20,35 @@
         log("✅ Connected to WebSocket!");
 
         stompClient.subscribe(`/topic/instances/${instanceId}/tree`, (msg) => {
-            const data = JSON.parse(msg.body);
-            log("📩 Received: " + JSON.stringify(data, null, 2));
+            log("💬 Raw message: " + msg.body);
+
+            try {
+                const data = JSON.parse(msg.body);
+                log(`📩 [${data.type}] Received:`);
+
+                switch (data.type) {
+                    case "tree:init":
+                        log("🟢 초기 트리 구조 수신!");
+                        log("내용: " + JSON.stringify(data.payload, null, 2));
+                        break;
+                    case "tree:add":
+                        log(`➕ 파일 추가됨 → ${JSON.stringify(data.payload)}`);
+                        break;
+                    case "tree:remove":
+                        log(`❌ 파일 제거됨 → ${JSON.stringify(data.payload)}`);
+                        break;
+                    case "tree:move":
+                        log(`🔀 파일 이동됨 → ${JSON.stringify(data.payload)}`);
+                        break;
+                    default:
+                        log("📦 기타 메시지 → " + JSON.stringify(data, null, 2));
+                }
+            } catch (e) {
+                log("❌ JSON 파싱 오류: " + e);
+            }
         });
 
+        // ✅ 구독 완료 후 전송
         stompClient.send(`/app/instances/${instanceId}/tree/init`, {}, {});
     });
 
