@@ -1,5 +1,6 @@
 package com.growlog.webide.domain.files.controller;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,7 @@ import com.growlog.webide.domain.files.dto.CreateFileRequest;
 import com.growlog.webide.domain.files.dto.FileOpenResponseDto;
 import com.growlog.webide.domain.files.dto.FileResponse;
 import com.growlog.webide.domain.files.dto.FileSaveRequestDto;
+import com.growlog.webide.domain.files.dto.FileSearchResponseDto;
 import com.growlog.webide.domain.files.dto.MoveFileRequest;
 import com.growlog.webide.domain.files.service.FileService;
 import com.growlog.webide.global.common.ApiResponse;
@@ -138,4 +140,15 @@ public class FileController {
 		}
 
 	}
+
+	@Operation(summary = "파일/폴더 이름 검색", description = "프로젝트 내 파일 또는 폴더의 이름을 기준으로 검색합니다.")
+	@GetMapping("/search")
+	public ApiResponse<List<FileSearchResponseDto>> searchFiles(
+		@Parameter(description = "프로젝트 ID", example = "1") @PathVariable Long projectId,
+		@Parameter(description = "검색 키워드", example = "code") @RequestParam String query
+	) {
+		List<FileSearchResponseDto> results = fileService.searchFilesByName(projectId, query);
+		return ApiResponse.ok(results);
+	}
+
 }
