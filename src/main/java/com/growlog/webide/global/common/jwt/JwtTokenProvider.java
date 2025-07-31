@@ -3,14 +3,13 @@ package com.growlog.webide.global.common.jwt;
 import java.util.Base64;
 import java.util.Date;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import io.github.cdimascio.dotenv.Dotenv;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import jakarta.annotation.PostConstruct;
 
 @Component
 public class JwtTokenProvider {
@@ -18,15 +17,11 @@ public class JwtTokenProvider {
 	private String secretKey;
 	private long expiration;
 
-	@PostConstruct
-	public void init() {
-		Dotenv dotenv = Dotenv.configure()
-			.directory("/app")
-			.filename(".env")
-			.load();
-
-		this.secretKey = Base64.getEncoder().encodeToString(dotenv.get("JWT_SECRET").getBytes());
-		this.expiration = Long.parseLong(dotenv.get("JWT_EXPIRATION")); // JWT 만료 시간 (밀리초 단위)
+	private JwtTokenProvider(
+		@Value("${jwt.secret}") final String secretKey,
+		@Value("${jwt.expiration}")  final long expiration) {
+		this.secretKey = Base64.getEncoder().encodeToString(secretKey.getBytes());
+		this.expiration = expiration;
 	}
 
 	public String createToken(Long userId) {
