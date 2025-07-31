@@ -58,7 +58,7 @@ jobs:
           set -a
           source .env
           set +a
-          ./gradlew clean build       # build = compile + test까지 포함됨
+          ./gradlew clean bootJar       # build = compile + test까지 포함됨
 
       # Docker Hub 로그인
       - name: 🔐 Docker Hub 로그인
