@@ -10,7 +10,7 @@ import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 
-@Profile("prod")
+@Profile({"prod", "s3"})
 @Configuration
 public class S3Config {
 	@Value("${cloud.aws.credentials.access-key}")
