@@ -62,8 +62,6 @@ public class SecurityConfig {
 				.requestMatchers("/api/**").permitAll()
 				// WebSocket 엔드포인트 허용
 				.requestMatchers("/ws/**").permitAll()
-				// 채팅 테스트용 토큰 발급 페이지 허용
-				.requestMatchers("get-token").permitAll()
 				// 웹소켓 테스트 페이지 허용
 				.requestMatchers("/websockettest.html").permitAll()
 				// 인증 관련 경로 허용
