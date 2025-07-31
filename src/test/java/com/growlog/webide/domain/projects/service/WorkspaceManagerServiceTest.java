@@ -53,6 +53,7 @@ import com.growlog.webide.domain.projects.entity.ProjectStatus;
 import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
 import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
+import com.growlog.webide.domain.templates.service.TemplateService;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.factory.DockerClientFactory;
@@ -78,6 +79,9 @@ class WorkspaceManagerServiceTest {
 	private UserRepository userRepository;
 	@Mock
 	private ProjectMemberRepository projectMemberRepository;
+	@Mock
+	private TemplateService templateService;
+
 
 	// @BeforeEach
 	// void setUp() {
@@ -126,6 +130,10 @@ class WorkspaceManagerServiceTest {
 		ListVolumesCmd mockListVolumesCmd = mock(ListVolumesCmd.class);
 		when(mockListVolumesCmd.exec()).thenReturn(mockListVolumesResponse);
 		when(mockDockerClient.listVolumesCmd()).thenReturn(mockListVolumesCmd);
+
+		// templateService가 호출될 때 예외 없이 그냥 지나가도록 설정
+		doNothing().when(templateService).applyTemplate(anyString(), anyString(), anyString());
+
 
 		// when (실행): 테스트하려는 메소드를 호출합니다.
 		ProjectResponse response = workspaceManagerService.createProject(request, userId);
