@@ -35,7 +35,6 @@ jobs:
       - name: 📦 .env 파일 생성
         run: |
           cp .env.template .env
-          sed -i "s|${DB_HOST}|${{ secrets.DB_HOST }}|g" .env
           sed -i "s|${DB_USER_NAME}|${{ secrets.DB_USER_NAME }}|g" .env
           sed -i "s|${DB_USER_PASSWORD}|${{ secrets.DB_USER_PASSWORD }}|g" .env
           sed -i "s|${DB_ROOT_PASSWORD}|${{ secrets.DB_ROOT_PASSWORD }}|g" .env
