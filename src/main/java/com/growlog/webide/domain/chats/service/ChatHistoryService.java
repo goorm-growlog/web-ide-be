@@ -34,4 +34,16 @@ public class ChatHistoryService {
 		return PageResponse.from(chatResponses);
 	}
 
+	@Transactional(readOnly = true)
+	public PageResponse<ChattingResponseDto> searchChatHistory(Long projectId, String keyword, Pageable pageable) {
+		Page<Chats> chats = chatRepository.findByProjectIdAndKeywordWithUser(projectId, keyword, pageable);
+
+		Page<ChattingResponseDto> chatResponses = chats.map(
+			chat -> new ChattingResponseDto(
+				ChatType.TALK, projectId, chat.getUser().getName(), chat.getContent()
+			)
+		);
+		return PageResponse.from(chatResponses);
+	}
+
 }
