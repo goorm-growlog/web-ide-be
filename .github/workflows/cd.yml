@@ -19,32 +19,73 @@ jobs:
     runs-on: ubuntu-latest  # GitHub가 제공하는 최신 우분투 환경에서 실행
 
     steps:
-      # 1. GitHub 코드 체크아웃
+      #  GitHub 코드 체크아웃
       - name: 🔄 Checkout source code
         uses: actions/checkout@v3  # 리포지토리의 코드를 워크플로우 환경에 다운로드
 
-      # 2. JDK 21 설치 (Spring 애플리케이션 빌드에 필요)
+      #  JDK 21 설치 (Spring 애플리케이션 빌드에 필요)
       - name: ☕ JDK 21 설치
         uses: actions/setup-java@v3
         with:
           java-version: '21'       # 사용 중인 Java 버전
           distribution: 'temurin'  # OpenJDK 배포판 중 하나 (가장 많이 사용)
 
-      # 3. Gradle 빌드 (코드 검증, 실패 시 Docker 빌드 & 배포 중단)
+      #  Gradle 빌드 (코드 검증, 실패 시 Docker 빌드 & 배포 중단)
       - name: 🧪 Gradle Build (사전 확인용)
         run: ./gradlew build       # build = compile + test까지 포함됨
 
-      # 4. Docker Hub 로그인
+      # Docker Hub 로그인
       - name: 🔐 Docker Hub 로그인
         run: echo "${{ env.DOCKER_PASSWORD }}" | docker login -u "${{ env.DOCKER_USERNAME }}" --password-stdin
 
-      # 5. Docker 이미지 빌드 및 Push
+      # 📦 .env 파일 자동 생성 (.env.template 기반)
+      - name: 📦 .env 파일 생성
+        run: |
+          cp .env.template .env
+          sed -i "s|\${DB_USER_NAME}|${{ secrets.DB_USER_NAME }}|g" .env
+          sed -i "s|\${DB_USER_PASSWORD}|${{ secrets.DB_USER_PASSWORD }}|g" .env
+          sed -i "s|\${DB_ROOT_PASSWORD}|${{ secrets.DB_ROOT_PASSWORD }}|g" .env
+          sed -i "s|\${ACCESS_KEY}|${{ secrets.ACCESS_KEY }}|g" .env
+          sed -i "s|\${SECRET_KEY}|${{ secrets.SECRET_KEY }}|g" .env
+          sed -i "s|\${S3_BUCKET_NAME}|${{ secrets.S3_BUCKET_NAME }}|g" .env
+          sed -i "s|\${JWT_SECRET}|${{ secrets.JWT_SECRET }}|g" .env
+          sed -i "s|\${MAIL_USERNAME}|${{ secrets.MAIL_USERNAME }}|g" .env
+          sed -i "s|\${MAIL_PASSWORD}|${{ secrets.MAIL_PASSWORD }}|g" .env
+          sed -i "s|\${MAIL_FROM}|${{ secrets.MAIL_FROM }}|g" .env
+          sed -i "s|\${LIVEBLOCKS_ROOM_SALT}|${{ secrets.LIVEBLOCKS_ROOM_SALT }}|g" .env
+          sed -i "s|\${LIVEBLOCKS_SECRET_KEY}|${{ secrets.LIVEBLOCKS_SECRET_KEY }}|g" .env
+          sed -i "s|\${DOCKER_USERNAME}|${{ secrets.DOCKER_USERNAME }}|g" .env
+
+      # 📂 .env 파일 EC2에 전송
+      - name: 📂 EC2에 .env 전송
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ env.EC2_HOST }}
+          username: ${{ env.EC2_USER }}
+          key: ${{ env.PRIVATE_KEY }}
+          source: ".env"
+          target: "/home/ubuntu/web-ide-be"
+
+      #  Docker 이미지 빌드 및 Push
       - name: 🐳 Docker 이미지 빌드 및 Push
         run: |
           docker build -t $DOCKER_USERNAME/$BACKEND_IMAGE:latest -f Dockerfile .  # 이미지 빌드
           docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest                      # Docker Hub로 푸시
 
-      # 6. EC2에 SSH로 접속해서 컨테이너 배포 (현재 주석 처리됨)
+      # 모든 템플릿 이미지 빌드 & Push
+      - name: 🧩 템플릿 이미지 빌드 및 Docker Hub Push
+        run: |
+          for dir in infra/templates/*; do
+            name=$(basename "$dir")             # ex: java-17
+            lang="${name%%-*}"                  # java
+            version="${name##*-}"               # 17
+            tag="$DOCKER_USERNAME/${lang}-template:${version}"
+            echo "👉 Building and pushing $tag"
+            docker build -t "$tag" "$dir"
+            docker push "$tag"
+          done
+
+      # EC2에 SSH로 접속해서 컨테이너 배포
       - name: 🚀 EC2 배포 (컨테이너 교체)
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -69,4 +110,8 @@ jobs:
               --env-file /home/ubuntu/web-ide-be/.env \
               -p 8080:8080 \
               $DOCKER_USERNAME/$BACKEND_IMAGE:latest
+
+            # 템플릿 이미지 미리 pull (선택 사항, 자동 pull도 되긴 함)
+            docker pull $DOCKER_USERNAME/java-template:17 || true
+            docker pull $DOCKER_USERNAME/python-template:3.11 || true
 

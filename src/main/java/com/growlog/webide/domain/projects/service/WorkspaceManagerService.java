@@ -5,11 +5,13 @@ package com.growlog.webide.domain.projects.service;
  * */
 
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import com.growlog.webide.domain.templates.service.TemplateService;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -60,11 +62,12 @@ public class WorkspaceManagerService {
 	private final SessionScheduler sessionScheduler;
 	private final UserRepository userRepository;
 	private final ProjectMemberRepository projectMemberRepository;
+	private final TemplateService templateService;
 
 	public WorkspaceManagerService(DockerClientFactory dockerClientFactory, ProjectRepository projectRepository,
 		ActiveInstanceRepository activeInstanceRepository, ImageRepository imageRepository,
 		@Lazy SessionScheduler sessionScheduler, UserRepository userRepository,
-		ProjectMemberRepository projectMemberRepository) {
+		ProjectMemberRepository projectMemberRepository, TemplateService templateService) {
 		this.dockerClientFactory = dockerClientFactory;
 		this.projectRepository = projectRepository;
 		this.activeInstanceRepository = activeInstanceRepository;
@@ -72,6 +75,7 @@ public class WorkspaceManagerService {
 		this.sessionScheduler = sessionScheduler;
 		this.userRepository = userRepository;
 		this.projectMemberRepository = projectMemberRepository;
+		this.templateService = templateService;
 	}
 
 	/*
@@ -94,6 +98,9 @@ public class WorkspaceManagerService {
 		try {
 			dockerClient.createVolumeCmd().withName(volumeName).exec();
 			log.info("Docker volume create: {}", volumeName);
+
+			log.info("템플릿 적용할 볼륨 이름: {}", volumeName);
+			templateService.applyTemplate(image.getImageName(), image.getVersion(), volumeName);
 
 			dockerClient.listVolumesCmd().exec().getVolumes().forEach(volume -> {
 				if (volume.getName().equals(volumeName)) {

@@ -33,8 +33,10 @@ VALUES ('test_user', 'test@test.com', '$2a$12$wYwlA/Kof2KH2sJrbNaLXe4qpaux.LidOE
 -- Images
 INSERT INTO images (image_id, image_name, version, docker_base_image, build_command, run_command, template_code,
                     created_at, updated_at)
-VALUES (1, 'Java', '17', 'openjdk:17-jdk-slim', 'javac Main.java', 'java Main',
-        'public class Main { public static void main(String[] args) { System.out.println("Hello!"); } }',
+VALUES (1, 'java', '17', 'openjdk:17-jdk-slim',
+        'javac -cp src {filePath}',
+        'java -cp src {className}',
+        'public class {className} {\n    public static void main(String[] args) {\n        System.out.println("Hello, Java 17 World!");\n    }\n}',
         NOW(), NOW());
 
 -- Projects
