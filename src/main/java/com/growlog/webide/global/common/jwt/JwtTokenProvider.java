@@ -20,7 +20,10 @@ public class JwtTokenProvider {
 
 	@PostConstruct
 	public void init() {
-		Dotenv dotenv = Dotenv.load();
+		Dotenv dotenv = Dotenv.configure()
+			.directory("/app")
+			.filename(".env")
+			.load();
 
 		this.secretKey = Base64.getEncoder().encodeToString(dotenv.get("JWT_SECRET").getBytes());
 		this.expiration = Long.parseLong(dotenv.get("JWT_EXPIRATION")); // JWT 만료 시간 (밀리초 단위)
