@@ -49,6 +49,10 @@ public class SecurityConfig {
 			.authorizeHttpRequests(authorize -> authorize
 				// Swagger UI 접근을 위한 경로들 허용
 				.requestMatchers(SWAGGER_WHITELIST).permitAll()
+				.requestMatchers(
+					"/", "/index.html", "/favicon.ico",
+					"/css/**", "/js/**", "/img/**", "/static/**"
+				).permitAll()
 				.requestMatchers("/swagger-ui.html").permitAll()
 				// API 경로 허용
 				.requestMatchers("/api/**").permitAll()
