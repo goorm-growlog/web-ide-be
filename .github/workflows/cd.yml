@@ -51,7 +51,11 @@ jobs:
 
       #  Gradle 빌드 (코드 검증, 실패 시 Docker 빌드 & 배포 중단)
       - name: 🧪 Gradle Build (사전 확인용)
-        run: ./gradlew clean build       # build = compile + test까지 포함됨
+        run: |
+          set -a
+          source .env
+          set +a
+          ./gradlew clean build       # build = compile + test까지 포함됨
 
       # Docker Hub 로그인
       - name: 🔐 Docker Hub 로그인
