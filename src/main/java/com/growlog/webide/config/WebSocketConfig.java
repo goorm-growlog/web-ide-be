@@ -8,7 +8,6 @@ import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
 import com.growlog.webide.domain.chats.config.StompHandler;
-import com.growlog.webide.global.common.jwt.JwtHandshakeInterceptor;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-	private final JwtHandshakeInterceptor jwtHandshakeInterceptor;
 	private final StompHandler stompHandler;
 
 	@PostConstruct
@@ -40,8 +38,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 		// "/ws" 엔드포인트로 WebSocket handshake 허용, SockJS fallback 지원
 		registry.addEndpoint("/ws")
 			.setAllowedOriginPatterns("*") // CORS 허용 (운영시 제한 권장)
-			.addInterceptors(jwtHandshakeInterceptor);
-		//.withSockJS(); // SockJS 사용 (브라우저 호환성)
+			.withSockJS(); // SockJS 사용 (브라우저 호환성)
 	}
 
 	/**

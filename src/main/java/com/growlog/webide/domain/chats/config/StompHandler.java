@@ -77,7 +77,7 @@ public class StompHandler implements ChannelInterceptor {
 
 	private void validateSubscription(StompHeaderAccessor accessor) {
 		try {
-			final Long userId = Long.parseLong(accessor.getSessionAttributes().get("AUTHENTICATED").toString());
+			final Long userId = Long.parseLong(accessor.getSessionAttributes().get("userId").toString());
 			final String destination = accessor.getDestination();
 			final Long projectId = Long.parseLong(destination.split("/")[3]);
 
@@ -97,7 +97,7 @@ public class StompHandler implements ChannelInterceptor {
 			final Authentication auth = jwtTokenProvider.getAuthentication(token);
 			UserPrincipal principal = (UserPrincipal)auth.getPrincipal();
 			Long userId = principal.getUserId();
-			accessor.getSessionAttributes().put("AUTHENTICATED", userId);
+			accessor.getSessionAttributes().put("userId", userId);
 			accessor.setUser(auth);
 		} else {
 			log.warn("유효하지 않은 토큰입니다.");
