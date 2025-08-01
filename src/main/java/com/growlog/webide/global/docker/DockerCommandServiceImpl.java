@@ -118,4 +118,13 @@ public class DockerCommandServiceImpl implements DockerCommandService {
 		executeDockerCommand(command); // 이미 구현된 공용 실행 함수
 	}
 
+	@Override
+	public String execAndReturn(String containerId, String shellCommand) {
+		List<String> cmd = List.of(
+			"docker", "exec", containerId,
+			"sh", "-c", shellCommand
+		);
+		return executeDockerCommand(cmd);
+	}
+
 }

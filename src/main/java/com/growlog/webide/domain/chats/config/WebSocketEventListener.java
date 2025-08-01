@@ -26,8 +26,20 @@ public class WebSocketEventListener {
 		final StompHeaderAccessor accessor = MessageHeaderAccessor
 			.getAccessor(event.getMessage(), StompHeaderAccessor.class);
 
-		final Long userId = Long.parseLong(accessor.getSessionAttributes().get("AUTHENTICATED").toString());
-		final Long projectId = Long.parseLong(accessor.getSessionAttributes().get("projectId").toString());
+		if (accessor == null || accessor.getSessionAttributes() == null) {
+			return; // 세션 종료만 됐고 handshake 전에 끊긴 경우
+		}
+
+		Object userIdObj = accessor.getSessionAttributes().get("userId");
+		Object projectIdObj = accessor.getSessionAttributes().get("projectId");
+
+		if (userIdObj == null || projectIdObj == null) {
+			return; // handshake는 되었지만 제대로 저장 안된 경우
+		}
+
+		Long userId = Long.parseLong(userIdObj.toString());
+		Long projectId = Long.parseLong(projectIdObj.toString());
+
 		final ChattingResponseDto response = chatService.leave(projectId, userId);
 
 		final String destination = "/topic/projects/" + projectId + "/chat";

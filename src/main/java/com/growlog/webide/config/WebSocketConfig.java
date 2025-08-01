@@ -8,7 +8,9 @@ import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
 import com.growlog.webide.domain.chats.config.StompHandler;
+import com.growlog.webide.global.common.jwt.JwtHandshakeInterceptor;
 
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -20,7 +22,13 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
+	private final JwtHandshakeInterceptor jwtHandshakeInterceptor;
 	private final StompHandler stompHandler;
+
+	@PostConstruct
+	public void init() {
+		System.out.println("✅ WebSocketConfig loaded");
+	}
 
 	/**
 	 * 클라이언트가 WebSocket으로 접속할 엔드포인트를 등록.
@@ -29,14 +37,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 	@Override
 	public void registerStompEndpoints(StompEndpointRegistry registry) {
 
-		// 순수 WebSocket 전용 (Postman에서 접속 가능)
-		//		registry.addEndpoint("/ws")
-		//			.setAllowedOriginPatterns("*");
-
 		// "/ws" 엔드포인트로 WebSocket handshake 허용, SockJS fallback 지원
 		registry.addEndpoint("/ws")
 			.setAllowedOriginPatterns("*") // CORS 허용 (운영시 제한 권장)
-			.withSockJS();                 // SockJS 사용 (브라우저 호환성)
+			.addInterceptors(jwtHandshakeInterceptor);
+		//.withSockJS(); // SockJS 사용 (브라우저 호환성)
 	}
 
 	/**

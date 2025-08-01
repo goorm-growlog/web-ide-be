@@ -14,13 +14,8 @@ import lombok.RequiredArgsConstructor;
 public class InstanceService {
 	private final ActiveInstanceRepository instanceRepository;
 
-	public ActiveInstance getActiveInstance(Long instanceId) {
-		return instanceRepository.findById(instanceId)
-			.orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
-	}
-
-	public ActiveInstance getActiveInstanceByProjectId(Long projectId) {
-		return instanceRepository.findByProject_Id(projectId)
-			.orElseThrow(() -> new CustomException(ErrorCode.INSTANCE_NOT_FOUND));
+	public ActiveInstance getActiveInstance(Long projectId, Long userId) {
+		return instanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
 	}
 }
