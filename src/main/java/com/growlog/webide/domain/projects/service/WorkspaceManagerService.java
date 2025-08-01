@@ -40,6 +40,7 @@ import com.growlog.webide.domain.projects.entity.ProjectStatus;
 import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
 import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
+import com.growlog.webide.domain.templates.service.TemplateService;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.factory.DockerClientFactory;
@@ -60,11 +61,12 @@ public class WorkspaceManagerService {
 	private final SessionScheduler sessionScheduler;
 	private final UserRepository userRepository;
 	private final ProjectMemberRepository projectMemberRepository;
+	private final TemplateService templateService;
 
 	public WorkspaceManagerService(DockerClientFactory dockerClientFactory, ProjectRepository projectRepository,
 		ActiveInstanceRepository activeInstanceRepository, ImageRepository imageRepository,
 		@Lazy SessionScheduler sessionScheduler, UserRepository userRepository,
-		ProjectMemberRepository projectMemberRepository) {
+		ProjectMemberRepository projectMemberRepository, TemplateService templateService) {
 		this.dockerClientFactory = dockerClientFactory;
 		this.projectRepository = projectRepository;
 		this.activeInstanceRepository = activeInstanceRepository;
@@ -72,6 +74,7 @@ public class WorkspaceManagerService {
 		this.sessionScheduler = sessionScheduler;
 		this.userRepository = userRepository;
 		this.projectMemberRepository = projectMemberRepository;
+		this.templateService = templateService;
 	}
 
 	/*
@@ -94,6 +97,9 @@ public class WorkspaceManagerService {
 		try {
 			dockerClient.createVolumeCmd().withName(volumeName).exec();
 			log.info("Docker volume create: {}", volumeName);
+
+			log.info("템플릿 적용할 볼륨 이름: {}", volumeName);
+			templateService.applyTemplate(image.getImageName(), image.getVersion(), volumeName);
 
 			dockerClient.listVolumesCmd().exec().getVolumes().forEach(volume -> {
 				if (volume.getName().equals(volumeName)) {
