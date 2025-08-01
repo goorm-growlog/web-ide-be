@@ -10,6 +10,7 @@ DROP TABLE IF EXISTS `project_members`;
 DROP TABLE IF EXISTS `projects`;
 DROP TABLE IF EXISTS `images`;
 DROP TABLE IF EXISTS `users`;
+DROP TABLE IF EXISTS `chats`;
 DROP TABLE IF EXISTS `file_meta`;
 
 -- 제약조건을 다시 활성화합니다.
@@ -116,7 +117,24 @@ CREATE TABLE `active_instances`
   COLLATE = utf8mb4_unicode_ci;
 
 -- =================================================================
--- 6. 'file_meta' 테이블 생성 (신규 추가)
+-- 6. 'chats' 테이블 생성
+-- =================================================================
+CREATE TABLE `chats`
+(
+    `chat_id`    BIGINT       NOT NULL AUTO_INCREMENT COMMENT '채팅 ID (PK)',
+    `project_id` BIGINT       NOT NULL COMMENT '프로젝트 ID (FK)',
+    `user_id`    BIGINT       NOT NULL COMMENT '사용자 ID (FK)',
+    `content`    TEXT         NOT NULL COMMENT '채팅 내용',
+    `sent_at`    DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '채팅 전송 시간',
+    PRIMARY KEY (`chat_id`),
+    CONSTRAINT `fk_chats_to_projects` FOREIGN KEY (`project_id`) REFERENCES `projects` (`project_id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_chats_to_users` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci;
+
+-- =================================================================
+-- 7. 'file_meta' 테이블 생성 (신규 추가)
 -- =================================================================
 CREATE TABLE `file_meta`
 (

@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -44,6 +45,7 @@ public class FileController {
 
 	@Operation(summary = "파일/폴더 생성", description = "새로운 파일이나 폴더를 생성합니다.")
 	@PostMapping
+	@PreAuthorize("@projectSecurityService.hasWritePermission(#projectId)")
 	public ApiResponse<FileResponse> createFile(
 		@PathVariable Long projectId,
 		@RequestBody CreateFileRequest request
@@ -54,6 +56,7 @@ public class FileController {
 
 	@Operation(summary = "파일/폴더 삭제", description = "파일/폴더를 삭제합니다.")
 	@DeleteMapping("/**")
+	@PreAuthorize("@projectSecurityService.hasWritePermission(#projectId)")
 	public ApiResponse<FileResponse> deleteFile(
 		@PathVariable Long projectId,
 		@RequestParam("path") String filePath
@@ -64,6 +67,7 @@ public class FileController {
 
 	@Operation(summary = "파일/폴더 이름 변경 및 이동", description = "파일/폴더의 이름을 변경하거나 위치를 변경합니다.")
 	@PatchMapping("/{filePath:.+}")
+	@PreAuthorize("@projectSecurityService.hasWritePermission(#projectId)")
 	public ApiResponse<FileResponse> moveFile(
 		@PathVariable Long projectId,
 		@RequestBody MoveFileRequest request

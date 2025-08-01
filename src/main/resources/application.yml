@@ -21,3 +21,7 @@ docker:
 liveblocks:
   secret-key: ${LIVEBLOCKS_SECRET_KEY}
   salt: ${LIVEBLOCKS_ROOM_SALT}
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION}
