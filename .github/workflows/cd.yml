@@ -135,6 +135,7 @@ jobs:
             docker run -d --name webide-backend \
               --env-file /home/ubuntu/web-ide-be/.env \
               -v /home/ubuntu/web-ide-be/.env:/app/.env \
+              -v /var/run/docker.sock:/var/run/docker.sock \
               -p 8080:8080 \
               $DOCKER_USERNAME/$BACKEND_IMAGE:latest
 

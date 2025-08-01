@@ -17,6 +17,9 @@ RUN gradle bootJar --no-daemon
 # 실행 이미지는 경량 Eclipse Temurin JRE 21 사용
 FROM eclipse-temurin:21-jre
 
+# 🔧 Docker CLI 추가 설치
+RUN apt-get update && apt-get install -y docker.io
+
 # 5. 애플리케이션 JAR 복사
 # 빌드한 JAR 파일만 실행 이미지로 복사
 COPY --from=builder /app/build/libs/*-SNAPSHOT.jar app.jar
