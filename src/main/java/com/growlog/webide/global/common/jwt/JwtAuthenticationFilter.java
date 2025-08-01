@@ -2,13 +2,10 @@ package com.growlog.webide.global.common.jwt;
 
 import java.io.IOException;
 
-import org.apache.logging.log4j.util.Strings;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
-import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.growlog.webide.domain.users.entity.Users;
@@ -26,9 +23,6 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
-
-	public static final String AUTHORIZATION = "Authorization";
-	public static final String BEARER = "Bearer ";
 	private final JwtTokenProvider jwtTokenProvider;
 	private final UserRepository userRepository;
 
@@ -40,7 +34,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 		String token = resolveToken(request);
 
-		if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
+		if (token != null && jwtTokenProvider.validateToken(token)) {
 			Long userId = jwtTokenProvider.getUserId(token);
 
 			Users user = userRepository.findById(userId)
@@ -62,10 +56,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	}
 
 	private String resolveToken(HttpServletRequest request) {
-		String bearerToken = request.getHeader(AUTHORIZATION);
-		if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER)) {
+		String bearerToken = request.getHeader("Authorization");
+		if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
 			return bearerToken.substring(7);
 		}
-		return Strings.EMPTY;
+		return null;
 	}
 }

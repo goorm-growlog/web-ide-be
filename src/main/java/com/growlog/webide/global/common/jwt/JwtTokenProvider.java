@@ -3,36 +3,25 @@ package com.growlog.webide.global.common.jwt;
 import java.util.Base64;
 import java.util.Date;
 
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import com.growlog.webide.global.security.CustomUserDetailService;
-
-import io.github.cdimascio.dotenv.Dotenv;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
 
 @Component
-@RequiredArgsConstructor
 public class JwtTokenProvider {
 
 	private String secretKey;
 	private long expiration;
 
-	private final CustomUserDetailService customUserDetailsService;
-
-	@PostConstruct
-	public void init() {
-		Dotenv dotenv = Dotenv.load();
-
-		this.secretKey = Base64.getEncoder().encodeToString(dotenv.get("JWT_SECRET").getBytes());
-		this.expiration = Long.parseLong(dotenv.get("JWT_EXPIRATION")); // JWT 만료 시간 (밀리초 단위)
+	private JwtTokenProvider(
+		@Value("${jwt.secret}") final String secretKey,
+		@Value("${jwt.expiration}")  final long expiration) {
+		this.secretKey = Base64.getEncoder().encodeToString(secretKey.getBytes());
+		this.expiration = expiration;
 	}
 
 	public String createToken(Long userId) {
@@ -68,14 +57,5 @@ public class JwtTokenProvider {
 				.getBody()
 				.getSubject()
 		);
-	}
-
-	public Authentication getAuthentication(String token) {
-		UserDetails userPrincipal = getUserPrincipal(token);
-		return new UsernamePasswordAuthenticationToken(userPrincipal, "", userPrincipal.getAuthorities());
-	}
-
-	private UserDetails getUserPrincipal(String token) {
-		return customUserDetailsService.loadUserById(this.getUserId(token));
 	}
 }

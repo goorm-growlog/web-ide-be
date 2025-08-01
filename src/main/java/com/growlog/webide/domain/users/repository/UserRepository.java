@@ -9,11 +9,7 @@ import com.growlog.webide.domain.users.entity.Users;
 
 @Repository
 public interface UserRepository extends JpaRepository<Users, Long> {
-	Optional<Users> findById(Long id);
-
-	Optional<Users> findByName(String name);
+	boolean existsByEmail(String email);
 
 	Optional<Users> findByEmail(String email);
-
-	boolean existsByEmail(String email);
 }

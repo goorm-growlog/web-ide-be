@@ -1,15 +1,10 @@
 package com.growlog.webide.config;
 
 import org.springframework.context.annotation.Configuration;
-import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
-
-import com.growlog.webide.domain.chats.config.StompHandler;
-
-import lombok.RequiredArgsConstructor;
 
 /**
  * WebSocket 관련 전체 설정을 담당하는 클래스.
@@ -17,10 +12,7 @@ import lombok.RequiredArgsConstructor;
  */
 @Configuration
 @EnableWebSocketMessageBroker // WebSocket 메시지 브로커 활성화
-@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
-
-	private final StompHandler stompHandler;
 
 	/**
 	 * 클라이언트가 WebSocket으로 접속할 엔드포인트를 등록.
@@ -54,10 +46,5 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
 		// 특정 사용자 1:1 메시징을 위한 prefix, @SendToUser 어노테이션 사용 시 적용됨
 		registry.setUserDestinationPrefix("/user");
-	}
-
-	@Override
-	public void configureClientInboundChannel(ChannelRegistration registration) {
-		registration.interceptors(stompHandler);
 	}
 }

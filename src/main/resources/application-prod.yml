@@ -4,8 +4,6 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${RDS_DB_USER_NAME}
     password: ${RDS_DB_PASSWORD}
-  profiles:
-    include: s3  # 오직 prod 환경에서만 s3 사용
 
   jpa:
     hibernate:
@@ -28,3 +26,13 @@ spring:
 
   email:
     from: ${MAIL_FROM} #커스텀 클래스에서 사용하는 값
+
+cloud:
+  aws:
+    s3:
+      bucket: ${S3_BUCKET_NAME}
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION}
+
