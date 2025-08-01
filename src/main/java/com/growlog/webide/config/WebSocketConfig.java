@@ -40,8 +40,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 		// "/ws" 엔드포인트로 WebSocket handshake 허용, SockJS fallback 지원
 		registry.addEndpoint("/ws")
 			.setAllowedOriginPatterns("*") // CORS 허용 (운영시 제한 권장)
-			.addInterceptors(jwtHandshakeInterceptor);
-		//.withSockJS(); // SockJS 사용 (브라우저 호환성)
+			// .addInterceptors(jwtHandshakeInterceptor)
+			.withSockJS(); // SockJS 사용 (브라우저 호환성)
 	}
 
 	/**
