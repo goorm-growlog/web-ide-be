@@ -121,10 +121,10 @@ CREATE TABLE `active_instances`
 -- =================================================================
 CREATE TABLE `chats`
 (
-    `chat_id`    BIGINT       NOT NULL AUTO_INCREMENT COMMENT '채팅 ID (PK)',
-    `project_id` BIGINT       NOT NULL COMMENT '프로젝트 ID (FK)',
-    `user_id`    BIGINT       NOT NULL COMMENT '사용자 ID (FK)',
-    `content`    TEXT         NOT NULL COMMENT '채팅 내용',
+    `chat_id`    BIGINT NOT NULL AUTO_INCREMENT COMMENT '채팅 ID (PK)',
+    `project_id` BIGINT NOT NULL COMMENT '프로젝트 ID (FK)',
+    `user_id`    BIGINT NOT NULL COMMENT '사용자 ID (FK)',
+    `content`    TEXT   NOT NULL COMMENT '채팅 내용',
     `sent_at`    DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '채팅 전송 시간',
     PRIMARY KEY (`chat_id`),
     CONSTRAINT `fk_chats_to_projects` FOREIGN KEY (`project_id`) REFERENCES `projects` (`project_id`) ON DELETE CASCADE,

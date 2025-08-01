@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.growlog.webide.domain.files.dto.tree.TreeNodeDto;
 import com.growlog.webide.domain.files.entity.FileMeta;
 import com.growlog.webide.domain.files.repository.FileMetaRepository;
-import com.growlog.webide.domain.projects.entity.ActiveInstance;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
 import com.growlog.webide.global.docker.DockerCommandService;
@@ -25,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class TreeService {
 	private static final String CONTAINER_BASE = "/app";
-	private final InstanceService instanceService;
 	private final DockerCommandService dockerCommandService;
 	private final FileMetaRepository fileMetaRepository;
 
@@ -33,23 +31,23 @@ public class TreeService {
 	 * 프로젝트 볼륨에서 전체 트리(Root 포함)를 DTO로 빌드하여 반환.
 	 */
 	@Transactional(readOnly = true)
-	public List<TreeNodeDto> buildTree(Long instanceId) {
-
-		ActiveInstance inst = instanceService.getActiveInstance(instanceId);
-		long projectId = inst.getProject().getId();
-		String containerId = inst.getContainerId();
+	public List<TreeNodeDto> buildTree(Long projectId, String containerId) {
 
 		// 컨테이너 내부에서 디렉토리/파일 경로 추출
 		List<String> dirPaths = execFind(containerId, "-type d");
 		List<String> filePaths = execFind(containerId, "-type f");
 
-		// 절대경로 → 상대경로 매핑 & DTO 생성
+		// 1. 프로젝트의 모든 FileMeta를 한 번에 조회
+		Map<String, Long> pathIdMap = fileMetaRepository.findAllByProjectIdAndDeletedFalse(projectId)
+			.stream()
+			.collect(Collectors.toMap(FileMeta::getPath, FileMeta::getId));
+
 		Map<String, TreeNodeDto> nodes = new LinkedHashMap<>();
 		TreeNodeDto root = new TreeNodeDto(null, "", "folder");
 		nodes.put("", root);
 
-		addNodes(dirPaths, "folder", nodes, projectId);
-		addNodes(filePaths, "file", nodes, projectId);
+		addNodes(dirPaths, "folder", nodes, pathIdMap);
+		addNodes(filePaths, "file", nodes, pathIdMap);
 
 		nodes.forEach((path, node) -> {
 			if (path.isEmpty()) {
@@ -68,16 +66,16 @@ public class TreeService {
 		return List.of(root);
 	}
 
-	private void addNodes(List<String> absolutePaths, String type, Map<String, TreeNodeDto> nodes, long projectId) {
+	private void addNodes(List<String> absolutePaths, String type, Map<String, TreeNodeDto> nodes,
+		Map<String, Long> pathIdMap) {
 		for (String absPath : absolutePaths) {
 			String relPath = toRelPath(absPath);
 			if (relPath == null) {
-				// 🛑 null이면 로그 찍고 continue 하자
 				log.warn("🚫 무시된 경로 (루트 또는 base 외 경로): {}", absPath);
 				continue;
 			}
-			Long id = fileMetaRepository.findByProjectIdAndPath(projectId, relPath)
-				.map(FileMeta::getId).orElse(null);
+			// 3. Map에서 바로 ID 조회
+			Long id = pathIdMap.get(relPath);
 			nodes.put(relPath, new TreeNodeDto(id, relPath, type));
 		}
 	}
@@ -116,7 +114,7 @@ public class TreeService {
 	private String getParentPath(String path) {
 		int lastSlash = path.lastIndexOf('/');
 		if (lastSlash == -1) {
-			return null; // 최상위 노드
+			return ""; // 최상위 노드
 		}
 		return path.substring(0, lastSlash);
 	}

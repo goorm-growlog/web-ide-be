@@ -11,4 +11,6 @@ public interface FileMetaRepository extends JpaRepository<FileMeta, Long> {
 	Optional<FileMeta> findByProjectIdAndPath(Long projectId, String path);
 
 	List<FileMeta> findByProjectIdAndNameContainingIgnoreCaseAndDeletedFalse(Long projectId, String name);
+
+	List<FileMeta> findAllByProjectIdAndDeletedFalse(Long projectId);
 }

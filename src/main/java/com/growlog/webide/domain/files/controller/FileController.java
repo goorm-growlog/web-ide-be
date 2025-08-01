@@ -48,20 +48,22 @@ public class FileController {
 	@PreAuthorize("@projectSecurityService.hasWritePermission(#projectId)")
 	public ApiResponse<FileResponse> createFile(
 		@PathVariable Long projectId,
-		@RequestBody CreateFileRequest request
+		@RequestBody CreateFileRequest request,
+		@AuthenticationPrincipal UserPrincipal user
 	) {
-		fileService.createFileorDirectory(projectId, request);
+		fileService.createFileorDirectory(projectId, request, user.getUserId());
 		return ApiResponse.ok(new FileResponse("파일이 생성되었습니다."));
 	}
 
 	@Operation(summary = "파일/폴더 삭제", description = "파일/폴더를 삭제합니다.")
-	@DeleteMapping("/**")
+	@DeleteMapping("/{filePath:.+}")
 	@PreAuthorize("@projectSecurityService.hasWritePermission(#projectId)")
 	public ApiResponse<FileResponse> deleteFile(
 		@PathVariable Long projectId,
-		@RequestParam("path") String filePath
+		@PathVariable("filePath") String filePath,
+		@AuthenticationPrincipal UserPrincipal user
 	) {
-		fileService.deleteFileorDirectory(projectId, filePath);
+		fileService.deleteFileorDirectory(projectId, filePath, user.getUserId());
 		return ApiResponse.ok(new FileResponse("삭제되었습니다."));
 	}
 
@@ -70,9 +72,10 @@ public class FileController {
 	@PreAuthorize("@projectSecurityService.hasWritePermission(#projectId)")
 	public ApiResponse<FileResponse> moveFile(
 		@PathVariable Long projectId,
-		@RequestBody MoveFileRequest request
+		@RequestBody MoveFileRequest request,
+		@AuthenticationPrincipal UserPrincipal user
 	) {
-		fileService.moveFileorDirectory(projectId, request);
+		fileService.moveFileorDirectory(projectId, request, user.getUserId());
 		return ApiResponse.ok(new FileResponse("파일이 이동되었습니다."));
 	}
 
@@ -82,7 +85,7 @@ public class FileController {
 	 * @param projectId 프로젝트 ID
 	 * @param path      파일 경로
 	 *                  - 루트 작업 디렉토리(`/workspace`) 기준의 상대 경로입니다.
-	 *  	            - 예: "src/Main.java" → 실제 경로: "/workspace/src/Main.java"
+	 *                  - 예: "src/Main.java" → 실제 경로: "/workspace/src/Main.java"
 	 * @param user      인증된 사용자 정보
 	 * @return 파일 내용
 	 */
@@ -103,11 +106,11 @@ public class FileController {
 	/**
 	 * 파일 저장 API
 	 *
-	 * @param projectId 프로젝트 ID
+	 * @param projectId  프로젝트 ID
 	 * @param requestDto 저장할 파일 경로 및 내용
-	 *             - path 값은 컨테이너 루트 디렉토리(`/workspace`)를 기준으로 한 상대 경로입니다.
-	 *             - 예: "src/Main.java"
-	 * @param user 인증된 사용자 정보
+	 *                   - path 값은 컨테이너 루트 디렉토리(`/workspace`)를 기준으로 한 상대 경로입니다.
+	 *                   - 예: "src/Main.java"
+	 * @param user       인증된 사용자 정보
 	 * @return 저장 성공 메시지
 	 */
 	@Operation(summary = "파일 저장", description = "프로젝트 내 파일을 수정 및 저장한다. (경로는 컨테이너 작업 디렉토리 기준)")
