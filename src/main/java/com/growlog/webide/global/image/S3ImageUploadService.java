@@ -18,12 +18,16 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @Profile("prod")
-@RequiredArgsConstructor
 public class S3ImageUploadService implements ImageUploadService {
-	private final AmazonS3 amazonS3;
 
-	@Value("${spring.cloud.aws.s3.bucket}")
-	private String bucket;
+	private final AmazonS3 amazonS3;
+	private final String bucket;
+
+	private S3ImageUploadService(final AmazonS3 amazonS3,
+								 @Value("${spring.cloud.aws.s3.bucket}") final String bucket) {
+		this.amazonS3 = amazonS3;
+		this.bucket = bucket;
+	}
 
 	@Override
 	public String uploadProfileImage(MultipartFile file) {
