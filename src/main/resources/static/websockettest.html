@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8"/>
     <title>🌲 WebSocket Tree 테스트</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
     <style>
         body {
@@ -64,12 +65,12 @@
         }
 
         log("📡 WebSocket 연결 중...");
-        const socket = new WebSocket(`ws://localhost:8080/ws?token=${token}&projectId=${projectId}`);
-        stompClient = Stomp.over(socket);
+        const socket = new SockJS("http://localhost:8080/ws");
+        const stompClient = Stomp.over(socket);
         stompClient.debug = str => log("🐛 " + str);
 
         stompClient.connect(
-            {Authorization: "Bearer " + token},
+            {Authorization: "Bearer " + token, projectId: projectId},
             () => {
                 log("✅ STOMP 연결 성공");
 
