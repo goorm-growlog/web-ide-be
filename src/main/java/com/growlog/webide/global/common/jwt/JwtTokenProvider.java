@@ -19,7 +19,7 @@ public class JwtTokenProvider {
 
 	private JwtTokenProvider(
 		@Value("${jwt.secret}") final String secretKey,
-		@Value("${jwt.expiration}")  final long expiration) {
+		@Value("${jwt.expiration}") final long expiration) {
 		this.secretKey = Base64.getEncoder().encodeToString(secretKey.getBytes());
 		this.expiration = expiration;
 	}
