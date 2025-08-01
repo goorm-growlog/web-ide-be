@@ -32,7 +32,3 @@ cloud:
     s3:
       bucket: ${S3_BUCKET_NAME}
 
-jwt:
-  secret: ${JWT_SECRET}
-  expiration: ${JWT_EXPIRATION}
-
