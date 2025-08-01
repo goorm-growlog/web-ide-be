@@ -22,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 public class S3ImageUploadService implements ImageUploadService {
 	private final AmazonS3 amazonS3;
 
-	@Value("${cloud.aws.s3.bucket}")
+	@Value("${spring.cloud.aws.s3.bucket}")
 	private String bucket;
 
 	@Override
