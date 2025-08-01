@@ -19,32 +19,86 @@ jobs:
     runs-on: ubuntu-latest  # GitHub가 제공하는 최신 우분투 환경에서 실행
 
     steps:
-      # 1. GitHub 코드 체크아웃
+      #  GitHub 코드 체크아웃
       - name: 🔄 Checkout source code
         uses: actions/checkout@v3  # 리포지토리의 코드를 워크플로우 환경에 다운로드
 
-      # 2. JDK 21 설치 (Spring 애플리케이션 빌드에 필요)
+      #  JDK 21 설치 (Spring 애플리케이션 빌드에 필요)
       - name: ☕ JDK 21 설치
         uses: actions/setup-java@v3
         with:
           java-version: '21'       # 사용 중인 Java 버전
           distribution: 'temurin'  # OpenJDK 배포판 중 하나 (가장 많이 사용)
 
-      # 3. Gradle 빌드 (코드 검증, 실패 시 Docker 빌드 & 배포 중단)
-      - name: 🧪 Gradle Build (사전 확인용)
-        run: ./gradlew build       # build = compile + test까지 포함됨
 
-      # 4. Docker Hub 로그인
+      # 📦 .env 파일 자동 생성
+      - name: 📦 .env 파일 생성
+        run: |
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+          echo "DB_NAME=webide" >> .env
+          echo "DB_USER_NAME=${{ secrets.DB_USER_NAME }}" >> .env
+          echo "DB_USER_PASSWORD=${{ secrets.DB_USER_PASSWORD }}" >> .env
+          echo "DB_ROOT_PASSWORD=${{ secrets.DB_ROOT_PASSWORD }}" >> .env
+
+          echo "RDS_ENDPOINT=${{ secrets.RDS_ENDPOINT }}" >> .env
+          echo "RDS_DB_NAME=webide_database" >> .env
+          echo "RDS_DB_USER_NAME=${{ secrets.RDS_DB_USER_NAME }}" >> .env
+          echo "RDS_DB_PASSWORD=${{ secrets.RDS_DB_PASSWORD }}" >> .env
+
+          echo "ACCESS_KEY=${{ secrets.ACCESS_KEY }}" >> .env
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+          echo "S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}" >> .env
+          echo "S3_REGION=ap-northeast-2" >> .env
+          echo "IMAGE_UPLOAD_DIR=profile-images/" >> .env
+          echo "DEFAULT_PROFILE_IMAGE_URL=https://${{ secrets.S3_BUCKET_NAME }}.s3.amazonaws.com/profile-images/default.png" >> .env
+
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+          echo "JWT_EXPIRATION=3600000" >> .env
+
+          echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
+          echo "MAIL_PASSWORD=\"${{ secrets.MAIL_PASSWORD }}\"" >> .env
+          echo "MAIL_FROM=${{ secrets.MAIL_FROM }}" >> .env
+
+          echo "LIVEBLOCKS_ROOM_SALT=${{ secrets.LIVEBLOCKS_ROOM_SALT }}" >> .env
+          echo "LIVEBLOCKS_SECRET_KEY=${{ secrets.LIVEBLOCKS_SECRET_KEY }}" >> .env
+
+          echo "TEMPLATE_DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> .env
+
+          echo "SPRING_PROFILES_ACTIVE=prod" >> .env
+
+      - name: 🔍 디버깅 .env 줄 번호 확인
+        run: cat -n .env
+
+      #  Gradle 빌드 (코드 검증, 실패 시 Docker 빌드 & 배포 중단)
+      - name: 🧪 Gradle Build (사전 확인용)
+        run: |
+          set -a
+          source .env
+          set +a
+          ./gradlew clean bootJar       # build = compile
+
+      # Docker Hub 로그인
       - name: 🔐 Docker Hub 로그인
         run: echo "${{ env.DOCKER_PASSWORD }}" | docker login -u "${{ env.DOCKER_USERNAME }}" --password-stdin
 
-      # 5. Docker 이미지 빌드 및 Push
+
+      # 📂 .env 파일 EC2에 전송
+      - name: 📂 EC2에 .env 전송
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ env.EC2_HOST }}
+          username: ${{ env.EC2_USER }}
+          key: ${{ env.PRIVATE_KEY }}
+          source: ".env"
+          target: "/home/ubuntu/web-ide-be"
+
+      #  Docker 이미지 빌드 및 Push
       - name: 🐳 Docker 이미지 빌드 및 Push
         run: |
           docker build -t $DOCKER_USERNAME/$BACKEND_IMAGE:latest -f Dockerfile .  # 이미지 빌드
           docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest                      # Docker Hub로 푸시
 
-      # 6. EC2에 SSH로 접속해서 컨테이너 배포 (현재 주석 처리됨)
+      # EC2에 SSH로 접속해서 컨테이너 배포
       - name: 🚀 EC2 배포 (컨테이너 교체)
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -67,6 +121,6 @@ jobs:
             # 컨테이너 실행
             docker run -d --name webide-backend \
               --env-file /home/ubuntu/web-ide-be/.env \
+              -v /home/ubuntu/web-ide-be/.env:/app/.env \
               -p 8080:8080 \
               $DOCKER_USERNAME/$BACKEND_IMAGE:latest
-

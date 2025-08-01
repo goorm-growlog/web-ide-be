@@ -2,11 +2,11 @@ spring:
   cloud:
     aws:
       credentials:
-      #access-key: ${ACCESS_KEY}
-      #secret-key: ${SECRET_KEY}
+        access-key: ${ACCESS_KEY}
+        secret-key: ${SECRET_KEY}
       region:
-      #static: ap-northeast-2  # 버킷의 리전
+        static: ${S3_REGION}  # 버킷의 리전
       s3:
-      #bucket: growlog-travel-service   # 버킷 이름
+        bucket: ${S3_BUCKET_NAME}   # 버킷 이름
       stack:
         auto: false
