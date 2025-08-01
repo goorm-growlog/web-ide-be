@@ -40,6 +40,7 @@ import com.growlog.webide.domain.projects.entity.ProjectStatus;
 import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
 import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
+import com.growlog.webide.domain.templates.service.TemplateService;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.factory.DockerClientFactory;
@@ -60,11 +61,12 @@ public class WorkspaceManagerService {
 	private final SessionScheduler sessionScheduler;
 	private final UserRepository userRepository;
 	private final ProjectMemberRepository projectMemberRepository;
+	private final TemplateService templateService;
 
 	public WorkspaceManagerService(DockerClientFactory dockerClientFactory, ProjectRepository projectRepository,
 		ActiveInstanceRepository activeInstanceRepository, ImageRepository imageRepository,
 		@Lazy SessionScheduler sessionScheduler, UserRepository userRepository,
-		ProjectMemberRepository projectMemberRepository) {
+		ProjectMemberRepository projectMemberRepository, TemplateService templateService) {
 		this.dockerClientFactory = dockerClientFactory;
 		this.projectRepository = projectRepository;
 		this.activeInstanceRepository = activeInstanceRepository;
@@ -72,6 +74,7 @@ public class WorkspaceManagerService {
 		this.sessionScheduler = sessionScheduler;
 		this.userRepository = userRepository;
 		this.projectMemberRepository = projectMemberRepository;
+		this.templateService = templateService;
 	}
 
 	/*
@@ -94,6 +97,9 @@ public class WorkspaceManagerService {
 		try {
 			dockerClient.createVolumeCmd().withName(volumeName).exec();
 			log.info("Docker volume create: {}", volumeName);
+
+			log.info("템플릿 적용할 볼륨 이름: {}", volumeName);
+			templateService.applyTemplate(image.getImageName(), image.getVersion(), volumeName);
 
 			dockerClient.listVolumesCmd().exec().getVolumes().forEach(volume -> {
 				if (volume.getName().equals(volumeName)) {
@@ -156,7 +162,7 @@ public class WorkspaceManagerService {
 		sessionScheduler.cancelDeletion(user.getUserId(), projectId);
 
 		// 2. 이미 해당 사용자의 활성 세션이 있는지 확인
-		activeInstanceRepository.findByUserAndProject(user, project).ifPresent(activeInstance -> {
+		activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId).ifPresent(activeInstance -> {
 			throw new IllegalStateException("User already has an active session for this project.");
 		});
 
@@ -307,7 +313,7 @@ public class WorkspaceManagerService {
 			.orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new EntityNotFoundException("Project not found: " + projectId));
-		ActiveInstance instance = activeInstanceRepository.findByUserAndProject(user, project)
+		ActiveInstance instance = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
 			.orElseThrow(() -> new IllegalArgumentException(
 				"Active session not found for project " + projectId + "and user " + user));
 

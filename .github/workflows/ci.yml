@@ -32,11 +32,11 @@ jobs:
 
 
     steps:
-      # 1. GitHub 코드 체크아웃
+      #  GitHub 코드 체크아웃
       - name: 🔄 Checkout source code
         uses: actions/checkout@v3  # PR 브랜치의 소스코드를 가져옴
 
-      # 2. JDK 21 설치
+      #  JDK 21 설치
       - name: ☕ JDK 21 설치
         uses: actions/setup-java@v3
         with:
@@ -75,13 +75,6 @@ jobs:
           done
           echo "MySQL did not start in time" && exit 1
 
-
-      # ✅ Docker 환경 초기화
-      - name: 🐳 Setup Docker Test Environment
-        run: |
-          chmod +x ./scripts/setup-docker-env.sh
-          ./scripts/setup-docker-env.sh
-
-      # 3. Gradle 빌드 및 테스트 실행
+      #  Gradle 빌드 및 테스트 실행
       - name: 🧪 Gradle Build & Test
         run: ./gradlew clean build       # compile, test 등 전체 빌드 수행

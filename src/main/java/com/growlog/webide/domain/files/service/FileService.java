@@ -1,17 +1,21 @@
 package com.growlog.webide.domain.files.service;
 
 import java.io.File;
+import java.util.List;
 
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import com.growlog.webide.domain.files.dto.CreateFileRequest;
 import com.growlog.webide.domain.files.dto.FileOpenResponseDto;
+import com.growlog.webide.domain.files.dto.FileSearchResponseDto;
 import com.growlog.webide.domain.files.dto.MoveFileRequest;
 import com.growlog.webide.domain.files.dto.tree.TreeAddEventDto;
 import com.growlog.webide.domain.files.dto.tree.TreeMoveEventDto;
 import com.growlog.webide.domain.files.dto.tree.TreeRemoveEventDto;
 import com.growlog.webide.domain.files.dto.tree.WebSocketMessage;
+import com.growlog.webide.domain.files.entity.FileMeta;
+import com.growlog.webide.domain.files.repository.FileMetaRepository;
 import com.growlog.webide.domain.permissions.service.ProjectPermissionService;
 import com.growlog.webide.domain.projects.entity.ActiveInstance;
 import com.growlog.webide.domain.projects.entity.Project;
@@ -36,9 +40,15 @@ public class FileService {
 	private final DockerCommandService dockerCommandService;
 	private final ProjectPermissionService permissionService;
 	private final ActiveInstanceRepository activeInstanceRepository;
+	private final FileMetaRepository fileMetaRepository;
 
-	public void createFileorDirectory(Long projectId, CreateFileRequest request) {
-		ActiveInstance inst = instanceService.getActiveInstanceByProjectId(projectId);
+	public void createFileorDirectory(Long projectId, CreateFileRequest request, Long userId) {
+		Project project = projectRepository.findById(projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
+		ActiveInstance inst = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+		Long instanceId = inst.getId();
+
 		String cid = inst.getContainerId();
 		String rel = request.getPath().startsWith("/")
 			? request.getPath().substring(1)
@@ -67,20 +77,26 @@ public class FileService {
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 
+		FileMeta fileMeta = fileMetaRepository.save(FileMeta.of(project, request.getPath(), request.getType()));
+
 		// ✅ WebSocket 이벤트 푸시
 		WebSocketMessage msg = new WebSocketMessage(
 			"tree:add",
-			new TreeAddEventDto(request.getPath(), request.getType())
+			new TreeAddEventDto(fileMeta.getId(), request.getPath(), request.getType())
 		);
-		log.info("[WS ▶ add] sending tree:add → instanceId={}", inst.getId());
+		log.info("[WS ▶ add] sending tree:add → projectId={}", projectId);
 		messagingTemplate.convertAndSend(
-			"/topic/instances/" + inst.getId() + "/tree",
+			"/topic/projects/" + projectId + "/tree",
 			msg
 		);
 	}
 
-	public void deleteFileorDirectory(Long projectId, String path) {
-		ActiveInstance inst = instanceService.getActiveInstanceByProjectId(projectId);
+	public void deleteFileorDirectory(Long projectId, String path, Long userId) {
+		ActiveInstance inst = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+
+		Long instanceId = inst.getId();
+
 		String cid = inst.getContainerId();
 
 		String rel = path.startsWith("/") ? path.substring(1) : path;
@@ -99,20 +115,29 @@ public class FileService {
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 
+		FileMeta meta = fileMetaRepository.findByProjectIdAndPath(projectId, path)
+			.orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+		meta.markDeleted();
+		fileMetaRepository.save(meta);
+
 		// ✅ WebSocket 이벤트 푸시
 		WebSocketMessage msg = new WebSocketMessage(
 			"tree:remove",
-			new TreeRemoveEventDto(path)
+			new TreeRemoveEventDto(meta.getId(), path)
 		);
 		messagingTemplate.convertAndSend(
-			"/topic/instances/" + inst.getId() + "/tree",
+			"/topic/projects/" + projectId + "/tree",
 			msg
 		);
 
 	}
 
-	public void moveFileorDirectory(Long projectId, MoveFileRequest request) {
-		ActiveInstance inst = instanceService.getActiveInstanceByProjectId(projectId);
+	public void moveFileorDirectory(Long projectId, MoveFileRequest request, Long userId) {
+		ActiveInstance inst = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+
+		Long instanceId = inst.getId();
+
 		String cid = inst.getContainerId();
 
 		String from = request.getFromPath().startsWith("/")
@@ -145,13 +170,18 @@ public class FileService {
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 
+		FileMeta meta = fileMetaRepository.findByProjectIdAndPath(projectId, request.getFromPath())
+			.orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+
+		meta.updatePath(request.getToPath());
+
 		// ✅ WebSocket 이벤트 푸시
 		WebSocketMessage msg = new WebSocketMessage(
 			"tree:move",
-			new TreeMoveEventDto(request.getFromPath(), request.getToPath())
+			new TreeMoveEventDto(meta.getId(), request.getFromPath(), request.getToPath())
 		);
 		messagingTemplate.convertAndSend(
-			"/topic/instances/" + inst.getId() + "/tree",
+			"/topic/projects/" + projectId + "/tree",
 			msg
 		);
 	}
@@ -206,4 +236,12 @@ public class FileService {
 
 		log.info("✅ 파일 저장 완료 - containerId: {}, path: {}", containerId, relativePath);
 	}
+
+	public List<FileSearchResponseDto> searchFilesByName(Long projectId, String query) {
+		return fileMetaRepository.findByProjectIdAndNameContainingIgnoreCaseAndDeletedFalse(projectId, query)
+			.stream()
+			.map(FileSearchResponseDto::from)
+			.toList();
+	}
+
 }

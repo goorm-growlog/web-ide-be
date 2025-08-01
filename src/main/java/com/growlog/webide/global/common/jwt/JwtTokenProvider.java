@@ -4,7 +4,12 @@ import java.util.Base64;
 import java.util.Date;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+
+import com.growlog.webide.global.security.CustomUserDetailService;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -14,14 +19,17 @@ import io.jsonwebtoken.SignatureAlgorithm;
 @Component
 public class JwtTokenProvider {
 
+	private final CustomUserDetailService customUserDetailsService;
 	private String secretKey;
 	private long expiration;
 
-	private JwtTokenProvider(
+	public JwtTokenProvider(
 		@Value("${jwt.secret}") final String secretKey,
-		@Value("${jwt.expiration}")  final long expiration) {
+		@Value("${jwt.expiration}") final long expiration,
+		final CustomUserDetailService customUserDetailsService) {
 		this.secretKey = Base64.getEncoder().encodeToString(secretKey.getBytes());
 		this.expiration = expiration;
+		this.customUserDetailsService = customUserDetailsService;
 	}
 
 	public String createToken(Long userId) {
@@ -57,5 +65,14 @@ public class JwtTokenProvider {
 				.getBody()
 				.getSubject()
 		);
+	}
+
+	public Authentication getAuthentication(String token) {
+		UserDetails userPrincipal = getUserPrincipal(token);
+		return new UsernamePasswordAuthenticationToken(userPrincipal, "", userPrincipal.getAuthorities());
+	}
+
+	private UserDetails getUserPrincipal(String token) {
+		return customUserDetailsService.loadUserById(this.getUserId(token));
 	}
 }

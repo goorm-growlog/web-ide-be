@@ -30,7 +30,6 @@ jobs:
           java-version: '21'       # 사용 중인 Java 버전
           distribution: 'temurin'  # OpenJDK 배포판 중 하나 (가장 많이 사용)
 
-
       # 📦 .env 파일 자동 생성
       - name: 📦 .env 파일 생성
         run: |
@@ -98,6 +97,20 @@ jobs:
           docker build -t $DOCKER_USERNAME/$BACKEND_IMAGE:latest -f Dockerfile .  # 이미지 빌드
           docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest                      # Docker Hub로 푸시
 
+
+      # 모든 템플릿 이미지 빌드 & Push
+      - name: 🧩 템플릿 이미지 빌드 및 Docker Hub Push
+        run: |
+          for dir in infra/templates/*; do
+            name=$(basename "$dir")             # ex: java-17
+            lang="${name%%-*}"                  # java
+            version="${name##*-}"               # 17
+            tag="$DOCKER_USERNAME/${lang}-template:${version}"
+            echo "👉 Building and pushing $tag"
+            docker build -t "$tag" "$dir"
+            docker push "$tag"
+          done
+
       # EC2에 SSH로 접속해서 컨테이너 배포
       - name: 🚀 EC2 배포 (컨테이너 교체)
         uses: appleboy/ssh-action@v1.0.0
@@ -125,3 +138,8 @@ jobs:
               -v /var/run/docker.sock:/var/run/docker.sock \
               -p 8080:8080 \
               $DOCKER_USERNAME/$BACKEND_IMAGE:latest
+
+            # 템플릿 이미지 미리 pull (선택 사항, 자동 pull도 되긴 함)
+            docker pull $DOCKER_USERNAME/java-template:17 || true
+            docker pull $DOCKER_USERNAME/python-template:3.11 || true
+

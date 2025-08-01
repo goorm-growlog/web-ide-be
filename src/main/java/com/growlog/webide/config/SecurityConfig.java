@@ -2,16 +2,25 @@ package com.growlog.webide.config;
 
 import static org.springframework.security.config.Customizer.*;
 
+import java.util.List;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.Message;
+import org.springframework.security.authorization.AuthorizationManager;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.messaging.access.intercept.MessageMatcherDelegatingAuthorizationManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.global.common.jwt.JwtAuthenticationFilter;
@@ -19,6 +28,7 @@ import com.growlog.webide.global.common.jwt.JwtTokenProvider;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
 	private static final String[] SWAGGER_WHITELIST = {
@@ -81,5 +91,34 @@ public class SecurityConfig {
 			.httpBasic(basic -> basic.disable());
 
 		return http.build();
+	}
+
+	/**
+	 * WebSocket 메시지(STOMP)에 대한 보안 규칙 설정
+	 */
+	@Bean
+	public AuthorizationManager<Message<?>> messageAuthorizationManager() {
+		MessageMatcherDelegatingAuthorizationManager.Builder messages =
+			MessageMatcherDelegatingAuthorizationManager.builder();
+
+		messages
+			.simpSubscribeDestMatchers("/topic/**", "/queue/**").authenticated()
+			.simpDestMatchers("/app/**").authenticated()
+			.anyMessage().permitAll();
+
+		return messages.build();
+	}
+
+	@Bean
+	public CorsConfigurationSource corsConfigurationSource() {
+		CorsConfiguration config = new CorsConfiguration();
+		config.setAllowedOriginPatterns(List.of("*"));
+		config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+		config.setAllowedHeaders(List.of("*"));
+		config.setAllowCredentials(true);
+
+		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+		source.registerCorsConfiguration("/**", config);
+		return source;
 	}
 }

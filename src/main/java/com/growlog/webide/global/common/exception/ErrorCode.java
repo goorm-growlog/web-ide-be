@@ -50,7 +50,13 @@ public enum ErrorCode {
 	FILE_ALREADY_EXISTS("FILE_ALREADY_EXISTS", "해당 경로에 이미 파일 또는 폴더가 존재합니다."),
 	FILE_NOT_FOUND("FILE_NOT_FOUND", "파일 또는 폴더를 찾을 수 없습니다."),
 	FILE_OPERATION_FAILED("FILE_OPERATION_FAILED", "파일 처리 중 오류가 발생했습니다."),
-	INSTANCE_NOT_FOUND("INSTANCE_NOT_FOUND", "인스턴스를 찾을 수 없습니다.");
+	INSTANCE_NOT_FOUND("INSTANCE_NOT_FOUND", "인스턴스를 찾을 수 없습니다."),
+
+	MEMBER_ALREADY_EXISTS("MEMBER_ALREADY_EXISTS", "이미 프로젝트에 참여중인 사용자입니다."),
+	MEMBER_NOT_FOUND("MEMBER_NOT_FOUND", "프로젝트 멤버가 아닙니다."),
+
+	// 채팅 관련
+	KEYWORD_NOT_FOUND("KEYWORD_NOT_FOUND", "검색 키워드가 비어있습니다.");
 
 	private final String code;
 	private final String message;

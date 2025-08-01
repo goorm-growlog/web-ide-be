@@ -1,35 +1,121 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <title>WebSocket Tree Test</title>
+    <meta charset="UTF-8"/>
+    <title>🌲 WebSocket Tree 테스트</title>
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #f9f9f9;
+            padding: 20px;
+        }
+
+        input {
+            padding: 8px;
+            margin-right: 10px;
+            width: 400px;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px 0;
+        }
+
+        pre {
+            background: #fff;
+            padding: 15px;
+            border-radius: 6px;
+            height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
 </head>
 <body>
-<h1>WebSocket Tree Test</h1>
+<h2>🌲 WebSocket Tree 테스트 (STOMP)</h2>
+
+<div>
+    🔐 JWT Token:<br/>
+    <input id="tokenInput" placeholder="Bearer ey..." type="text"/><br/><br/>
+    📁 Project ID:
+    <input id="projectIdInput" placeholder="1" type="number"/>
+    <button onclick="connectWebSocket()">WebSocket 연결</button>
+</div>
+
 <pre id="log"></pre>
 
 <script>
-    const instanceId = 1; // 🔥 실제 instanceId로 바꾸기
-
-    const sock = new SockJS("http://localhost:8080/ws");
-    const stompClient = Stomp.over(sock);
-
-    stompClient.connect({}, () => {
-        log("✅ Connected to WebSocket!");
-
-        stompClient.subscribe(`/topic/instances/${instanceId}/tree`, (msg) => {
-            const data = JSON.parse(msg.body);
-            log("📩 Received: " + JSON.stringify(data, null, 2));
-        });
-
-        stompClient.send(`/app/instances/${instanceId}/tree/init`, {}, {});
-    });
+    let stompClient = null;
 
     function log(message) {
         const pre = document.getElementById("log");
-        pre.textContent += message + "\n";
+        pre.textContent += `[${new Date().toLocaleTimeString()}] ${message}\n`;
+        pre.scrollTop = pre.scrollHeight;
+    }
+
+    function connectWebSocket() {
+        const token = document.getElementById("tokenInput").value.trim().replace(/^Bearer\s+/, '');
+        const projectId = document.getElementById("projectIdInput").value.trim();
+
+        if (!token || !projectId) {
+            log("❗ 토큰과 Project ID를 모두 입력해 주세요.");
+            return;
+        }
+
+        log("📡 WebSocket 연결 중...");
+        const socket = new SockJS("http://localhost:8080/ws");
+        const stompClient = Stomp.over(socket);
+        stompClient.debug = str => log("🐛 " + str);
+
+        stompClient.connect(
+            {Authorization: "Bearer " + token, projectId: projectId},
+            () => {
+                log("✅ STOMP 연결 성공");
+
+                const topic = `/topic/projects/${projectId}/tree`;
+                const destination = `/app/projects/${projectId}/tree/init`;
+
+                stompClient.subscribe(topic, (msg) => {
+                    const body = JSON.parse(msg.body);
+                    log(`📩 메시지 수신 [${body.type}]`);
+
+                    switch (body.type) {
+                        case 'tree:init':
+                            log("🌳 초기 트리 구조 수신!");
+                            displayTree(body.payload);
+                            break;
+                        case 'tree:add':
+                            log(`➕ 파일 추가됨 → ${JSON.stringify(body.payload)}`);
+                            break;
+                        case 'tree:remove':
+                            log(`🗑️ 파일 삭제됨 → ${JSON.stringify(body.payload)}`);
+                            break;
+                        case 'tree:move':
+                            log(`🔀 파일 이동됨 → ${JSON.stringify(body.payload)}`);
+                            break;
+                        default:
+                            log("📦 기타 메시지:\n" + JSON.stringify(body, null, 2));
+                    }
+                });
+
+                log("📤 초기 트리 요청 전송 중...");
+                stompClient.send(destination, {}, JSON.stringify({}));
+            }, err => {
+                log("❌ STOMP 연결 실패: " + err);
+            });
+    }
+
+    function displayTree(nodes, depth = 0) {
+        const indent = '  '.repeat(depth);
+        for (const node of nodes) {
+            const icon = node.type === 'folder' ? '📁' : '📄';
+            log(`${indent}${icon} ${node.path || "(root)"}`);
+            if (node.children && node.children.length > 0) {
+                displayTree(node.children, depth + 1);
+            }
+        }
     }
 </script>
 </body>

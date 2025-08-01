@@ -10,6 +10,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TreeAddEventDto {
+	private Long id;
 	private String path;
 	private String type;
 }
