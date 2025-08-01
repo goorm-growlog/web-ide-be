@@ -56,7 +56,7 @@ jobs:
           echo "JWT_EXPIRATION=3600000" >> .env
 
           echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
-          echo "MAIL_PASSWORD=\"${{ secrets.MAIL_PASSWORD }}\"" >> .env
+          echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env
           echo "MAIL_FROM=${{ secrets.MAIL_FROM }}" >> .env
 
           echo "LIVEBLOCKS_ROOM_SALT=${{ secrets.LIVEBLOCKS_ROOM_SALT }}" >> .env
