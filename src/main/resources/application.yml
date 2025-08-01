@@ -1,7 +1,6 @@
 spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE}
-    include: s3 # prod일 때만 s3 프로파일 포함시켜야 하기 때문에 주석처리
   config:
     import: optional:file:.env[.properties]
 

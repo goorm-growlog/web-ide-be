@@ -4,6 +4,8 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${RDS_DB_USER_NAME}
     password: ${RDS_DB_PASSWORD}
+  profiles:
+    include: s3
 
   jpa:
     hibernate:
