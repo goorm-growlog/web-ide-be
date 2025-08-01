@@ -12,9 +12,6 @@ public class ResetPasswordRequestDto {
 	@Schema(description = "이름", example = "홍길동")
 	private String name;
 
-	@Schema(description = "휴대폰 번호", example = "01012345678")
-	private String phoneNumber;
-
 	@Schema(description = "이메일", example = "hong@gmail.com")
 	private String email;
 }
