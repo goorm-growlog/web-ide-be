@@ -54,10 +54,9 @@ public enum ErrorCode {
 
 	MEMBER_ALREADY_EXISTS("MEMBER_ALREADY_EXISTS", "이미 프로젝트에 참여중인 사용자입니다."),
 	MEMBER_NOT_FOUND("MEMBER_NOT_FOUND", "프로젝트 멤버가 아닙니다."),
-  
-  	// 채팅 관련
-	KEYWORD_NOT_FOUND("KEYWORD_NOT_FOUND", "검색 키워드가 비어있습니다.");
 
+	// 채팅 관련
+	KEYWORD_NOT_FOUND("KEYWORD_NOT_FOUND", "검색 키워드가 비어있습니다.");
 
 	private final String code;
 	private final String message;

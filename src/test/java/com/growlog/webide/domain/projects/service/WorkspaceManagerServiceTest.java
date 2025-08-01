@@ -1,10 +1,19 @@
 package com.growlog.webide.domain.projects.service;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.assertj.core.api.Fail.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Fail.fail;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -53,6 +62,7 @@ import com.growlog.webide.domain.projects.entity.ProjectStatus;
 import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
 import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
+import com.growlog.webide.domain.templates.service.TemplateService;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.factory.DockerClientFactory;
@@ -78,6 +88,8 @@ class WorkspaceManagerServiceTest {
 	private UserRepository userRepository;
 	@Mock
 	private ProjectMemberRepository projectMemberRepository;
+	@Mock
+	private TemplateService templateService;
 
 	// @BeforeEach
 	// void setUp() {
@@ -126,6 +138,9 @@ class WorkspaceManagerServiceTest {
 		ListVolumesCmd mockListVolumesCmd = mock(ListVolumesCmd.class);
 		when(mockListVolumesCmd.exec()).thenReturn(mockListVolumesResponse);
 		when(mockDockerClient.listVolumesCmd()).thenReturn(mockListVolumesCmd);
+
+		// templateService가 호출될 때 예외 없이 그냥 지나가도록 설정
+		doNothing().when(templateService).applyTemplate(anyString(), anyString(), anyString());
 
 		// when (실행): 테스트하려는 메소드를 호출합니다.
 		ProjectResponse response = workspaceManagerService.createProject(request, userId);
@@ -207,7 +222,7 @@ class WorkspaceManagerServiceTest {
 		// 1. repository mock 설정
 		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(anyLong())).thenReturn(Optional.of(fakeProject));
-		when(activeInstanceRepository.findByUserAndProject(any(Users.class), any(Project.class)))
+		when(activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId))
 			.thenReturn(Optional.empty()); // 기존 세션 없음
 		when(activeInstanceRepository.save(any(ActiveInstance.class)))
 			.thenAnswer(inv -> inv.getArgument(0));
@@ -267,7 +282,7 @@ class WorkspaceManagerServiceTest {
 		// 2. Mock 객체 호출 검증
 		verify(userRepository, times(1)).findById(userId);
 		verify(projectRepository, times(1)).findById(projectId);
-		verify(activeInstanceRepository, times(1)).findByUserAndProject(any(Users.class), any(Project.class));
+		verify(activeInstanceRepository, times(1)).findByUser_UserIdAndProject_Id(userId, projectId);
 		verify(dockerClientFactory, times(1)).buildDockerClient();
 		verify(mockDockerClient, times(1)).startContainerCmd(fakeContainerId);
 		verify(projectMemberRepository, times(1)).findByUserAndProject(fakeUser, fakeProject);
@@ -308,7 +323,7 @@ class WorkspaceManagerServiceTest {
 
 		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
-		when(activeInstanceRepository.findByUserAndProject(fakeUser, fakeProject))
+		when(activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId))
 			.thenReturn(Optional.empty());
 		when(projectMemberRepository.findByUserAndProject(fakeUser, fakeProject))
 			.thenReturn(Optional.of(member));
@@ -348,7 +363,7 @@ class WorkspaceManagerServiceTest {
 
 		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(anyLong())).thenReturn(Optional.of(fakeProject));
-		when(activeInstanceRepository.findByUserAndProject(any(Users.class), any(Project.class)))
+		when(activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId))
 			.thenReturn(Optional.of(fakeInstance));
 		when(projectMemberRepository.findByUserAndProject(any(Users.class), any(Project.class)))
 			.thenReturn(Optional.of(member));
@@ -422,7 +437,7 @@ class WorkspaceManagerServiceTest {
 		// 서비스 로직이 ActiveInstance를 찾을 수 있도록 Mocking
 		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
-		when(activeInstanceRepository.findByUserAndProject(fakeUser, fakeProject)).thenReturn(
+		when(activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)).thenReturn(
 			Optional.of(fakeInstance));
 		// when
 		workspaceManagerService.closeProjectSession(projectId, userId);
