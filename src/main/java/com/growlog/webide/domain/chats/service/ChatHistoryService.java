@@ -1,5 +1,8 @@
 package com.growlog.webide.domain.chats.service;
 
+import java.time.Instant;
+
+import org.jetbrains.annotations.NotNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -9,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.growlog.webide.domain.chats.dto.ChatPagingRequestDto;
 import com.growlog.webide.domain.chats.dto.ChatType;
 import com.growlog.webide.domain.chats.dto.ChattingResponseDto;
+import com.growlog.webide.domain.chats.dto.CodeLink;
 import com.growlog.webide.domain.chats.dto.PageResponse;
 import com.growlog.webide.domain.chats.entity.Chats;
 import com.growlog.webide.domain.chats.repository.ChatRepository;
@@ -27,14 +31,8 @@ public class ChatHistoryService {
 
 		Page<Chats> chats = chatRepository.findByProjectIdWithUser(projectId, pageable);
 
-		Page<ChattingResponseDto> chatResponses = chats.map(
-			chat -> {
-				final String username = chat.getUser().getName();
-				final String content = chat.getContent();
-				return new ChattingResponseDto(
-					ChatType.TALK, projectId, username, content
-				);
-			});
+		Page<ChattingResponseDto> chatResponses = getChattingResponseDtos(
+			projectId, chats);
 		return PageResponse.from(chatResponses);
 	}
 
@@ -45,12 +43,24 @@ public class ChatHistoryService {
 
 		Page<Chats> chats = chatRepository.findByProjectIdAndKeywordWithUser(projectId, keyword, pageable);
 
-		Page<ChattingResponseDto> chatResponses = chats.map(
-			chat -> new ChattingResponseDto(
-				ChatType.TALK, projectId, chat.getUser().getName(), chat.getContent()
-			)
-		);
+		Page<ChattingResponseDto> chatResponses = getChattingResponseDtos(
+			projectId, chats);
 		return PageResponse.from(chatResponses);
+	}
+
+	@NotNull
+	private static Page<ChattingResponseDto> getChattingResponseDtos(Long projectId, Page<Chats> chats) {
+		Page<ChattingResponseDto> chatResponses = chats.map(
+			chat -> {
+				final String username = chat.getUser().getName();
+				final String content = chat.getContent();
+				final Instant sentAt = chat.getSentAt();
+				final CodeLink codeLink = CodeLinkParser.parse(chat.getContent());
+				return new ChattingResponseDto(
+					ChatType.TALK, projectId, username, content, sentAt, codeLink
+				);
+			});
+		return chatResponses;
 	}
 
 }

@@ -1,6 +1,5 @@
 package com.growlog.webide.domain.chats.service;
 
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Service;
@@ -40,7 +39,7 @@ public class ChatService {
 		Users userRef = userRepository.getReferenceById(userId);
 		String username = userRef.getName();
 		Chats chat = new Chats(projectRef, userRef, content);
-		CodeLink codeLink = parseForCodeLink(content);
+		CodeLink codeLink = CodeLinkParser.parse(content);
 
 		chatRepository.save(chat);
 
@@ -54,18 +53,5 @@ public class ChatService {
 		String leaveMessage = username + "님이 퇴장했습니다.";
 
 		return new ChattingResponseDto(ChatType.LEAVE, projectId, username, leaveMessage);
-	}
-
-	// 문자열에서 [텍스트](ide://경로:줄번호) 패턴을 찾아 CodeLink 객체로 변환
-	private CodeLink parseForCodeLink(String content) {
-		Matcher matcher = CODE_LINK_PATTERN.matcher(content);
-
-		if (matcher.find()) {
-			String text = matcher.group(1);
-			String path = matcher.group(2);
-			int line = Integer.parseInt(matcher.group(3));
-			return new CodeLink(text, path, line);
-		}
-		return null;
 	}
 }

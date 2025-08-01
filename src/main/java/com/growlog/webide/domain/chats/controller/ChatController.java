@@ -33,7 +33,7 @@ public class ChatController {
 		@DestinationVariable Long projectId,
 		StompHeaderAccessor accessor
 	) {
-		final Long userId = Long.parseLong(accessor.getSessionAttributes().get("AUTHENTICATED").toString());
+		final Long userId = Long.parseLong(accessor.getSessionAttributes().get("userId").toString());
 
 		final Users user = userRepository.findById(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
@@ -56,7 +56,7 @@ public class ChatController {
 		StompHeaderAccessor accessor,
 		@Payload String content
 	) {
-		final Long userId = Long.parseLong(accessor.getSessionAttributes().get("AUTHENTICATED").toString());
+		final Long userId = Long.parseLong(accessor.getSessionAttributes().get("userId").toString());
 
 		return chatService.talk(projectId, userId, content);
 	}

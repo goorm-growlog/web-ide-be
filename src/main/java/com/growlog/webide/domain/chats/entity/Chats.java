@@ -1,6 +1,6 @@
 package com.growlog.webide.domain.chats.entity;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -44,7 +44,7 @@ public class Chats {
 	@CreatedDate
 	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Seoul")
 	@Column(name = "sent_at", updatable = false)
-	private LocalDateTime sentAt;
+	private Instant sentAt;
 
 	public Chats(Project project, Users user, String content) {
 		this.project = project;
@@ -67,4 +67,9 @@ public class Chats {
 	public String getContent() {
 		return content;
 	}
+
+	public Instant getSentAt() {
+		return sentAt;
+	}
+
 }
