@@ -24,7 +24,7 @@ liveblocks:
 
 template:
   docker-username: ${TEMPLATE_DOCKER_USERNAME}
-  
+
 jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION}

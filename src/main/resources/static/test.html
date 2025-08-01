@@ -10,22 +10,22 @@
 <h1>WebSocket STOMP Auth Test Client</h1>
 <div>
     <label for="jwtToken">JWT Token:</label>
-    <input type="text" id="jwtToken" size="100" placeholder="put your token here">
+    <input id="jwtToken" placeholder="put your token here" size="100" type="text">
 </div>
 <div>
     <button id="connectBtn">1. Connect with Token</button>
-    <button id="disconnectBtn" disabled>Disconnect</button>
+    <button disabled id="disconnectBtn">Disconnect</button>
 </div>
 <div>
     <label for="projectId">Project ID:</label>
-    <input type="text" id="projectId" value="1">
-    <button id="subscribeBtn" disabled>2. Subscribe & Enter</button>
+    <input id="projectId" type="text" value="1">
+    <button disabled id="subscribeBtn">2. Subscribe & Enter</button>
 </div>
 <hr>
 <div>
     <label for="chatMessage">Message:</label>
-    <input type="text" id="chatMessage" size="50" placeholder="Enter message to send">
-    <button id="sendBtn" disabled>3. Send Talk</button>
+    <input id="chatMessage" placeholder="Enter message to send" size="50" type="text">
+    <button disabled id="sendBtn">3. Send Talk</button>
 </div>
 <hr>
 <h2>Log</h2>

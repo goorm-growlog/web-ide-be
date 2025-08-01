@@ -19,10 +19,9 @@ import io.jsonwebtoken.SignatureAlgorithm;
 @Component
 public class JwtTokenProvider {
 
+	private final CustomUserDetailService customUserDetailsService;
 	private String secretKey;
 	private long expiration;
-
-	private final CustomUserDetailService customUserDetailsService;
 
 	public JwtTokenProvider(
 		@Value("${jwt.secret}") final String secretKey,

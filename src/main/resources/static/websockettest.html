@@ -68,40 +68,42 @@
         stompClient = Stomp.over(socket);
         stompClient.debug = str => log("🐛 " + str);
 
-        stompClient.connect({}, () => {
-            log("✅ STOMP 연결 성공");
+        stompClient.connect(
+            {Authorization: "Bearer " + token},
+            () => {
+                log("✅ STOMP 연결 성공");
 
-            const topic = `/topic/projects/${projectId}/tree`;
-            const destination = `/app/projects/${projectId}/tree/init`;
+                const topic = `/topic/projects/${projectId}/tree`;
+                const destination = `/app/projects/${projectId}/tree/init`;
 
-            stompClient.subscribe(topic, (msg) => {
-                const body = JSON.parse(msg.body);
-                log(`📩 메시지 수신 [${body.type}]`);
+                stompClient.subscribe(topic, (msg) => {
+                    const body = JSON.parse(msg.body);
+                    log(`📩 메시지 수신 [${body.type}]`);
 
-                switch (body.type) {
-                    case 'tree:init':
-                        log("🌳 초기 트리 구조 수신!");
-                        displayTree(body.payload);
-                        break;
-                    case 'tree:add':
-                        log(`➕ 파일 추가됨 → ${JSON.stringify(body.payload)}`);
-                        break;
-                    case 'tree:remove':
-                        log(`🗑️ 파일 삭제됨 → ${JSON.stringify(body.payload)}`);
-                        break;
-                    case 'tree:move':
-                        log(`🔀 파일 이동됨 → ${JSON.stringify(body.payload)}`);
-                        break;
-                    default:
-                        log("📦 기타 메시지:\n" + JSON.stringify(body, null, 2));
-                }
+                    switch (body.type) {
+                        case 'tree:init':
+                            log("🌳 초기 트리 구조 수신!");
+                            displayTree(body.payload);
+                            break;
+                        case 'tree:add':
+                            log(`➕ 파일 추가됨 → ${JSON.stringify(body.payload)}`);
+                            break;
+                        case 'tree:remove':
+                            log(`🗑️ 파일 삭제됨 → ${JSON.stringify(body.payload)}`);
+                            break;
+                        case 'tree:move':
+                            log(`🔀 파일 이동됨 → ${JSON.stringify(body.payload)}`);
+                            break;
+                        default:
+                            log("📦 기타 메시지:\n" + JSON.stringify(body, null, 2));
+                    }
+                });
+
+                log("📤 초기 트리 요청 전송 중...");
+                stompClient.send(destination, {}, JSON.stringify({}));
+            }, err => {
+                log("❌ STOMP 연결 실패: " + err);
             });
-
-            log("📤 초기 트리 요청 전송 중...");
-            stompClient.send(destination, {}, JSON.stringify({}));
-        }, err => {
-            log("❌ STOMP 연결 실패: " + err);
-        });
     }
 
     function displayTree(nodes, depth = 0) {

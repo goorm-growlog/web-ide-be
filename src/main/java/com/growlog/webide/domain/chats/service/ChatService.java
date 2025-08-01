@@ -22,11 +22,10 @@ import lombok.RequiredArgsConstructor;
 @Service
 public class ChatService {
 
+	private static final Pattern CODE_LINK_PATTERN = Pattern.compile("\\[([^\\]]+)\\]\\(ide://([^:]+):(\\d+)\\)");
 	private final ChatRepository chatRepository;
 	private final UserRepository userRepository;
 	private final ProjectRepository projectRepository;
-
-	private static final Pattern CODE_LINK_PATTERN = Pattern.compile("\\[([^\\]]+)\\]\\(ide://([^:]+):(\\d+)\\)");
 
 	@Transactional(readOnly = true)
 	public ChattingResponseDto enter(Long projectId, String username) {

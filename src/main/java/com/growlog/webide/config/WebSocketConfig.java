@@ -7,13 +7,10 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
+import com.growlog.webide.domain.chats.config.StompHandler;
 import com.growlog.webide.global.common.jwt.JwtHandshakeInterceptor;
 
 import jakarta.annotation.PostConstruct;
-import lombok.RequiredArgsConstructor;
-
-import com.growlog.webide.domain.chats.config.StompHandler;
-
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -26,13 +23,12 @@ import lombok.RequiredArgsConstructor;
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
 	private final JwtHandshakeInterceptor jwtHandshakeInterceptor;
+	private final StompHandler stompHandler;
 
 	@PostConstruct
 	public void init() {
 		System.out.println("✅ WebSocketConfig loaded");
 	}
-
-	private final StompHandler stompHandler;
 
 	/**
 	 * 클라이언트가 WebSocket으로 접속할 엔드포인트를 등록.

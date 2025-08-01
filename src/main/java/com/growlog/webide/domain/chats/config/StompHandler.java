@@ -37,6 +37,19 @@ public class StompHandler implements ChannelInterceptor {
 
 	private final ProjectMemberRepository projectMemberRepository;
 
+	private static boolean checkDuplicatedSubscribtion(StompHeaderAccessor accessor) {
+		final Set<String> subscriptions = (Set<String>)accessor.getSessionAttributes()
+			.getOrDefault("SUBSCRIPTIONS", new HashSet<>());
+		final String destination = accessor.getDestination();
+		if (subscriptions.contains(destination)) {
+			return true;
+		} else {
+			subscriptions.add(destination);
+			accessor.getSessionAttributes().put("SUBSCRIPTIONS", subscriptions);
+		}
+		return false;
+	}
+
 	@Override
 	public Message<?> preSend(Message<?> message, MessageChannel channel) {
 		final StompHeaderAccessor accessor = MessageHeaderAccessor
@@ -76,19 +89,6 @@ public class StompHandler implements ChannelInterceptor {
 			log.warn("잘못된 구독 요청: {}", e.getMessage());
 			throw new CustomException(ErrorCode.BAD_REQUEST);
 		}
-	}
-
-	private static boolean checkDuplicatedSubscribtion(StompHeaderAccessor accessor) {
-		final Set<String> subscriptions = (Set<String>)accessor.getSessionAttributes()
-			.getOrDefault("SUBSCRIPTIONS", new HashSet<>());
-		final String destination = accessor.getDestination();
-		if (subscriptions.contains(destination)) {
-			return true;
-		} else {
-			subscriptions.add(destination);
-			accessor.getSessionAttributes().put("SUBSCRIPTIONS", subscriptions);
-		}
-		return false;
 	}
 
 	private void handleValidToken(StompHeaderAccessor accessor) {

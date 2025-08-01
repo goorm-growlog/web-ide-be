@@ -110,7 +110,7 @@ jobs:
             docker build -t "$tag" "$dir"
             docker push "$tag"
           done
-          
+
       # EC2에 SSH로 접속해서 컨테이너 배포
       - name: 🚀 EC2 배포 (컨테이너 교체)
         uses: appleboy/ssh-action@v1.0.0
