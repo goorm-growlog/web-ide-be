@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>WebSocket STOMP Final Auth Test</title>
+    <title>WebSocket STOMP Auth Test</title>
     <!-- STOMP와 SockJS 라이브러리를 CDN으로 불러옵니다. -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 </head>
 <body>
-<h1>WebSocket STOMP Final Auth Test Client</h1>
+<h1>WebSocket STOMP Auth Test Client</h1>
 <div>
     <label for="jwtToken">JWT Token:</label>
     <input type="text" id="jwtToken" size="100" placeholder="put your token here">
@@ -107,6 +107,7 @@
         // 4. 특정 토픽을 구독합니다.
         stompClient.subscribe(topicUrl, function (message) {
             const body = JSON.parse(message.body);
+            console.log("서버로부터 받은 전체 메시지:", body);
             log(`MESSAGE RECEIVED: [${body.username}] ${body.content}`);
         });
 

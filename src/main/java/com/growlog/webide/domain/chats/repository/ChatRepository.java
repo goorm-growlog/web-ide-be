@@ -11,4 +11,13 @@ import com.growlog.webide.domain.chats.entity.Chats;
 public interface ChatRepository extends JpaRepository<Chats, Long> {
 	@Query("SELECT c FROM Chats c JOIN FETCH c.user WHERE c.project.id = :projectId ORDER BY c.sentAt DESC")
 	Page<Chats> findByProjectIdWithUser(@Param("projectId") Long projectId, Pageable pageable);
+
+	@Query("SELECT c FROM Chats c JOIN FETCH c.user "
+		+ "WHERE c.project.id = :projectId AND c.content LIKE %:keyword% "
+		+ "ORDER BY c.sentAt DESC")
+	Page<Chats> findByProjectIdAndKeywordWithUser(
+		@Param("projectId") Long projectId,
+		@Param("keyword") String keyword,
+		Pageable pageable
+	);
 }

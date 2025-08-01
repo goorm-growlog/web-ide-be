@@ -10,9 +10,15 @@ public record ChattingResponseDto(
 	String username,
 	String content,
 	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Seoul")
-	LocalDateTime sentAt
+	LocalDateTime sentAt,
+	CodeLink codeLink
 ) {
 	public ChattingResponseDto(ChatType messageType, Long projectId, String username, String content) {
-		this(messageType, projectId, username, content, LocalDateTime.now());
+		this(messageType, projectId, username, content, LocalDateTime.now(), null);
+	}
+
+	public ChattingResponseDto(ChatType messageType, Long projectId, String username, String content,
+		CodeLink codeLink) {
+		this(messageType, projectId, username, content, LocalDateTime.now(), codeLink);
 	}
 }
