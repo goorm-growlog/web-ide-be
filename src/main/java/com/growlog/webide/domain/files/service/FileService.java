@@ -42,10 +42,13 @@ public class FileService {
 	private final ActiveInstanceRepository activeInstanceRepository;
 	private final FileMetaRepository fileMetaRepository;
 
-	public void createFileorDirectory(Long projectId, CreateFileRequest request) {
+	public void createFileorDirectory(Long projectId, CreateFileRequest request, Long userId) {
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
-		ActiveInstance inst = instanceService.getActiveInstanceByProjectId(projectId);
+		ActiveInstance inst = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+		Long instanceId = inst.getId();
+
 		String cid = inst.getContainerId();
 		String rel = request.getPath().startsWith("/")
 			? request.getPath().substring(1)
@@ -81,15 +84,19 @@ public class FileService {
 			"tree:add",
 			new TreeAddEventDto(fileMeta.getId(), request.getPath(), request.getType())
 		);
-		log.info("[WS ▶ add] sending tree:add → instanceId={}", inst.getId());
+		log.info("[WS ▶ add] sending tree:add → projectId={}", projectId);
 		messagingTemplate.convertAndSend(
-			"/topic/instances/" + inst.getId() + "/tree",
+			"/topic/projects/" + projectId + "/tree",
 			msg
 		);
 	}
 
-	public void deleteFileorDirectory(Long projectId, String path) {
-		ActiveInstance inst = instanceService.getActiveInstanceByProjectId(projectId);
+	public void deleteFileorDirectory(Long projectId, String path, Long userId) {
+		ActiveInstance inst = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+
+		Long instanceId = inst.getId();
+
 		String cid = inst.getContainerId();
 
 		String rel = path.startsWith("/") ? path.substring(1) : path;
@@ -119,14 +126,18 @@ public class FileService {
 			new TreeRemoveEventDto(meta.getId(), path)
 		);
 		messagingTemplate.convertAndSend(
-			"/topic/instances/" + inst.getId() + "/tree",
+			"/topic/projects/" + projectId + "/tree",
 			msg
 		);
 
 	}
 
-	public void moveFileorDirectory(Long projectId, MoveFileRequest request) {
-		ActiveInstance inst = instanceService.getActiveInstanceByProjectId(projectId);
+	public void moveFileorDirectory(Long projectId, MoveFileRequest request, Long userId) {
+		ActiveInstance inst = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+
+		Long instanceId = inst.getId();
+
 		String cid = inst.getContainerId();
 
 		String from = request.getFromPath().startsWith("/")
@@ -170,7 +181,7 @@ public class FileService {
 			new TreeMoveEventDto(meta.getId(), request.getFromPath(), request.getToPath())
 		);
 		messagingTemplate.convertAndSend(
-			"/topic/instances/" + inst.getId() + "/tree",
+			"/topic/projects/" + projectId + "/tree",
 			msg
 		);
 	}
