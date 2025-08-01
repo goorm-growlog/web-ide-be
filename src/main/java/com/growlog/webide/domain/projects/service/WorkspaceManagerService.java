@@ -162,7 +162,7 @@ public class WorkspaceManagerService {
 		sessionScheduler.cancelDeletion(user.getUserId(), projectId);
 
 		// 2. 이미 해당 사용자의 활성 세션이 있는지 확인
-		activeInstanceRepository.findByUserAndProject(user, project).ifPresent(activeInstance -> {
+		activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId).ifPresent(activeInstance -> {
 			throw new IllegalStateException("User already has an active session for this project.");
 		});
 
@@ -313,7 +313,7 @@ public class WorkspaceManagerService {
 			.orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new EntityNotFoundException("Project not found: " + projectId));
-		ActiveInstance instance = activeInstanceRepository.findByUserAndProject(user, project)
+		ActiveInstance instance = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
 			.orElseThrow(() -> new IllegalArgumentException(
 				"Active session not found for project " + projectId + "and user " + user));
 
