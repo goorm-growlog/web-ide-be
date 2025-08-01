@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
 import org.springframework.security.authorization.AuthorizationManager;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -27,6 +28,7 @@ import com.growlog.webide.global.common.jwt.JwtTokenProvider;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
 	private static final String[] SWAGGER_WHITELIST = {
@@ -57,6 +59,10 @@ public class SecurityConfig {
 			.authorizeHttpRequests(authorize -> authorize
 				// Swagger UI 접근을 위한 경로들 허용
 				.requestMatchers(SWAGGER_WHITELIST).permitAll()
+				.requestMatchers(
+					"/", "/index.html", "/favicon.ico",
+					"/css/**", "/js/**", "/img/**", "/static/**"
+				).permitAll()
 				.requestMatchers("/swagger-ui.html").permitAll()
 				// API 경로 허용
 				.requestMatchers("/api/**").permitAll()

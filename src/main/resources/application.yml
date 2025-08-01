@@ -21,3 +21,10 @@ docker:
 liveblocks:
   secret-key: ${LIVEBLOCKS_SECRET_KEY}
   salt: ${LIVEBLOCKS_ROOM_SALT}
+
+template:
+  docker-username: ${TEMPLATE_DOCKER_USERNAME}
+  
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION}
