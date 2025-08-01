@@ -53,8 +53,3 @@ VALUES ((SELECT project_id FROM projects WHERE project_name = '프로젝트 A'),
        ((SELECT project_id FROM projects WHERE project_name = '프로젝트 B'),
         (SELECT user_id FROM users WHERE email = 'test1@example.com'), 'READ');
 
-INSERT INTO active_instances (project_id, user_id, container_id, web_socket_port, connected_at)
-VALUES ((SELECT project_id FROM projects WHERE project_name = '프로젝트 A'),
-        (SELECT user_id FROM users WHERE email = 'test1@example.com'),
-        'container-a', 10000, NOW());
-/*도커 명령어는 컨테이너 이름과 id 두 값을 모두 인식할 수 있어서 container_id에 컨테이너 이름을 넣어도 무사히 값을 찾아감*/
