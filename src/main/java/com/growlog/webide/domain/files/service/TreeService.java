@@ -1,5 +1,14 @@
 package com.growlog.webide.domain.files.service;
 
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.growlog.webide.domain.files.dto.tree.TreeNodeDto;
 import com.growlog.webide.domain.files.entity.FileMeta;
 import com.growlog.webide.domain.files.repository.FileMetaRepository;
@@ -8,16 +17,9 @@ import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
 import com.growlog.webide.global.docker.DockerCommandService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,66 +31,65 @@ public class TreeService {
 	private final ProjectRepository projectRepository;
 
 	/**
-	 * 프로젝트 볼륨에서 전체 트리(Root 포함)를 DTO로 빌드하여 반환.
+	 * 최초 1회: 컨테이너 내부 구조 스캔해서 DB에 FileMeta 생성
 	 */
-	@Transactional(readOnly = false)
-	public List<TreeNodeDto> buildTree(Long projectId, String containerId) {
-
-		// 컨테이너 내부에서 디렉토리/파일 경로 추출
+	@Transactional
+	public void syncFromContainer(Long projectId, String containerId) {
 		List<String> dirPaths = execFind(containerId, "-type d");
 		List<String> filePaths = execFind(containerId, "-type f");
 
-		// 1. 프로젝트의 모든 FileMeta를 한 번에 조회
-		Map<String, Long> pathIdMap = fileMetaRepository.findAllByProjectIdAndDeletedFalse(projectId)
-			.stream()
-			.collect(Collectors.toMap(FileMeta::getPath, FileMeta::getId));
+		Project project = projectRepository.findById(projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
+
+		List<FileMeta> existing = fileMetaRepository.findAllByProjectIdAndDeletedFalse(projectId);
+		Map<String, FileMeta> metaMap = existing.stream()
+			.collect(Collectors.toMap(FileMeta::getPath, m -> m));
+
+		for (String absPath : dirPaths) {
+			String relPath = toRelPath(absPath);
+			if (relPath != null && !metaMap.containsKey(relPath)) {
+				fileMetaRepository.save(FileMeta.of(project, relPath, "folder"));
+			}
+		}
+
+		for (String absPath : filePaths) {
+			String relPath = toRelPath(absPath);
+			if (relPath != null && !metaMap.containsKey(relPath)) {
+				fileMetaRepository.save(FileMeta.of(project, relPath, "file"));
+			}
+		}
+	}
+
+	/**
+	 * DB 기반으로 트리 빌드
+	 */
+	@Transactional(readOnly = true)
+	public List<TreeNodeDto> buildTreeFromDb(Long projectId) {
+		List<FileMeta> files = fileMetaRepository.findAllByProjectIdAndDeletedFalse(projectId);
 
 		Map<String, TreeNodeDto> nodes = new LinkedHashMap<>();
 		TreeNodeDto root = new TreeNodeDto(null, "", "folder");
 		nodes.put("", root);
 
-		Project project = projectRepository.findById(projectId)
-			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
+		for (FileMeta meta : files) {
+			String path = meta.getPath();
+			TreeNodeDto node = new TreeNodeDto(meta.getId(), path, meta.getType());
+			nodes.put(path, node);
+		}
 
-		addNodes(dirPaths, "folder", nodes, pathIdMap, project);
-		addNodes(filePaths, "file", nodes, pathIdMap, project);
-
-		nodes.forEach((path, node) -> {
-			if (path.isEmpty()) {
-				return; // root
-			}
+		// parent-child 관계 구성
+		for (Map.Entry<String, TreeNodeDto> entry : nodes.entrySet()) {
+			String path = entry.getKey();
+			TreeNodeDto node = entry.getValue();
+			if (path.isEmpty())
+				continue;
 
 			String parent = getParentPath(path);
-			TreeNodeDto parentNode = nodes.get(parent);
-			if (parentNode != null) {
-				parentNode.addChild(node);
-			} else {
-				root.addChild(node); // 예외 fallback
-			}
-		});
+			TreeNodeDto parentNode = nodes.getOrDefault(parent, root);
+			parentNode.addChild(node);
+		}
 
 		return List.of(root);
-	}
-
-	private void addNodes(List<String> absolutePaths, String type, Map<String, TreeNodeDto> nodes,
-						  Map<String, Long> pathIdMap, Project project) {
-		for (String absPath : absolutePaths) {
-			String relPath = toRelPath(absPath);
-			if (relPath == null) {
-				log.warn("🚫 무시된 경로 (루트 또는 base 외 경로): {}", absPath);
-				continue;
-			}
-
-			// ✅ DB에 없는 경우 자동 생성
-			if (!pathIdMap.containsKey(relPath)) {
-				FileMeta meta = fileMetaRepository.save(FileMeta.of(project, relPath, type));
-				pathIdMap.put(relPath, meta.getId());
-			}
-
-			// 3. Map에서 바로 ID 조회
-			Long id = pathIdMap.get(relPath);
-			nodes.put(relPath, new TreeNodeDto(id, relPath, type));
-		}
 	}
 
 	private List<String> execFind(String containerId, String typeOption) {
@@ -105,28 +106,19 @@ public class TreeService {
 		}
 	}
 
-	// 절대경로 → 상대경로 (예: /app/foo/bar → /foo/bar)
 	private String toRelPath(String absolutePath) {
-		if (!absolutePath.startsWith(CONTAINER_BASE)) {
+		if (!absolutePath.startsWith(CONTAINER_BASE))
 			return null;
-		}
 
 		String rel = absolutePath.substring(CONTAINER_BASE.length());
-		if (rel.isEmpty() || rel.equals("/")) {
-			log.debug("📁 Excluding root path.: {}", absolutePath);
+		if (rel.isEmpty() || rel.equals("/"))
 			return null;
-		}
-
-		// ✅ 앞 슬래시 제거 (add와 동일하게)
 		return rel.startsWith("/") ? rel.substring(1) : rel;
 	}
 
-	// 부모 경로 추출
 	private String getParentPath(String path) {
-		int lastSlash = path.lastIndexOf('/');
-		if (lastSlash == -1) {
-			return ""; // 최상위 노드
-		}
-		return path.substring(0, lastSlash);
+		int idx = path.lastIndexOf('/');
+		return (idx == -1) ? "" : path.substring(0, idx);
 	}
 }
+

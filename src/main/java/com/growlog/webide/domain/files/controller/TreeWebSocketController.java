@@ -13,6 +13,7 @@ import org.springframework.stereotype.Controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.growlog.webide.domain.files.dto.tree.TreeNodeDto;
 import com.growlog.webide.domain.files.dto.tree.WebSocketMessage;
+import com.growlog.webide.domain.files.repository.FileMetaRepository;
 import com.growlog.webide.domain.files.service.TreeService;
 import com.growlog.webide.domain.projects.entity.ActiveInstance;
 import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
@@ -30,11 +31,8 @@ public class TreeWebSocketController {
 	private final TreeService treeService;
 	private final SimpMessagingTemplate messagingTemplate;
 	private final ActiveInstanceRepository activeInstanceRepository;
+	private final FileMetaRepository fileMetaRepository;
 
-	/**
-	 * 클라이언트가 "/app/projects/{projectId}/tree/init"로 메시지를 보내면
-	 * 서버가 해당 인스턴스의 전체 파일 트리를 반환함.
-	 */
 	@MessageMapping("/projects/{projectId}/tree/init")
 	public void sendInitialTree(
 		@DestinationVariable Long projectId,
@@ -45,39 +43,35 @@ public class TreeWebSocketController {
 			throw new AccessDeniedException("WebSocket authentication failed: No session info");
 		}
 
-		Long userId = (Long)accessor.getSessionAttributes().get("userId");
-
+		Long userId = (Long) accessor.getSessionAttributes().get("userId");
 		if (userId == null) {
 			throw new AccessDeniedException("WebSocket authentication failed: No userId");
 		}
 
-		log.info("[WS Authenticated] userId={}, projectId={}", userId, projectId);
+		log.info("[WS] 트리 요청 userId={}, projectId={}", userId, projectId);
 
-		// 💡 서버에서 ActiveInstance 조회
+		// 📦 인스턴스 조회
 		ActiveInstance inst = activeInstanceRepository
 			.findByUser_UserIdAndProject_Id(userId, projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
 
-		Long instanceId = inst.getId();
+		String containerId = inst.getContainerId();
 
-		List<TreeNodeDto> tree = treeService.buildTree(projectId, inst.getContainerId());
-
-		if (!inst.getId().equals(instanceId)) {
-			throw new AccessDeniedException("You do not have permission to access this instance.");
+		// ✅ 최초 1회만 동기화 수행 (DB에 아무 파일도 없다면)
+		boolean isEmpty = fileMetaRepository.findAllByProjectIdAndDeletedFalse(projectId).isEmpty();
+		if (isEmpty) {
+			log.info("[WS] 최초 트리 요청 - 컨테이너에서 파일 구조 동기화 시작");
+			treeService.syncFromContainer(projectId, containerId);
 		}
+
+		// 🌳 트리 구성
+		List<TreeNodeDto> tree = treeService.buildTreeFromDb(projectId);
 
 		WebSocketMessage msg = new WebSocketMessage("tree:init", tree);
-
-		try {
-			String json = new ObjectMapper().writeValueAsString(msg); // 💡 여기
-			log.info("📤 Sending message: {}", json);
-		} catch (Exception e) {
-			log.error("❌ Message serialization failed.", e);
-		}
-
 		messagingTemplate.convertAndSend(
 			"/topic/projects/" + projectId + "/tree",
 			msg
 		);
 	}
+
 }
