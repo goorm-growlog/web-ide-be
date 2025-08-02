@@ -89,7 +89,7 @@ public class TreeService {
 				.filter(s -> !s.isEmpty())
 				.collect(Collectors.toList());
 		} catch (Exception e) {
-			log.error("❌ [execFind] 컨테이너({})에서 find 명령 실패", containerId, e);
+			log.error("❌ [execFind] Failed to execute find command in container ({}).", containerId, e);
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 	}
@@ -102,7 +102,7 @@ public class TreeService {
 
 		String rel = absolutePath.substring(CONTAINER_BASE.length());
 		if (rel.isEmpty() || rel.equals("/")) {
-			log.debug("📁 root path 제외: {}", absolutePath);
+			log.debug("📁 Excluding root path.: {}", absolutePath);
 			return null;
 		}
 

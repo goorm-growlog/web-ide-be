@@ -21,15 +21,15 @@ public class SmtpMailSender implements MailSender {
 		SimpleMailMessage message = new SimpleMailMessage();
 		message.setTo(to);
 		message.setFrom(emailProperties.getFrom());
-		message.setSubject("[GrowLog - WEB IDE] 이메일 인증번호 안내");
+		message.setSubject("[GrowLog - WEB IDE] Email Verification Code");
 
 		String content = """
-			GrowLog WEB IDE 에 오신걸 환영합니다!
+			Welcome to GrowLog WEB IDE!
 
 			---------------------------------------------------------
-			인증번호: %s
+			Verification code: %s
 
-			이 번호를 인증 페이지에 입력해주세요.
+			Please enter this code on the verification page.
 			---------------------------------------------------------
 			""".formatted(code);
 
@@ -43,15 +43,15 @@ public class SmtpMailSender implements MailSender {
 		SimpleMailMessage message = new SimpleMailMessage();
 		message.setTo(to);
 		message.setFrom(emailProperties.getFrom());
-		message.setSubject("[GrowLog - WEB IDE] 임시 비밀번호 발급");
+		message.setSubject("[GrowLog - WEB IDE] Password Reset Notification");
 
 		String content = """
-			GrowLog WEB IDE 임시 비밀번호 발급 메일입니다!
+			This mail contains your temporary password for GrowLog WEB IDE!
 
 			---------------------------------------------------------
-			임시 비밀번호: %s
+			Your temporary password: %s
 
-			로그인 후 반드시 비밀번호를 변경해주세요.
+			For your security, please change your password immediately after logging in.
 			---------------------------------------------------------
 			""".formatted(tempPassword);
 

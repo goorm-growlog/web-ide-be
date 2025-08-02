@@ -70,6 +70,8 @@ public class SecurityConfig {
 				.requestMatchers("/ws/**").permitAll()
 				// 웹소켓 테스트 페이지 허용
 				.requestMatchers("/websockettest.html").permitAll()
+				// 채팅 테스트 페이지 허용
+				.requestMatchers("/test.html").permitAll()
 				// 인증 관련 경로 허용
 				.requestMatchers(
 					"/auth/email/**", // 인증 요청

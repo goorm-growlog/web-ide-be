@@ -59,7 +59,7 @@ public class DockerCommandServiceImpl implements DockerCommandService {
 	 * */
 	private String executeDockerCommand(List<String> command) {
 		try {
-			log.info("📦 실행할 Docker 명령어: {}", String.join(" ", command));
+			log.info("📦 Docker command to execute: {}", String.join(" ", command));
 
 			ProcessBuilder builder = new ProcessBuilder(command);
 			builder.redirectErrorStream(false); //stderr 따로 보기 위해 false
@@ -94,7 +94,7 @@ public class DockerCommandServiceImpl implements DockerCommandService {
 			throw ce;
 
 		} catch (Exception e) {
-			log.error("❌ Docker 명령어 실행 중 예외 발생", e);
+			log.error("❌ Exception occurred while executing Docker command.", e);
 			throw new CustomException(ErrorCode.DOCKER_COMMAND_FAILED);
 		}
 	}

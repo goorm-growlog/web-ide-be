@@ -72,7 +72,7 @@ public class FileService {
 		} catch (CustomException ce) {
 			throw ce;
 		} catch (Exception e) {
-			log.error("컨테이너 내부 파일 생성 실패", e);
+			log.error("Failed to create file in container.", e);
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 
@@ -110,7 +110,7 @@ public class FileService {
 		} catch (CustomException ce) {
 			throw ce;
 		} catch (Exception e) {
-			log.error("컨테이너 내부 파일/디렉토리 삭제 실패", e);
+			log.error("Failed to delete file or directory in container.", e);
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 
@@ -161,7 +161,7 @@ public class FileService {
 		} catch (CustomException ce) {
 			throw ce;
 		} catch (Exception e) {
-			log.error("컨테이너 내부 파일/디렉토리 이동 실패", e);
+			log.error("Failed move file or directory in container.", e);
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 
@@ -210,7 +210,7 @@ public class FileService {
 		String containerId = instance.getContainerId();
 
 		// 👉 로그 추가 (디버깅용)
-		log.info("📂 파일 열기 - containerId: {}, path: {}", containerId, relativePath);
+		log.info("📂 Open file - containerId: {}, path: {}", containerId, relativePath);
 
 		String fileContent = dockerCommandService.readFileContent(containerId, relativePath);
 
@@ -229,7 +229,7 @@ public class FileService {
 		String containerId = instance.getContainerId();
 		dockerCommandService.writeFileContent(containerId, relativePath, content);
 
-		log.info("✅ 파일 저장 완료 - containerId: {}, path: {}", containerId, relativePath);
+		log.info("✅ File saved successfully. - containerId: {}, path: {}", containerId, relativePath);
 	}
 
 	public List<FileSearchResponseDto> searchFilesByName(Long projectId, String query) {

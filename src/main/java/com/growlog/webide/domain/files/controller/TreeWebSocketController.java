@@ -42,16 +42,16 @@ public class TreeWebSocketController {
 	) {
 		var accessor = SimpMessageHeaderAccessor.getAccessor(message, SimpMessageHeaderAccessor.class);
 		if (accessor == null || accessor.getSessionAttributes() == null) {
-			throw new AccessDeniedException("WebSocket 인증 실패: session 정보 없음");
+			throw new AccessDeniedException("WebSocket authentication failed: No session info");
 		}
 
 		Long userId = (Long)accessor.getSessionAttributes().get("userId");
 
 		if (userId == null) {
-			throw new AccessDeniedException("WebSocket 인증 실패: userId 없음");
+			throw new AccessDeniedException("WebSocket authentication failed: No userId");
 		}
 
-		log.info("[WS 인증] userId={}, projectId={}", userId, projectId);
+		log.info("[WS Authenticated] userId={}, projectId={}", userId, projectId);
 
 		// 💡 서버에서 ActiveInstance 조회
 		ActiveInstance inst = activeInstanceRepository
@@ -63,16 +63,16 @@ public class TreeWebSocketController {
 		List<TreeNodeDto> tree = treeService.buildTree(projectId, inst.getContainerId());
 
 		if (!inst.getId().equals(instanceId)) {
-			throw new AccessDeniedException("이 인스턴스에 접근 권한이 없습니다.");
+			throw new AccessDeniedException("You do not have permission to access this instance.");
 		}
 
 		WebSocketMessage msg = new WebSocketMessage("tree:init", tree);
 
 		try {
 			String json = new ObjectMapper().writeValueAsString(msg); // 💡 여기
-			log.info("📤 보내는 메시지: {}", json);
+			log.info("📤 Sending message: {}", json);
 		} catch (Exception e) {
-			log.error("❌ 메시지 직렬화 실패", e);
+			log.error("❌ Message serialization failed.", e);
 		}
 
 		messagingTemplate.convertAndSend(

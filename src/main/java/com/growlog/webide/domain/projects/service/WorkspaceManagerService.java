@@ -98,19 +98,19 @@ public class WorkspaceManagerService {
 			dockerClient.createVolumeCmd().withName(volumeName).exec();
 			log.info("Docker volume create: {}", volumeName);
 
-			log.info("템플릿 적용할 볼륨 이름: {}", volumeName);
+			log.info("Volume name for template application: {}", volumeName);
 			templateService.applyTemplate(image.getImageName(), image.getVersion(), volumeName);
 
 			dockerClient.listVolumesCmd().exec().getVolumes().forEach(volume -> {
 				if (volume.getName().equals(volumeName)) {
-					System.out.println("생성된 볼륨 정보:");
-					System.out.println("  이름: " + volume.getName());
-					System.out.println("  드라이버: " + volume.getDriver());
-					System.out.println("  마운트 포인트: " + volume.getMountpoint());
+					System.out.println("Information of the created volume:");
+					System.out.println("  Name: " + volume.getName());
+					System.out.println("  Driver: " + volume.getDriver());
+					System.out.println("  Mount point: " + volume.getMountpoint());
 				}
 			});
 		} catch (Exception e) {
-			throw new RuntimeException("볼륨 생성 오류: " + e.getMessage());
+			throw new RuntimeException("Error creating volume: " + e.getMessage());
 		} finally {
 			try {
 				dockerClient.close();

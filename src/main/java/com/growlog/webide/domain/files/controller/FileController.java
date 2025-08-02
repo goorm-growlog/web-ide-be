@@ -54,7 +54,7 @@ public class FileController {
 		@AuthenticationPrincipal UserPrincipal user
 	) {
 		fileService.createFileorDirectory(projectId, request, user.getUserId());
-		return ApiResponse.ok(new FileResponse("파일이 생성되었습니다."));
+		return ApiResponse.ok(new FileResponse("File created"));
 	}
 
 	@Operation(summary = "파일/폴더 삭제", description = "파일/폴더를 삭제합니다.")
@@ -67,7 +67,7 @@ public class FileController {
 	) {
 		log.info("[DELETE 요청] projectId={}, filePath={}", projectId, filePath);
 		fileService.deleteFileorDirectory(projectId, filePath, user.getUserId());
-		return ApiResponse.ok(new FileResponse("삭제되었습니다."));
+		return ApiResponse.ok(new FileResponse("File deleted"));
 	}
 
 	@Operation(summary = "파일/폴더 이름 변경 및 이동", description = "파일/폴더의 이름을 변경하거나 위치를 변경합니다.")
@@ -80,7 +80,7 @@ public class FileController {
 		@AuthenticationPrincipal UserPrincipal user
 	) {
 		fileService.moveFileorDirectory(projectId, filePath, request.getToPath(), user.getUserId());
-		return ApiResponse.ok(new FileResponse("파일이 이동되었습니다."));
+		return ApiResponse.ok(new FileResponse("File moved"));
 	}
 
 	/**
@@ -140,7 +140,7 @@ public class FileController {
 		@AuthenticationPrincipal UserPrincipal user) {
 		try {
 			fileService.saveFile(projectId, requestDto.getPath(), requestDto.getContent(), user.getUserId());
-			return ResponseEntity.ok(ApiResponse.ok(Map.of("message", "저장되었습니다.")));
+			return ResponseEntity.ok(ApiResponse.ok(Map.of("message", "File saved")));
 		} catch (CustomException e) {
 			HttpStatus status = switch (e.getErrorCode()) {
 				case NO_WRITE_PERMISSION, NOT_A_MEMBER -> HttpStatus.FORBIDDEN;

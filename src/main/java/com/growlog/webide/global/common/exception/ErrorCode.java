@@ -8,55 +8,55 @@ import lombok.RequiredArgsConstructor;
 public enum ErrorCode {
 
 	// 공통 에러
-	BAD_REQUEST("BAD_REQUEST", "잘못된 요청입니다."),
-	INVALID_ACCESSTOKEN("INVALID_ACCESSTOKEN", "유효하지 않은 접근입니다."),
-	INTERNAL_SERVER_ERROR("INTERNAL_SERVER_ERROR", "서버 내부 오류가 발생했습니다."),
+	BAD_REQUEST("BAD_REQUEST", "Bad request."),
+	INVALID_ACCESSTOKEN("INVALID_ACCESSTOKEN", "Invalid access token."),
+	INTERNAL_SERVER_ERROR("INTERNAL_SERVER_ERROR", "An internal server error has occurred."),
 
 	// Sign in, Log in 관련
-	LOGIN_FAILED("LOGIN_FAILED", "아이디 혹은 비밀번호가 올바르지 않습니다."),
-	EMAIL_CONFLICT("EMAIL_CONFLICT", "이 이메일로 가입된 계정이 있습니다."),
-	EMAIL_NOT_FOUND("EMAIL_NOT_FOUND", "이메일을 찾을 수 없습니다."),
+	LOGIN_FAILED("LOGIN_FAILED", "Incorrect username or password."),
+	EMAIL_CONFLICT("EMAIL_CONFLICT", "An account with this email already exists."),
+	EMAIL_NOT_FOUND("EMAIL_NOT_FOUND", "Email not found."),
 
 	// 인증 관련
-	EMAIL_VERIFICATION_FAILED("EMAIL_VERIFICATION_FAILED", "이메일 인증에 실패했습니다."),
-	EMAIL_NOT_VERIFIED("EMAIL_NOT_VERIFIED", "이메일이 인증되지 않았습니다."),
-	AUTH_CODE_NOT_FOUND("AUTH_404", "인증번호를 먼저 요청해주세요."),
-	INVALID_AUTH_CODE("AUTH_401", "인증번호가 일치하지 않습니다."),
-	DELETED_USER("DELETED_USER", "삭제된 회원입니다."),
-	AUTH_INFO_NOT_FOUND("AUTH_INFO_NOT_FOUND", "인증 정보 조회에 실패했습니다."),
+	EMAIL_VERIFICATION_FAILED("EMAIL_VERIFICATION_FAILED", "Email verification failed."),
+	EMAIL_NOT_VERIFIED("EMAIL_NOT_VERIFIED", "Email not verified."),
+	AUTH_CODE_NOT_FOUND("AUTH_404", "Please request an auth code first."),
+	INVALID_AUTH_CODE("AUTH_401", "The auth code does not match."),
+	DELETED_USER("DELETED_USER", "This account has been deleted."),
+	AUTH_INFO_NOT_FOUND("AUTH_INFO_NOT_FOUND", "Failed to retrieve auth information."),
 	SHA256_NOT_CREATED("SHA256_NOT_CREATED", "SHA-256 Algorithm not available"),
 
 	// User 관련
-	USER_NOT_FOUND("USER_NOT_FOUND", "존재하지 않는 회원입니다."),
+	USER_NOT_FOUND("USER_NOT_FOUND", "User not found."),
 
 	// 회원 탈퇴 관련
-	INVALID_PASSWORD("INVALID_PASSWORD", "비밀번호가 일치하지 않습니다."),
-	UNAUTHORIZED_ACCESS("UNAUTHORIZED_ACCESS", "접근 권한이 없습니다."),
+	INVALID_PASSWORD("INVALID_PASSWORD", "Incorrect password."),
+	UNAUTHORIZED_ACCESS("UNAUTHORIZED_ACCESS", "Unauthorized access."),
 
 	//권한 관련
-	NOT_A_MEMBER("NOT_A_MEMBER", "프로젝트의 멤버가 아닙니다."),
-	NO_READ_PERMISSION("NO_READ_PERMISSION", "읽기 권한이 없습니다."),
-	NO_WRITE_PERMISSION("NO_WRITE_PERMISSION", "쓰기 권한이 없습니다."),
-	NO_OWNER_PERMISSION("NO_OWNER_PERMISSION", "오너 권한이 없습니다."),
+	NOT_A_MEMBER("NOT_A_MEMBER", "Not a member of this project."),
+	NO_READ_PERMISSION("NO_READ_PERMISSION", "Read permission required."),
+	NO_WRITE_PERMISSION("NO_WRITE_PERMISSION", "Write permission required."),
+	NO_OWNER_PERMISSION("NO_OWNER_PERMISSION", "Owner permission required."),
 
 	//도커 관련
-	DOCKER_COMMAND_FAILED("DOCKER_COMMAND_FAILED", "Docker 명령어 실행에 실패했습니다."),
+	DOCKER_COMMAND_FAILED("DOCKER_COMMAND_FAILED", "Failed to execute Docker command."),
 
 	//프로젝트/파일 관련
-	CONTAINER_NOT_FOUND("CONTAINER_NOT_FOUND", "컨테이너를 찾을 수 없습니다."),
-	ACTIVE_CONTAINER_NOT_FOUND("ACTIVE_CONTAINER_NOT_FOUND", "현재 활성화된 컨테이너를 찾을 수 없습니다."),
-	NOT_SUPPORT_LANGUAGE("NOT_SUPPORT_LANGUAGE", "지원하지 않는 언어입니다."),
-	PROJECT_NOT_FOUND("PROJECT_NOT_FOUND", "해당 프로젝트를 찾을 수 없습니다."),
-	FILE_ALREADY_EXISTS("FILE_ALREADY_EXISTS", "해당 경로에 이미 파일 또는 폴더가 존재합니다."),
-	FILE_NOT_FOUND("FILE_NOT_FOUND", "파일 또는 폴더를 찾을 수 없습니다."),
-	FILE_OPERATION_FAILED("FILE_OPERATION_FAILED", "파일 처리 중 오류가 발생했습니다."),
-	INSTANCE_NOT_FOUND("INSTANCE_NOT_FOUND", "인스턴스를 찾을 수 없습니다."),
+	CONTAINER_NOT_FOUND("CONTAINER_NOT_FOUND", "Container not found."),
+	ACTIVE_CONTAINER_NOT_FOUND("ACTIVE_CONTAINER_NOT_FOUND", "Active container not found."),
+	NOT_SUPPORT_LANGUAGE("NOT_SUPPORT_LANGUAGE", "Unsupported language."),
+	PROJECT_NOT_FOUND("PROJECT_NOT_FOUND", "Project not found."),
+	FILE_ALREADY_EXISTS("FILE_ALREADY_EXISTS", "A file or directory already exists at this path."),
+	FILE_NOT_FOUND("FILE_NOT_FOUND", "File or directory not found."),
+	FILE_OPERATION_FAILED("FILE_OPERATION_FAILED", "An error occurred during file operation."),
+	INSTANCE_NOT_FOUND("INSTANCE_NOT_FOUND", "Instance not found."),
 
-	MEMBER_ALREADY_EXISTS("MEMBER_ALREADY_EXISTS", "이미 프로젝트에 참여중인 사용자입니다."),
-	MEMBER_NOT_FOUND("MEMBER_NOT_FOUND", "프로젝트 멤버가 아닙니다."),
+	MEMBER_ALREADY_EXISTS("MEMBER_ALREADY_EXISTS", "This user is already a member of the project."),
+	MEMBER_NOT_FOUND("MEMBER_NOT_FOUND", "Project member not found."),
 
 	// 채팅 관련
-	KEYWORD_NOT_FOUND("KEYWORD_NOT_FOUND", "검색 키워드가 비어있습니다.");
+	KEYWORD_NOT_FOUND("KEYWORD_NOT_FOUND", "Search keyword cannot be empty.");
 
 	private final String code;
 	private final String message;

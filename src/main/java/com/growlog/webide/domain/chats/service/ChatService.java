@@ -28,7 +28,7 @@ public class ChatService {
 
 	@Transactional(readOnly = true)
 	public ChattingResponseDto enter(Long projectId, String username) {
-		String enterMessage = username + "님이 입장했습니다.";
+		String enterMessage = username + " joined.";
 
 		return new ChattingResponseDto(ChatType.ENTER, projectId, username, enterMessage);
 	}
@@ -50,7 +50,7 @@ public class ChatService {
 	public ChattingResponseDto leave(Long projectId, Long userId) {
 		Users userRef = userRepository.getReferenceById(userId);
 		String username = userRef.getName();
-		String leaveMessage = username + "님이 퇴장했습니다.";
+		String leaveMessage = username + " left.";
 
 		return new ChattingResponseDto(ChatType.LEAVE, projectId, username, leaveMessage);
 	}

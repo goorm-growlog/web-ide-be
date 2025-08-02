@@ -38,10 +38,10 @@ public class AuthController {
 	public ApiResponse<String> logout(Authentication authentication) {
 		if (authentication != null) {
 			String email = authentication.getName(); // JWT에서 추출한 email
-			log.info("로그아웃 요청 : {}", email);
+			log.info("Logout requested : {}", email);
 		}
 
 		// 토큰 무효화는 JWT의 경우 서버에서 관리하지 않으므로, 클라이언트 측에서 토큰을 삭제하는 방식으로 처리(프론트에서 토큰 삭제 조치)
-		return ApiResponse.ok("로그아웃 되었습니다.");
+		return ApiResponse.ok("Logged out successfully.");
 	}
 }

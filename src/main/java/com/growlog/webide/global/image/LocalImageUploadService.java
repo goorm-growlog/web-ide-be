@@ -23,7 +23,7 @@ public class LocalImageUploadService implements ImageUploadService {
 	public String uploadProfileImage(MultipartFile file) {
 		String originalFilename = file.getOriginalFilename();
 		if (originalFilename == null) {
-			throw new RuntimeException("파일 이름이 존재하지 않습니다.");
+			throw new RuntimeException("File name not found.");
 		}
 
 		// 확장자 분리
@@ -43,7 +43,7 @@ public class LocalImageUploadService implements ImageUploadService {
 
 		File dir = new File(fullPath);
 		if (!dir.exists() && !dir.mkdirs()) {
-			throw new RuntimeException("디렉토리 생성 실패: " + fullPath);
+			throw new RuntimeException("Failed to create directory: " + fullPath);
 		}
 
 		File target = new File(fullPath, filename);
@@ -51,7 +51,7 @@ public class LocalImageUploadService implements ImageUploadService {
 		try {
 			file.transferTo(target); // 실제 파일 저장
 		} catch (IOException e) {
-			throw new RuntimeException("로컬 업로드 실패", e);
+			throw new RuntimeException("Failed to upload local file", e);
 		}
 
 		// 프론트에서 접근할 수 있는 URL 형식으로 반환 (테스트용)

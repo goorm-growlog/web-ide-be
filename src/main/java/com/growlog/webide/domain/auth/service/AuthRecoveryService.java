@@ -39,7 +39,7 @@ public class AuthRecoveryService {
 
 		// 4. 이메일 발송
 		mailSender.sendTemporaryPassword(user.getEmail(), tempPassword);
-		log.info("{}의 임시 비밀번호: {}", user.getEmail(), tempPassword);
+		log.info("{}'s temporary password: {}", user.getEmail(), tempPassword);
 
 	}
 }

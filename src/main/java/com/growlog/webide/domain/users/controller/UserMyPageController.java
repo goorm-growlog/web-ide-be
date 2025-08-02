@@ -47,7 +47,7 @@ public class UserMyPageController {
 	public ApiResponse<String> updateName(@RequestBody NameUpdateRequestDto requestDto,
 		@AuthenticationPrincipal UserPrincipal user) {
 		userService.updateName(requestDto.getName(), user.getUserId());
-		return ApiResponse.ok("이름이 변경되었습니다.");
+		return ApiResponse.ok("Username updated successfully.");
 	}
 
 	@Operation(summary = "비밀번호 변경")
@@ -55,7 +55,7 @@ public class UserMyPageController {
 	public ApiResponse<String> updatePassword(@RequestBody PasswordUpdateRequestDto dto,
 		@AuthenticationPrincipal UserPrincipal user) {
 		userService.updatePassword(dto.getCurrentPassword(), dto.getNewPassword(), user.getUserId());
-		return ApiResponse.ok("비밀번호가 변경되었습니다.");
+		return ApiResponse.ok("Password updated successfully.");
 	}
 
 	@Operation(summary = "비밀번호 검증")
@@ -71,7 +71,7 @@ public class UserMyPageController {
 	public ApiResponse<String> deleteAccount(@RequestBody DeleteRequestDto requestDto,
 		@AuthenticationPrincipal UserPrincipal user) {
 		userService.deleteAccount(requestDto.getPassword(), user.getUserId());
-		return ApiResponse.ok("회원 탈퇴가 완료되었습니다.");
+		return ApiResponse.ok("Account deleted successfully.");
 	}
 
 	//마이페이지

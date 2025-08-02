@@ -45,7 +45,7 @@ public class TemplateService {
 
 			containerId = container.getId();
 			dockerClient.startContainerCmd(containerId).exec();
-			log.info("템플릿 컨테이너 {} 시작 (image: {})", containerId, imageName);
+			log.info("Starting Template container : {} (image: {})", containerId, imageName);
 
 			// 2. 복사 명령 실행 (/template/src → /app/src)
 			String copyCommand = "mkdir -p /app/src && cp -r /template/src/* /app/src/";
@@ -59,24 +59,24 @@ public class TemplateService {
 				.exec(new ExecStartResultCallback(System.out, System.err))
 				.awaitCompletion(1, TimeUnit.MINUTES);
 
-			log.info("템플릿 복사 완료: {} → /app/src", imageName);
+			log.info("Template copied successfully: {} → /app/src", imageName);
 
 		} catch (Exception e) {
-			log.error("템플릿 적용 실패 (image: {})", imageName, e);
+			log.error("Failed to apply template (image: {})", imageName, e);
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		} finally {
 			if (dockerClient != null && containerId != null) {
 				try {
 					dockerClient.stopContainerCmd(containerId).exec();
 					dockerClient.removeContainerCmd(containerId).exec();
-					log.info("템플릿 컨테이너 {} 정리 완료", containerId);
+					log.info("Template container {} removed successfully.", containerId);
 				} catch (Exception e) {
-					log.warn("컨테이너 정리 중 오류: {}", e.getMessage());
+					log.warn("Failed to remove container: {}", e.getMessage());
 				}
 				try {
 					dockerClient.close();
 				} catch (IOException e) {
-					log.warn("DockerClient 닫기 실패", e);
+					log.warn("Failed to closing DockerClient", e);
 				}
 			}
 		}

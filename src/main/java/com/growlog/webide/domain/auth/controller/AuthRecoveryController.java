@@ -25,7 +25,7 @@ public class AuthRecoveryController {
 	@PostMapping("/reset-password")
 	public ResponseEntity<ApiResponse<Void>> resetPassword(@RequestBody ResetPasswordRequestDto requestDto) {
 		authRecoveryService.resetPassword(requestDto);
-		log.info("[GrowLog - 여행서비스] 비밀번호 재설정 요청: {}", requestDto);
+		log.info("[GrowLog - WebIDE] Password reset requested : {}", requestDto);
 		return ResponseEntity.ok(ApiResponse.ok(null));
 	}
 }

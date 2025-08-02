@@ -88,7 +88,7 @@ public class ProjectMemberService {
 		pm.setRole(dto.getRole());
 		memberRepo.save(pm);
 
-		return ApiResponse.ok("권한이 변경되었습니다.");
+		return ApiResponse.ok("Member role has been updated.");
 	}
 
 	public ApiResponse<String> removeMember(Long projectId, Long userId) {
@@ -100,6 +100,6 @@ public class ProjectMemberService {
 			.orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
 
 		memberRepo.delete(pm);
-		return ApiResponse.ok("사용자가 프로젝트에서 제거되었습니다.");
+		return ApiResponse.ok("The user has been removed from the project.");
 	}
 }

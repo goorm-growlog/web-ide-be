@@ -64,11 +64,11 @@ public class StompHandler implements ChannelInterceptor {
 				validateSubscription(accessor);
 
 				if (checkDuplicatedSubscribtion(accessor)) {
-					log.warn("중복 구독 시도, 요청을 차단합니다.");
+					log.warn("Already Subscribed.");
 					return null;
 				}
 			} catch (CustomException e) {
-				log.warn("구독 요청 거부: code={}, message={}", e.getErrorCode().getCode(), e.getMessage());
+				log.warn("Subscription denied: code={}, message={}", e.getErrorCode().getCode(), e.getMessage());
 				return null;
 			}
 		}
@@ -82,11 +82,11 @@ public class StompHandler implements ChannelInterceptor {
 			final Long projectId = Long.parseLong(destination.split("/")[3]);
 
 			if (projectMemberRepository.findByProject_IdAndUser_UserId(projectId, userId).isEmpty()) {
-				log.warn("권한 없는 구독 시도, 요청을 차단합니다.");
+				log.warn("Required permissions are missing.");
 				throw new CustomException(ErrorCode.NOT_A_MEMBER);
 			}
 		} catch (Exception e) {
-			log.warn("잘못된 구독 요청: {}", e.getMessage());
+			log.warn("Failed to process subscription request.: {}", e.getMessage());
 			throw new CustomException(ErrorCode.BAD_REQUEST);
 		}
 	}
@@ -100,9 +100,8 @@ public class StompHandler implements ChannelInterceptor {
 			accessor.getSessionAttributes().put("userId", userId);
 			accessor.setUser(auth);
 		} else {
-			log.warn("유효하지 않은 토큰입니다.");
 			CustomException authException = new CustomException(ErrorCode.INVALID_ACCESSTOKEN);
-			log.error("WebSocket 인증 실패:", authException);
+			log.error("WebSocket connection failed:", authException);
 			throw authException;
 		}
 	}

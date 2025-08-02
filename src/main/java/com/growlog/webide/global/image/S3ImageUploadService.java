@@ -36,7 +36,7 @@ public class S3ImageUploadService implements ImageUploadService {
 
 			amazonS3.putObject(new PutObjectRequest(bucket, key, is, meta));
 		} catch (IOException e) {
-			throw new RuntimeException("S3 업로드 실패", e);
+			throw new RuntimeException("Failed to upload S3", e);
 		}
 		return amazonS3.getUrl(bucket, key).toString();
 	}
