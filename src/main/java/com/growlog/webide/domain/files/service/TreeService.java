@@ -48,14 +48,16 @@ public class TreeService {
 		for (String absPath : dirPaths) {
 			String relPath = toRelPath(absPath);
 			if (relPath != null && !metaMap.containsKey(relPath)) {
-				fileMetaRepository.save(FileMeta.of(project, relPath, "folder"));
+				FileMeta saved = fileMetaRepository.save(FileMeta.of(project, relPath, "folder"));
+				metaMap.put(relPath, saved);
 			}
 		}
 
 		for (String absPath : filePaths) {
 			String relPath = toRelPath(absPath);
 			if (relPath != null && !metaMap.containsKey(relPath)) {
-				fileMetaRepository.save(FileMeta.of(project, relPath, "file"));
+				FileMeta saved = fileMetaRepository.save(FileMeta.of(project, relPath, "file"));
+				metaMap.put(relPath, saved);
 			}
 		}
 	}
