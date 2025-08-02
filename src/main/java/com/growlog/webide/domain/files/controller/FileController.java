@@ -75,10 +75,11 @@ public class FileController {
 	@PreAuthorize("@projectSecurityService.hasWritePermission(#projectId)")
 	public ApiResponse<FileResponse> moveFile(
 		@PathVariable Long projectId,
+		@PathVariable String filePath,
 		@RequestBody MoveFileRequest request,
 		@AuthenticationPrincipal UserPrincipal user
 	) {
-		fileService.moveFileorDirectory(projectId, request, user.getUserId());
+		fileService.moveFileorDirectory(projectId, filePath, request.getToPath(), user.getUserId());
 		return ApiResponse.ok(new FileResponse("파일이 이동되었습니다."));
 	}
 
