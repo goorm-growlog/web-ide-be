@@ -79,6 +79,7 @@ public class FileController {
 		@AuthenticationPrincipal UserPrincipal user
 	) {
 		fileService.moveFileorDirectory(projectId, fromPath, toPath, user.getUserId());
+		log.info("[FILE MOVE] Parameters: {}, {}, {}, {}", projectId, fromPath, toPath, user.getUserId());
 		return ApiResponse.ok(new FileResponse("File moved"));
 	}
 
