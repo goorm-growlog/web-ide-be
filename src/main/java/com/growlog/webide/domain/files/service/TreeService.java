@@ -12,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.growlog.webide.domain.files.dto.tree.TreeNodeDto;
 import com.growlog.webide.domain.files.entity.FileMeta;
 import com.growlog.webide.domain.files.repository.FileMetaRepository;
+import com.growlog.webide.domain.projects.entity.Project;
+import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
 import com.growlog.webide.global.docker.DockerCommandService;
@@ -26,6 +28,7 @@ public class TreeService {
 	private static final String CONTAINER_BASE = "/app";
 	private final DockerCommandService dockerCommandService;
 	private final FileMetaRepository fileMetaRepository;
+	private final ProjectRepository projectRepository;
 
 	/**
 	 * 프로젝트 볼륨에서 전체 트리(Root 포함)를 DTO로 빌드하여 반환.
@@ -46,8 +49,11 @@ public class TreeService {
 		TreeNodeDto root = new TreeNodeDto(null, "", "folder");
 		nodes.put("", root);
 
-		addNodes(dirPaths, "folder", nodes, pathIdMap);
-		addNodes(filePaths, "file", nodes, pathIdMap);
+		Project project = projectRepository.findById(projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
+
+		addNodes(dirPaths, "folder", nodes, pathIdMap, project);
+		addNodes(filePaths, "file", nodes, pathIdMap, project);
 
 		nodes.forEach((path, node) -> {
 			if (path.isEmpty()) {
@@ -67,13 +73,20 @@ public class TreeService {
 	}
 
 	private void addNodes(List<String> absolutePaths, String type, Map<String, TreeNodeDto> nodes,
-		Map<String, Long> pathIdMap) {
+		Map<String, Long> pathIdMap, Project project) {
 		for (String absPath : absolutePaths) {
 			String relPath = toRelPath(absPath);
 			if (relPath == null) {
 				log.warn("🚫 무시된 경로 (루트 또는 base 외 경로): {}", absPath);
 				continue;
 			}
+
+			// ✅ DB에 없는 경우 자동 생성
+			if (!pathIdMap.containsKey(relPath)) {
+				FileMeta meta = fileMetaRepository.save(FileMeta.of(project, relPath, type));
+				pathIdMap.put(relPath, meta.getId());
+			}
+
 			// 3. Map에서 바로 ID 조회
 			Long id = pathIdMap.get(relPath);
 			nodes.put(relPath, new TreeNodeDto(id, relPath, type));
