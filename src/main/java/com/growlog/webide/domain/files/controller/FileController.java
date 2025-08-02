@@ -77,7 +77,6 @@ public class FileController {
 		@PathVariable Long projectId,
 		@RequestParam String fromPath,
 		@RequestParam String toPath,
-		@RequestBody MoveFileRequest request,
 		@AuthenticationPrincipal UserPrincipal user
 	) {
 		fileService.moveFileorDirectory(projectId, fromPath, toPath, user.getUserId());

@@ -1,14 +1,5 @@
 package com.growlog.webide.domain.files.service;
 
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.growlog.webide.domain.files.dto.tree.TreeNodeDto;
 import com.growlog.webide.domain.files.entity.FileMeta;
 import com.growlog.webide.domain.files.repository.FileMetaRepository;
@@ -17,9 +8,16 @@ import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
 import com.growlog.webide.global.docker.DockerCommandService;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,7 +31,7 @@ public class TreeService {
 	/**
 	 * 프로젝트 볼륨에서 전체 트리(Root 포함)를 DTO로 빌드하여 반환.
 	 */
-	@Transactional(readOnly = true)
+	@Transactional(readOnly = false)
 	public List<TreeNodeDto> buildTree(Long projectId, String containerId) {
 
 		// 컨테이너 내부에서 디렉토리/파일 경로 추출
@@ -73,7 +71,7 @@ public class TreeService {
 	}
 
 	private void addNodes(List<String> absolutePaths, String type, Map<String, TreeNodeDto> nodes,
-		Map<String, Long> pathIdMap, Project project) {
+						  Map<String, Long> pathIdMap, Project project) {
 		for (String absPath : absolutePaths) {
 			String relPath = toRelPath(absPath);
 			if (relPath == null) {
