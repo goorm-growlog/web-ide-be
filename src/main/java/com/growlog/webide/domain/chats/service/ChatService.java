@@ -27,10 +27,11 @@ public class ChatService {
 	private final ProjectRepository projectRepository;
 
 	@Transactional(readOnly = true)
-	public ChattingResponseDto enter(Long projectId, String username) {
+	public ChattingResponseDto enter(Long projectId, Long userId, String username, String profileImageUrl) {
 		String enterMessage = username + " joined.";
 
-		return new ChattingResponseDto(ChatType.ENTER, projectId, username, enterMessage);
+		return new ChattingResponseDto(ChatType.ENTER, projectId, userId, username, profileImageUrl, enterMessage);
+
 	}
 
 	@Transactional
@@ -43,7 +44,7 @@ public class ChatService {
 
 		chatRepository.save(chat);
 
-		return new ChattingResponseDto(ChatType.TALK, projectId, username, content, codeLink);
+		return new ChattingResponseDto(ChatType.TALK, projectId, userId, username, null, content, codeLink);
 	}
 
 	@Transactional(readOnly = true)
@@ -52,6 +53,6 @@ public class ChatService {
 		String username = userRef.getName();
 		String leaveMessage = username + " left.";
 
-		return new ChattingResponseDto(ChatType.LEAVE, projectId, username, leaveMessage);
+		return new ChattingResponseDto(ChatType.LEAVE, projectId, userId, username, null, leaveMessage);
 	}
 }

@@ -52,12 +52,13 @@ public class ChatHistoryService {
 	private static Page<ChattingResponseDto> getChattingResponseDtos(Long projectId, Page<Chats> chats) {
 		Page<ChattingResponseDto> chatResponses = chats.map(
 			chat -> {
+				final Long userId = chat.getUser().getUserId();
 				final String username = chat.getUser().getName();
 				final String content = chat.getContent();
 				final Instant sentAt = chat.getSentAt();
 				final CodeLink codeLink = CodeLinkParser.parse(chat.getContent());
 				return new ChattingResponseDto(
-					ChatType.TALK, projectId, username, content, sentAt, codeLink
+					ChatType.TALK, projectId, userId, username, null, content, sentAt, codeLink
 				);
 			});
 		return chatResponses;

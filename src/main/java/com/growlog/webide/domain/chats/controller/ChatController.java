@@ -38,6 +38,8 @@ public class ChatController {
 		final Users user = userRepository.findById(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
+		final String profileImageUrl = user.getProfileImageUrl();
+
 		projectMemberRepository.findByProject_IdAndUser_UserId(projectId, userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.NOT_A_MEMBER));
 
@@ -46,7 +48,7 @@ public class ChatController {
 		accessor.getSessionAttributes().put("projectId", projectId);
 		log.info("accessor: {}", accessor);
 
-		return chatService.enter(projectId, username);
+		return chatService.enter(projectId, userId, username, profileImageUrl);
 	}
 
 	@MessageMapping("/projects/{projectId}/chat/talk")
