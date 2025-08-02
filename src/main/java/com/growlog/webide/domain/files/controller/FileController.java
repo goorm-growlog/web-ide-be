@@ -23,7 +23,6 @@ import com.growlog.webide.domain.files.dto.FileOpenResponseDto;
 import com.growlog.webide.domain.files.dto.FileResponse;
 import com.growlog.webide.domain.files.dto.FileSaveRequestDto;
 import com.growlog.webide.domain.files.dto.FileSearchResponseDto;
-import com.growlog.webide.domain.files.dto.MoveFileRequest;
 import com.growlog.webide.domain.files.service.FileService;
 import com.growlog.webide.global.common.ApiResponse;
 import com.growlog.webide.global.common.exception.CustomException;

@@ -10,7 +10,6 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.growlog.webide.domain.files.dto.tree.TreeNodeDto;
 import com.growlog.webide.domain.files.dto.tree.WebSocketMessage;
 import com.growlog.webide.domain.files.repository.FileMetaRepository;
@@ -43,7 +42,7 @@ public class TreeWebSocketController {
 			throw new AccessDeniedException("WebSocket authentication failed: No session info");
 		}
 
-		Long userId = (Long) accessor.getSessionAttributes().get("userId");
+		Long userId = (Long)accessor.getSessionAttributes().get("userId");
 		if (userId == null) {
 			throw new AccessDeniedException("WebSocket authentication failed: No userId");
 		}

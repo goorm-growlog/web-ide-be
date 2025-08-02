@@ -81,8 +81,9 @@ public class TreeService {
 		for (Map.Entry<String, TreeNodeDto> entry : nodes.entrySet()) {
 			String path = entry.getKey();
 			TreeNodeDto node = entry.getValue();
-			if (path.isEmpty())
+			if (path.isEmpty()) {
 				continue;
+			}
 
 			String parent = getParentPath(path);
 			TreeNodeDto parentNode = nodes.getOrDefault(parent, root);
@@ -107,12 +108,14 @@ public class TreeService {
 	}
 
 	private String toRelPath(String absolutePath) {
-		if (!absolutePath.startsWith(CONTAINER_BASE))
+		if (!absolutePath.startsWith(CONTAINER_BASE)) {
 			return null;
+		}
 
 		String rel = absolutePath.substring(CONTAINER_BASE.length());
-		if (rel.isEmpty() || rel.equals("/"))
+		if (rel.isEmpty() || rel.equals("/")) {
 			return null;
+		}
 		return rel.startsWith("/") ? rel.substring(1) : rel;
 	}
 
