@@ -71,15 +71,16 @@ public class FileController {
 	}
 
 	@Operation(summary = "파일/폴더 이름 변경 및 이동", description = "파일/폴더의 이름을 변경하거나 위치를 변경합니다.")
-	@PatchMapping("/{filePath:.+}")
+	@PatchMapping
 	@PreAuthorize("@projectSecurityService.hasWritePermission(#projectId)")
 	public ApiResponse<FileResponse> moveFile(
 		@PathVariable Long projectId,
-		@PathVariable String filePath,
+		@RequestParam String fromPath,
+		@RequestParam String toPath,
 		@RequestBody MoveFileRequest request,
 		@AuthenticationPrincipal UserPrincipal user
 	) {
-		fileService.moveFileorDirectory(projectId, filePath, request.getToPath(), user.getUserId());
+		fileService.moveFileorDirectory(projectId, fromPath, toPath, user.getUserId());
 		return ApiResponse.ok(new FileResponse("File moved"));
 	}
 
