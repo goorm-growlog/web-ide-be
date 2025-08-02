@@ -34,11 +34,13 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Tag(name = "file-system", description = "파일 시스템 관련 API 입니다.")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/projects/{projectId}/files")
+@Slf4j
 public class FileController {
 
 	private final FileService fileService;
@@ -56,13 +58,14 @@ public class FileController {
 	}
 
 	@Operation(summary = "파일/폴더 삭제", description = "파일/폴더를 삭제합니다.")
-	@DeleteMapping("/{filePath:.+}")
+	@DeleteMapping
 	@PreAuthorize("@projectSecurityService.hasWritePermission(#projectId)")
 	public ApiResponse<FileResponse> deleteFile(
 		@PathVariable Long projectId,
-		@PathVariable("filePath") String filePath,
+		@RequestParam("path") String filePath,
 		@AuthenticationPrincipal UserPrincipal user
 	) {
+		log.info("[DELETE 요청] projectId={}, filePath={}", projectId, filePath);
 		fileService.deleteFileorDirectory(projectId, filePath, user.getUserId());
 		return ApiResponse.ok(new FileResponse("삭제되었습니다."));
 	}
@@ -72,10 +75,11 @@ public class FileController {
 	@PreAuthorize("@projectSecurityService.hasWritePermission(#projectId)")
 	public ApiResponse<FileResponse> moveFile(
 		@PathVariable Long projectId,
+		@PathVariable String filePath,
 		@RequestBody MoveFileRequest request,
 		@AuthenticationPrincipal UserPrincipal user
 	) {
-		fileService.moveFileorDirectory(projectId, request, user.getUserId());
+		fileService.moveFileorDirectory(projectId, filePath, request.getToPath(), user.getUserId());
 		return ApiResponse.ok(new FileResponse("파일이 이동되었습니다."));
 	}
 

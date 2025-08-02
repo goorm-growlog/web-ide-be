@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import com.growlog.webide.domain.files.dto.CreateFileRequest;
 import com.growlog.webide.domain.files.dto.FileOpenResponseDto;
 import com.growlog.webide.domain.files.dto.FileSearchResponseDto;
-import com.growlog.webide.domain.files.dto.MoveFileRequest;
 import com.growlog.webide.domain.files.dto.tree.TreeAddEventDto;
 import com.growlog.webide.domain.files.dto.tree.TreeMoveEventDto;
 import com.growlog.webide.domain.files.dto.tree.TreeRemoveEventDto;
@@ -132,7 +131,7 @@ public class FileService {
 
 	}
 
-	public void moveFileorDirectory(Long projectId, MoveFileRequest request, Long userId) {
+	public void moveFileorDirectory(Long projectId, String fromPath, String toPath, Long userId) {
 		ActiveInstance inst = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
 
@@ -140,12 +139,8 @@ public class FileService {
 
 		String cid = inst.getContainerId();
 
-		String from = request.getFromPath().startsWith("/")
-			? request.getFromPath().substring(1)
-			: request.getFromPath();
-		String to = request.getToPath().startsWith("/")
-			? request.getToPath().substring(1)
-			: request.getToPath();
+		String from = fromPath.startsWith("/") ? fromPath.substring(1) : fromPath;
+		String to = toPath.startsWith("/") ? toPath.substring(1) : toPath;
 
 		String fullFrom = CONTAINER_BASE + "/" + from;
 		String fullTo = CONTAINER_BASE + "/" + to;
@@ -170,15 +165,15 @@ public class FileService {
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 
-		FileMeta meta = fileMetaRepository.findByProjectIdAndPath(projectId, request.getFromPath())
+		FileMeta meta = fileMetaRepository.findByProjectIdAndPath(projectId, fromPath)
 			.orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
-		meta.updatePath(request.getToPath());
+		meta.updatePath(toPath);
 
 		// ✅ WebSocket 이벤트 푸시
 		WebSocketMessage msg = new WebSocketMessage(
 			"tree:move",
-			new TreeMoveEventDto(meta.getId(), request.getFromPath(), request.getToPath())
+			new TreeMoveEventDto(meta.getId(), fromPath, toPath)
 		);
 		messagingTemplate.convertAndSend(
 			"/topic/projects/" + projectId + "/tree",

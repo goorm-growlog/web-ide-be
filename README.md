@@ -1,9 +1,29 @@
 # web-ide-be
+> 구름톤 딥다이브 풀스택 13회차 백엔드<br>
+> 개발 기간: 2025.07.11 - 2025.08.03
 
-## 🐳 테스트용 Docker 환경 초기화 - 파일열기 할 경우 컨테이너 실행 필요.
+## 배포주소
 
-- 터미널에서 바로 입력하여 도커 내 컨테이너 구성하여 테스트.
+## 팀원 소개
 
-```bash
-bash scripts/setup-docker-env.sh
-```
+ profile  | ![img_1.png](readmeImage/profile/img_1.png)                                                                                   | ![img.png](readmeImage/profile/img.png)                                                                             | ![img_2.png](readmeImage/profile/img_2.png)                                                                       |![img_3.png](readmeImage/profile/img_3.png)
+-----|-------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------|---
+ name| <p align="center">강현아 </p>                                                                                                    | <p align="center">김유진</p>                                                                                           | <p align="center">이혜원</p>                                                                                         |<p align="center">최지유</p>
+Github| <p align="center">[![Github](https://img.shields.io/badge/hyuneeekang-black?logo=github)](https://github.com/hyuneeekang)</p> | <p align="center">[![Github](https://img.shields.io/badge/yuj118-black?logo=github)](https://github.com/yuj118)</p> | <p align="center">[![Github](https://img.shields.io/badge/hyew0-black?logo=github)](https://github.com/hyew0)</p> | <p align="center">[![Github](https://img.shields.io/badge/Jiyu-black?logo=github)](https://github.com/cherish0-0)</p> |
+Project Role| <p align="center">프로젝트&파일 시스템/터미널 실행 구현,<br/>프로젝트 초기 세팅</p>                                                                   | <p align="center">파일 탐색기 구현,<br> AWS 세팅</p>                                                                         | <p align="center">사용자 인증/코드 편집기 구현,<br> CI/CD 세팅</p>                                                              | <p align="center">채팅 구현,<br> Docker 개발 환경 세팅</p>
+
+
+## 프로젝트 소개
+
+### 기술 스택
+
+
+### 아키텍쳐
+![아키텍쳐](readmeImage/architec.png)
+
+### workflow
+
+
+### 주요 기능
+
+## 시연 영상
