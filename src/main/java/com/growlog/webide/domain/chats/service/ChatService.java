@@ -16,7 +16,9 @@ import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class ChatService {
@@ -30,6 +32,7 @@ public class ChatService {
 	public ChattingResponseDto enter(Long projectId, Long userId, String username, String profileImageUrl) {
 		String enterMessage = username + " joined.";
 
+		log.info("{} Entering project {}", username, projectId);
 		return new ChattingResponseDto(ChatType.ENTER, projectId, userId, username, profileImageUrl, enterMessage);
 
 	}
@@ -44,6 +47,7 @@ public class ChatService {
 
 		chatRepository.save(chat);
 
+		log.info("{} Talking Project {}", username, projectId);
 		return new ChattingResponseDto(ChatType.TALK, projectId, userId, username, null, content, codeLink);
 	}
 
@@ -53,6 +57,7 @@ public class ChatService {
 		String username = userRef.getName();
 		String leaveMessage = username + " left.";
 
+		log.info("{} Leaving Project {}", username, projectId);
 		return new ChattingResponseDto(ChatType.LEAVE, projectId, userId, username, null, leaveMessage);
 	}
 }

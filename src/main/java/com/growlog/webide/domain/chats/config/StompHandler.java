@@ -57,6 +57,7 @@ public class StompHandler implements ChannelInterceptor {
 
 		if (StompCommand.CONNECT.equals(accessor.getCommand())) {
 			handleValidToken(accessor);
+			log.info("Connected successfully");
 		}
 
 		if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
@@ -72,6 +73,7 @@ public class StompHandler implements ChannelInterceptor {
 				return null;
 			}
 		}
+		log.info("Subscribed successfully");
 		return message;
 	}
 
