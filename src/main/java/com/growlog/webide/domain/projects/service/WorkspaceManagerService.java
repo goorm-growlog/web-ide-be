@@ -164,11 +164,12 @@ public class WorkspaceManagerService {
 		sessionScheduler.cancelDeletion(user.getUserId(), projectId);
 
 		// 2. 이미 해당 사용자의 활성 세션이 있는지 확인 -> activate
-		Optional<ActiveInstance> ExistedActiveInstance = activeInstanceRepository.findByUser_UserIdAndProject_IdAndStatus(
-			userId, projectId, InstanceStatus.DISCONNECTING);
-		if (ExistedActiveInstance.isPresent()) {
+		Optional<ActiveInstance> existedActiveInstance =
+			activeInstanceRepository.findByUser_UserIdAndProject_IdAndStatus(
+				userId, projectId, InstanceStatus.DISCONNECTING);
+		if (existedActiveInstance.isPresent()) {
 
-			ExistedActiveInstance.get().activate();
+			existedActiveInstance.get().activate();
 
 			// 해당 프로젝트가 INACTIVE 상태였으면 -> active
 			if (project.getStatus() == ProjectStatus.INACTIVE) {
@@ -177,9 +178,9 @@ public class WorkspaceManagerService {
 
 			return new OpenProjectResponse(
 				projectId,
-				ExistedActiveInstance.get().getContainerId(),
-				ExistedActiveInstance.get().getWebSocketPort(),
-				ExistedActiveInstance.get().getId()
+				existedActiveInstance.get().getContainerId(),
+				existedActiveInstance.get().getWebSocketPort(),
+				existedActiveInstance.get().getId()
 			);
 		}
 
