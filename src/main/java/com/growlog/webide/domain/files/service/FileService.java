@@ -169,6 +169,7 @@ public class FileService {
 			.orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
 		meta.updatePath(toPath);
+		fileMetaRepository.save(meta);
 
 		// ✅ WebSocket 이벤트 푸시
 		WebSocketMessage msg = new WebSocketMessage(

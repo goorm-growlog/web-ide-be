@@ -136,7 +136,7 @@ jobs:
               --env-file /home/ubuntu/web-ide-be/.env \
               -v /home/ubuntu/web-ide-be/.env:/app/.env \
               -v /var/run/docker.sock:/var/run/docker.sock \
-              -p 8080:8080 \
+              -p 80:8080 \
               $DOCKER_USERNAME/$BACKEND_IMAGE:latest
 
             # 템플릿 이미지 미리 pull (선택 사항, 자동 pull도 되긴 함)
