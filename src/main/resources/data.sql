@@ -37,7 +37,7 @@ VALUES (1, 'java', '17', 'openjdk:17-jdk-slim', 'javac -cp src -d bin {filePath}
 -- Projects
 INSERT INTO projects (create_user_id, image_id, project_name, description, storage_volume_name, status, created_at,
                       updated_at)
-VALUES ((SELECT user_id FROM users WHERE email = 'test1@example.com'), 1, '프로젝트 A', '설명 A', 'container-a', 'ACTIVE',
+VALUES ((SELECT user_id FROM users WHERE email = 'test1@example.com'), 1, '프로젝트 A', '설명 A', 'container-a', 'INACTIVE',
         NOW(), NOW()),
        ((SELECT user_id FROM users WHERE email = 'test2@example.com'), 1, '프로젝트 B', '설명 B', 'container-b', 'INACTIVE',
         NOW(), NOW());

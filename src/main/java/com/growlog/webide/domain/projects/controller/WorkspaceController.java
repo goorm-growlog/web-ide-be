@@ -64,7 +64,7 @@ public class WorkspaceController {
 	) {
 		Long userId = userPrincipal.getUserId();
 		workspaceManagerService.closeProjectSession(projectId, userId);
-		return ResponseEntity.ok(ApiResponse.ok("프로젝트를 종료합니다."));
+		return ResponseEntity.ok(ApiResponse.ok("Complete Closing."));
 	}
 
 	@Operation(summary = "프로젝트 삭제",
@@ -75,7 +75,7 @@ public class WorkspaceController {
 		@AuthenticationPrincipal UserPrincipal userPrincipal) {
 		Long userId = userPrincipal.getUserId();
 		workspaceManagerService.deleteProject(projectId, userId);
-		return ResponseEntity.ok(ApiResponse.ok("프로젝트가 삭제되었습니다."));
+		return ResponseEntity.ok(ApiResponse.ok("Complete Deletion."));
 	}
 
 	@Operation(summary = "프로젝트 정보 조회",
