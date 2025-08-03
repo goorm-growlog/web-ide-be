@@ -1,10 +1,19 @@
 package com.growlog.webide.domain.projects.service;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.assertj.core.api.Fail.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Fail.fail;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -615,7 +624,7 @@ class WorkspaceManagerServiceTest {
 		when(projectMemberRepository.findByUser(fakeUser))
 			.thenReturn(List.of(owner, member));
 		// when
-		List<ProjectResponse> result = workspaceManagerService.findProjectByUser(fakeUser.getUserId(), null);
+		List<ProjectResponse> result = workspaceManagerService.findProjectListByUser(fakeUser.getUserId(), null);
 
 		// then
 		assertThat(result).hasSize(2);
@@ -652,7 +661,7 @@ class WorkspaceManagerServiceTest {
 		when(projectMemberRepository.findByUserAndRole(fakeUser, MemberRole.OWNER))
 			.thenReturn(List.of(owner));
 		// when
-		List<ProjectResponse> result = workspaceManagerService.findProjectByUser(fakeUser.getUserId(), "own");
+		List<ProjectResponse> result = workspaceManagerService.findProjectListByUser(fakeUser.getUserId(), "own");
 
 		// then
 		assertThat(result).hasSize(1);
@@ -689,7 +698,7 @@ class WorkspaceManagerServiceTest {
 		when(projectMemberRepository.findByUser(fakeUser))
 			.thenReturn(List.of(owner, member));
 		// when
-		List<ProjectResponse> result = workspaceManagerService.findProjectByUser(fakeUser.getUserId(), "joined");
+		List<ProjectResponse> result = workspaceManagerService.findProjectListByUser(fakeUser.getUserId(), "joined");
 
 		// then
 		assertThat(result).hasSize(1);

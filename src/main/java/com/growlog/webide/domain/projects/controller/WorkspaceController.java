@@ -113,7 +113,7 @@ public class WorkspaceController {
 		@AuthenticationPrincipal UserPrincipal userPrincipal,
 		@RequestParam(required = false) String type) {
 		Long userId = userPrincipal.getUserId();
-		List<ProjectResponse> projectList = workspaceManagerService.findProjectByUser(userId, type);
+		List<ProjectResponse> projectList = workspaceManagerService.findProjectListByUser(userId, type);
 		return ResponseEntity.ok(ApiResponse.ok(projectList));
 	}
 }

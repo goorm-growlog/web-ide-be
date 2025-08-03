@@ -12,7 +12,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.springframework.context.annotation.Lazy;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import com.github.dockerjava.api.DockerClient;
@@ -49,7 +48,6 @@ import com.growlog.webide.factory.DockerClientFactory;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
 
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 
@@ -91,9 +89,9 @@ public class WorkspaceManagerService {
 
 		// 1. DB 조회
 		Users owner = userRepository.findById(userId)
-			.orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 		Image image = imageRepository.findById(request.getImageId())
-			.orElseThrow(() -> new IllegalArgumentException("Image not found"));
+			.orElseThrow(() -> new CustomException(ErrorCode.IMAGE_NOT_FOUND));
 
 		// 2. 고유한 도커 볼륨 이름 생성 및 물리적 생성
 		DockerClient dockerClient = dockerClientFactory.buildDockerClient();
@@ -344,7 +342,6 @@ public class WorkspaceManagerService {
 		// 이 세션이 해당 프로젝트의 마지막 활성 세션이었는지 확인
 		if (activeInstanceRepository.countByProjectAndStatus(project, InstanceStatus.ACTIVE) == 0) {
 			project.deactivate();
-			log.info("Project '{}' is now INACTIVE.", project.getProjectName());
 		}
 	}
 	/*
@@ -360,14 +357,13 @@ public class WorkspaceManagerService {
 
 		// 1. 컨테이너 ID로 DB에서 ActiveInstance 정보 조회
 		ActiveInstance instance = activeInstanceRepository.findByContainerId(containerId)
-			.orElseThrow(() -> new IllegalArgumentException("ActiveInstance not found: " + containerId));
+			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
 
 		// 2. 물리적인 Docker 컨테이너를 중지하고 제거
 		removeContainerIfExists(dockerClient, containerId);
 
 		// 3. DB에서 ActiveInstance 레코드 삭제
 		activeInstanceRepository.delete(instance);
-		log.info("ActiveInstance deleted for container '{}'", containerId);
 
 		try {
 			dockerClient.close();
@@ -399,14 +395,14 @@ public class WorkspaceManagerService {
 
 		// 1. DB에서 프로젝트 정보 조회
 		Project project = projectRepository.findById(projectId)
-			.orElseThrow(() -> new EntityNotFoundException("Project not found: " + projectId));
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
 
 		if (!project.getOwner().getUserId().equals(userId)) {
-			throw new AccessDeniedException("User " + userId + " is not authorized to delete project " + projectId);
+			throw new CustomException(ErrorCode.NO_OWNER_PERMISSION);
 		}
 
 		if (activeInstanceRepository.countByProjectAndStatus(project, InstanceStatus.ACTIVE) > 0) {
-			throw new IllegalStateException("Cannot delete project with active sessions running.");
+			throw new CustomException(ErrorCode.CONTAINER_STILL_RUNNING);
 		}
 		String volumeName = project.getStorageVolumeName();
 
@@ -438,12 +434,12 @@ public class WorkspaceManagerService {
 		log.info("Updating project with ID: {}", projectId);
 
 		Users user = userRepository.findById(userId)
-			.orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 		Project project = projectRepository.findById(projectId)
-			.orElseThrow(() -> new EntityNotFoundException("Project not found: " + projectId));
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
 
 		if (!project.getOwner().getUserId().equals(userId)) {
-			throw new AccessDeniedException("User " + userId + " is not authorized to update project " + projectId);
+			throw new CustomException(ErrorCode.NO_OWNER_PERMISSION);
 		}
 
 		project.updateDetails(request.getProjectName(), request.getDescription());
@@ -454,16 +450,16 @@ public class WorkspaceManagerService {
 		log.info("Getting project details for project with ID: {}", projectId);
 
 		Users user = userRepository.findById(userId)
-			.orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 		Project project = projectRepository.findById(projectId)
-			.orElseThrow(() -> new EntityNotFoundException("Project not found: " + projectId));
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
 
 		return ProjectResponse.from(project, user);
 	}
 
-	public List<ProjectResponse> findProjectByUser(Long userId, String filterType) {
+	public List<ProjectResponse> findProjectListByUser(Long userId, String filterType) {
 		Users user = userRepository.findById(userId)
-			.orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
 		List<ProjectMembers> members;
 

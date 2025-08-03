@@ -51,6 +51,9 @@ public enum ErrorCode {
 	FILE_NOT_FOUND("FILE_NOT_FOUND", "File or directory not found."),
 	FILE_OPERATION_FAILED("FILE_OPERATION_FAILED", "An error occurred during file operation."),
 	INSTANCE_NOT_FOUND("INSTANCE_NOT_FOUND", "Instance not found."),
+	IMAGE_NOT_FOUND("IMAGE_NOT_FOUND", "Image not found."),
+
+	CONTAINER_STILL_RUNNING("CONTAINER_STILL_RUNNING", "Active container still running."),
 
 	MEMBER_ALREADY_EXISTS("MEMBER_ALREADY_EXISTS", "This user is already a member of the project."),
 	MEMBER_NOT_FOUND("MEMBER_NOT_FOUND", "Project member not found."),
