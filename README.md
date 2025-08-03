@@ -63,17 +63,17 @@ https://growlog-web-ide.vercel.app/
 
 ### 사용자 인증
 
-<img src="![signup](https://github.com/user-attachments/assets/2e22da9f-b194-41a4-9beb-cadef6d3d7d5)">
+![signup](https://github.com/user-attachments/assets/2e22da9f-b194-41a4-9beb-cadef6d3d7d5)
 
 
 ### 프로젝트 생성
-<img src="![Image](https://github.com/user-attachments/assets/2f6e6e5c-a43d-4cc2-84d7-d9248e268eac)">
+![Image](https://github.com/user-attachments/assets/2f6e6e5c-a43d-4cc2-84d7-d9248e268eac)
 
 ### 코드 편집
-<img src="![Image](https://github.com/user-attachments/assets/a2d1a2d4-92c3-4816-8c42-155bb14f5053)">
+![Image](https://github.com/user-attachments/assets/a2d1a2d4-92c3-4816-8c42-155bb14f5053)
 
 ### 프로젝트 초대
-<img src="![Image](https://github.com/user-attachments/assets/8bb9111e-1ca8-4815-aa0b-6de5ffc8c36f)" >
+![Image](https://github.com/user-attachments/assets/8bb9111e-1ca8-4815-aa0b-6de5ffc8c36f)
 
 ### 채팅
-<img src="![Image](https://github.com/user-attachments/assets/97ba2730-4294-4374-8aba-20aefe42c96e)">
+![Image](https://github.com/user-attachments/assets/97ba2730-4294-4374-8aba-20aefe42c96e)
