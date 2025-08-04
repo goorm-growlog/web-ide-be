@@ -31,7 +31,6 @@ import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.util.ReflectionUtils;
 
 import com.github.dockerjava.api.DockerClient;
@@ -42,9 +41,7 @@ import com.github.dockerjava.api.command.InspectContainerCmd;
 import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.api.command.ListVolumesCmd;
 import com.github.dockerjava.api.command.ListVolumesResponse;
-import com.github.dockerjava.api.command.RemoveContainerCmd;
 import com.github.dockerjava.api.command.StartContainerCmd;
-import com.github.dockerjava.api.command.StopContainerCmd;
 import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.InternetProtocol;
 import com.github.dockerjava.api.model.NetworkSettings;
@@ -55,6 +52,7 @@ import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
 import com.growlog.webide.domain.projects.dto.OpenProjectResponse;
 import com.growlog.webide.domain.projects.dto.ProjectResponse;
 import com.growlog.webide.domain.projects.entity.ActiveInstance;
+import com.growlog.webide.domain.projects.entity.InstanceStatus;
 import com.growlog.webide.domain.projects.entity.MemberRole;
 import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.entity.ProjectMembers;
@@ -66,6 +64,7 @@ import com.growlog.webide.domain.templates.service.TemplateService;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.factory.DockerClientFactory;
+import com.growlog.webide.global.common.exception.CustomException;
 
 @ExtendWith(MockitoExtension.class)
 class WorkspaceManagerServiceTest {
@@ -222,8 +221,8 @@ class WorkspaceManagerServiceTest {
 		// 1. repository mock 설정
 		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(anyLong())).thenReturn(Optional.of(fakeProject));
-		when(activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId))
-			.thenReturn(Optional.empty()); // 기존 세션 없음
+		when(activeInstanceRepository.findByUser_UserIdAndProject_IdAndStatus(
+			userId, projectId, InstanceStatus.DISCONNECTING)).thenReturn(Optional.empty());
 		when(activeInstanceRepository.save(any(ActiveInstance.class)))
 			.thenAnswer(inv -> inv.getArgument(0));
 		when(projectMemberRepository.findByUserAndProject(any(Users.class), any(Project.class)))
@@ -282,7 +281,8 @@ class WorkspaceManagerServiceTest {
 		// 2. Mock 객체 호출 검증
 		verify(userRepository, times(1)).findById(userId);
 		verify(projectRepository, times(1)).findById(projectId);
-		verify(activeInstanceRepository, times(1)).findByUser_UserIdAndProject_Id(userId, projectId);
+		verify(activeInstanceRepository, times(1))
+			.findByUser_UserIdAndProject_IdAndStatus(userId, projectId, InstanceStatus.DISCONNECTING);
 		verify(dockerClientFactory, times(1)).buildDockerClient();
 		verify(mockDockerClient, times(1)).startContainerCmd(fakeContainerId);
 		verify(projectMemberRepository, times(1)).findByUserAndProject(fakeUser, fakeProject);
@@ -300,6 +300,7 @@ class WorkspaceManagerServiceTest {
 		assertThat(savedInstance.getUser()).isEqualTo(fakeUser);
 		assertThat(savedInstance.getContainerId()).isEqualTo(fakeContainerId);
 		assertThat(savedInstance.getWebSocketPort()).isEqualTo(assignedPortByDocker);
+		assertThat(savedInstance.getStatus()).isEqualTo(InstanceStatus.ACTIVE);
 
 		// 4. 프로젝트의 상태가 ACTIVE로 변경되었는지 검증
 		assertThat(fakeProject.getStatus()).isEqualTo(ProjectStatus.ACTIVE);
@@ -323,7 +324,8 @@ class WorkspaceManagerServiceTest {
 
 		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
-		when(activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId))
+		when(activeInstanceRepository.findByUser_UserIdAndProject_IdAndStatus(userId, projectId,
+			InstanceStatus.DISCONNECTING))
 			.thenReturn(Optional.empty());
 		when(projectMemberRepository.findByUserAndProject(fakeUser, fakeProject))
 			.thenReturn(Optional.of(member));
@@ -339,8 +341,8 @@ class WorkspaceManagerServiceTest {
 	}
 
 	@Test
-	@DisplayName("프로젝트 열기(openProject) 단위 테스트 - 이미 세션이 존재하여 실패")
-	void openProject_Fail_SessionAlreadyExists() throws NoSuchFieldException {
+	@DisplayName("프로젝트 열기(openProject) 단위 테스트 - 이미 세션이 존재해도 접속")
+	void openProject_Success_IfDisconnectingInstanceExists() throws NoSuchFieldException {
 		// given
 		long projectId = 1L;
 		long userId = 1L;
@@ -359,25 +361,27 @@ class WorkspaceManagerServiceTest {
 		fakeProject.addProjectMember(member);
 
 		setEntityId(fakeProject, projectId);
-		ActiveInstance fakeInstance = ActiveInstance.builder().build(); // 비어있는 가짜 객체
+		ActiveInstance existedActiveInstance = ActiveInstance.builder()
+			.user(fakeUser)
+			.project(fakeProject)
+			.containerId(fakeContainerId)
+			.status(InstanceStatus.DISCONNECTING).build();
 
 		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
-		when(projectRepository.findById(anyLong())).thenReturn(Optional.of(fakeProject));
-		when(activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId))
-			.thenReturn(Optional.of(fakeInstance));
-		when(projectMemberRepository.findByUserAndProject(any(Users.class), any(Project.class)))
-			.thenReturn(Optional.of(member));
+		when(projectMemberRepository.findByUserAndProject(fakeUser, fakeProject)).thenReturn(Optional.of(member));
+		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
+		when(activeInstanceRepository.findByUser_UserIdAndProject_IdAndStatus(userId, projectId,
+			InstanceStatus.DISCONNECTING))
+			.thenReturn(Optional.of(existedActiveInstance));
 
-		// when & then
-		// openProject 실행 시 IllegalStateException이 발생하는지 검증
-		assertThatThrownBy(() -> workspaceManagerService.openProject(projectId, fakeUser.getUserId()))
-			.isInstanceOf(IllegalStateException.class)
-			.hasMessage("User already has an active session for this project.");
+		// when
+		OpenProjectResponse response = workspaceManagerService.openProject(projectId, userId);
 
-		// save나 dockerClient 관련 메소드가 전혀 호출되지 않았는지 검증
-		verify(activeInstanceRepository, never()).save(any());
-		verify(dockerClientFactory, never()).buildDockerClient();
-
+		// then
+		assertThat(response).isNotNull();
+		assertThat(response.getContainerId()).isEqualTo(fakeContainerId);
+		assertThat(existedActiveInstance.getStatus()).isEqualTo(InstanceStatus.ACTIVE);
+		assertThat(fakeProject.getStatus()).isEqualTo(ProjectStatus.ACTIVE);
 	}
 
 	@Test
@@ -400,8 +404,7 @@ class WorkspaceManagerServiceTest {
 			.thenReturn(Optional.empty());
 		// when&then
 		assertThatThrownBy(() -> workspaceManagerService.openProject(projectId, userId))
-			.isInstanceOf(AccessDeniedException.class)
-			.hasMessage("User has no active session for this project.");
+			.isInstanceOf(CustomException.class);
 
 		verify(dockerClientFactory, never()).buildDockerClient();
 		verify(activeInstanceRepository, never()).save(any(ActiveInstance.class));
@@ -465,100 +468,92 @@ class WorkspaceManagerServiceTest {
 	}
 
 	@Test
-	@DisplayName("프로젝트 닫기 단위 테스트 - 다른 사용자 남아있어 컨테이너 ACTIVE 유")
-	void closeProjectSession_Success_OtherRemain() {
-
+	@DisplayName("프로젝트 세션 닫기 단위 테스트 - 다른 세션이 남아있어 프로젝트는 ACTIVE 유지")
+	void closeProjectSession_Success_OtherSessionRemains() throws NoSuchFieldException {
 		// given
-		int portToRelease = 9001;
-		String containerId = "test-container-id-123";
-		Users fakeUser = new Users();
-		fakeUser.setName("test");
-		Image fakeImage = Image.builder().imageName("java").build();
-		Project fakeProject = Project.builder()
-			.projectName("test-project")
-			.owner(fakeUser)
-			.image(fakeImage)
-			.build();
-		fakeProject.activate(); // 초기 상태를 ACTIVE로 설정
+		Long userId = 1L;
+		Long projectId = 10L;
+
+		Users fakeUser = Users.builder().userId(userId).build();
+		Project fakeProject = Project.builder().build();
+		setEntityId(fakeProject, projectId);
+		fakeProject.activate(); // 초기 상태는 ACTIVE
+
 		ActiveInstance fakeInstance = ActiveInstance.builder()
-			.containerId(containerId)
-			.project(fakeProject)
-			.webSocketPort(portToRelease)
 			.user(fakeUser)
+			.project(fakeProject)
+			.containerId("test-container-id")
+			.status(InstanceStatus.ACTIVE)
 			.build();
 
-		// 1. Repository Mock 설정
-		when(activeInstanceRepository.findByContainerId(containerId)).thenReturn(Optional.of(fakeInstance));
-		when(activeInstanceRepository.countByProject(fakeProject)).thenReturn(1L); // 아직 다른 사용자 잔류
+		// Repository Mock 설정
+		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
+		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
+		when(activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId))
+			.thenReturn(Optional.of(fakeInstance));
 
-		// 2. DockerClient Mock 설정
-		when(dockerClientFactory.buildDockerClient()).thenReturn(mockDockerClient);
-		StopContainerCmd mockStopeCmd = mock(StopContainerCmd.class);
-		RemoveContainerCmd mockRemoveCmd = mock(RemoveContainerCmd.class);
-		when(mockDockerClient.stopContainerCmd(containerId)).thenReturn(mockStopeCmd);
-		when(mockDockerClient.removeContainerCmd(containerId)).thenReturn(mockRemoveCmd);
+		when(activeInstanceRepository.countByProjectAndStatus(fakeProject, InstanceStatus.ACTIVE))
+			.thenReturn(1L); // 다른 세션 남아있음
 
 		// when
-		workspaceManagerService.deleteContainer(containerId);
+		workspaceManagerService.closeProjectSession(projectId, userId);
 
 		// then
-		assertThat(fakeProject.getStatus()).isEqualTo(ProjectStatus.ACTIVE);
-		verify(mockDockerClient, times(1)).stopContainerCmd(containerId);
-		verify(mockDockerClient, times(1)).removeContainerCmd(containerId);
-		verify(activeInstanceRepository, times(1)).delete(fakeInstance);
-		verify(activeInstanceRepository, times(1)).countByProject(fakeProject);
+		// 상태가 DISCONNECTING으로 변경되었는지
+		assertThat(fakeInstance.getStatus()).isEqualTo(InstanceStatus.DISCONNECTING);
 
-		try {
-			verify(mockDockerClient, times(1)).close();
-		} catch (IOException e) {
-			fail("IIException should not be thrown in mock close");
-		}
+		// 스케줄러 삭제 예약 메소드가 호출되었는지
+		verify(sessionScheduler, times(1)).scheduleDeletion(anyString(), anyLong(), anyLong());
+		assertThat(fakeProject.getStatus()).isEqualTo(ProjectStatus.ACTIVE);
+
+		// 활성 인스턴스 수를 확인하는 메소드가 호출되었는지
+		verify(activeInstanceRepository, times(1))
+			.countByProjectAndStatus(fakeProject, InstanceStatus.ACTIVE);
 	}
 
 	@Test
 	@DisplayName("프로젝트 닫기 단위 테스트 - 마지막 사용자 종료하여 컨테이너 inactive")
-	void closeProjectSession_Success_LastUser() {
+	void closeProjectSession_Success_LastUser() throws NoSuchFieldException {
 		// given
-		String containerId = "test-container-123";
-		int portToRelease = 9001;
-		Project fakeProject = Project.builder().projectName("test-project").build();
-		fakeProject.activate(); // 초기 상태를 ACTIVE로 설정
+		Long userId = 1L;
+		Long projectId = 1L;
+
+		Users fakeUser = Users.builder().userId(userId).build();
+		Project fakeProject = Project.builder().build();
+		setEntityId(fakeProject, projectId);
+		fakeProject.activate(); // 초기 상태는 ACTIVE
 
 		ActiveInstance fakeInstance = ActiveInstance.builder()
-			.containerId(containerId)
+			.user(fakeUser)
 			.project(fakeProject)
-			.webSocketPort(portToRelease)
+			.containerId("test-container-id")
+			.status(InstanceStatus.ACTIVE) // 초기 상태는 ACTIVE
 			.build();
 
 		// 1. Repository Mock 설정
-		when(activeInstanceRepository.findByContainerId(containerId)).thenReturn(Optional.of(fakeInstance));
-		when(activeInstanceRepository.countByProject(fakeProject)).thenReturn(0L); // 남은 사용자 없음
+		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
+		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
+		when(activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId))
+			.thenReturn(Optional.of(fakeInstance));
 
-		// 2. DockerClient Mock 설정
-		when(dockerClientFactory.buildDockerClient()).thenReturn(mockDockerClient);
-		StopContainerCmd mockStopCmd = mock(StopContainerCmd.class);
-		RemoveContainerCmd mockRemoveCmd = mock(RemoveContainerCmd.class);
-		when(mockDockerClient.stopContainerCmd(containerId)).thenReturn(mockStopCmd);
-		when(mockDockerClient.removeContainerCmd(containerId)).thenReturn(mockRemoveCmd);
+		// 2. 마지막 세션 시나리오를 위한 Mocking
+		when(activeInstanceRepository.countByProjectAndStatus(fakeProject, InstanceStatus.ACTIVE))
+			.thenReturn(0L);
 
 		// when
-		workspaceManagerService.deleteContainer(containerId);
+		workspaceManagerService.closeProjectSession(projectId, userId);
 
 		// then
+		// 1. 상태 변경 검증: 인스턴스는 DISCONNECTING, 프로젝트는 INACTIVE
+		assertThat(fakeInstance.getStatus()).isEqualTo(InstanceStatus.DISCONNECTING);
 		assertThat(fakeProject.getStatus()).isEqualTo(ProjectStatus.INACTIVE);
 
-		// 프로젝트의 deactivate 메소드가 '정확히 1번 호출되었는지' 검증
-		verify(activeInstanceRepository, times(1)).findByContainerId(containerId);
-		verify(mockDockerClient, times(1)).stopContainerCmd(containerId);
-		verify(mockDockerClient, times(1)).removeContainerCmd(containerId);
-		verify(activeInstanceRepository, times(1)).delete(fakeInstance);
-		verify(activeInstanceRepository, times(1)).countByProject(fakeProject);
+		// 2. 주요 메소드 호출 검증
+		verify(sessionScheduler, times(1)).scheduleDeletion("test-container-id", userId, projectId);
 
-		try {
-			verify(mockDockerClient, times(1)).close();
-		} catch (IOException e) {
-			fail("IIException should not be thrown in mock close");
-		}
+		// 2-3. 남은 활성 인스턴스를 확인하는 메소드가 호출되었는지 검증
+		verify(activeInstanceRepository, times(1))
+			.countByProjectAndStatus(fakeProject, InstanceStatus.ACTIVE);
 	}
 
 	@Test
