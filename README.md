@@ -62,18 +62,20 @@ https://growlog-web-ide.vercel.app/
 ## 시연 영상
 
 ### 사용자 인증
-
-![signup](https://github.com/user-attachments/assets/2e22da9f-b194-41a4-9beb-cadef6d3d7d5)
-
+![signup_cropped](https://github.com/user-attachments/assets/aa6dab76-4a2b-427f-9524-326a3d25c646)
 
 ### 프로젝트 생성
-![Image](https://github.com/user-attachments/assets/2f6e6e5c-a43d-4cc2-84d7-d9248e268eac)
+![create_cropped](https://github.com/user-attachments/assets/b2c8eea6-6edb-4acc-8dbb-a73f30550dd1)
+
 
 ### 코드 편집
-![Image](https://github.com/user-attachments/assets/a2d1a2d4-92c3-4816-8c42-155bb14f5053)
+![edit_cropped](https://github.com/user-attachments/assets/20f9c931-f01e-43d7-8bfe-b5aa4c70f9cd)
+
 
 ### 프로젝트 초대
-![Image](https://github.com/user-attachments/assets/8bb9111e-1ca8-4815-aa0b-6de5ffc8c36f)
+![invite_cropped](https://github.com/user-attachments/assets/f20a1c4f-d2bd-4a14-8005-35b1c98b7901)
+
 
 ### 채팅
-![Image](https://github.com/user-attachments/assets/97ba2730-4294-4374-8aba-20aefe42c96e)
+![chat_cropped](https://github.com/user-attachments/assets/006fa4db-9fc4-4bb3-9cf2-d9830842342c)
+
