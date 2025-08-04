@@ -8,6 +8,7 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
 
 @Configuration
 public class SwaggerConfig {
@@ -16,6 +17,7 @@ public class SwaggerConfig {
 		final String securitySchemeName = "bearerAuth";
 
 		return new OpenAPI()
+			.addServersItem(new Server().url("https://growlog-web-ide.duckdns.org"))
 			.addSecurityItem(new SecurityRequirement().addList(securitySchemeName)) // Security Requirement 추가
 			.components(new Components().addSecuritySchemes(securitySchemeName,  // Security Scheme 추가
 				new SecurityScheme()

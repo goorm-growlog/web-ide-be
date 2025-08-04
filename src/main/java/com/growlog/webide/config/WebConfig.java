@@ -15,7 +15,7 @@ public class WebConfig {
 			@Override
 			public void addCorsMappings(CorsRegistry registry) {
 				registry.addMapping("/**")
-					.allowedOrigins("http://localhost:5173")
+					.allowedOrigins("https://growlog-web-ide.vercel.app")
 					.allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH")
 					.allowedHeaders("*")
 					.allowCredentials(true); // 쿠키나 인증 정보 포함 허용 시 필요
