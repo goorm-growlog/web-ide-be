@@ -27,3 +27,13 @@ template:
 jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION}
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus, health, info
+  metrics:
+    tags:
+      application: web-ide
