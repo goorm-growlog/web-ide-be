@@ -33,8 +33,6 @@ jobs:
       # 📦 .env 파일 자동 생성
       - name: 📦 .env 파일 생성
         run: |
-          echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> .env
-
           echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
           echo "DB_NAME=webide" >> .env
           echo "DB_USER_NAME=${{ secrets.DB_USER_NAME }}" >> .env
@@ -82,24 +80,16 @@ jobs:
       - name: 🔐 Docker Hub 로그인
         run: echo "${{ env.DOCKER_PASSWORD }}" | docker login -u "${{ env.DOCKER_USERNAME }}" --password-stdin
 
-      # 📂 배포용 파일 EC2에 전송
+
+      # 📂 .env 파일 EC2에 전송
       - name: 📂 EC2에 .env 전송
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ env.EC2_HOST }}
           username: ${{ env.EC2_USER }}
           key: ${{ env.PRIVATE_KEY }}
-          source: ".env,docker-compose.prod.yml"
+          source: ".env"
           target: "/home/ubuntu/web-ide-be"
-
-      - name: 📂 EC2에 prometheus 설정 전송
-        uses: appleboy/scp-action@v0.1.4
-        with:
-          host: ${{ env.EC2_HOST }}
-          username: ${{ env.EC2_USER }}
-          key: ${{ env.PRIVATE_KEY }}
-          source: "prometheus/config/prometheus.yml"
-          target: "/home/ubuntu/web-ide-be/prometheus/config"
 
       #  Docker 이미지 빌드 및 Push
       - name: 🐳 Docker 이미지 빌드 및 Push
@@ -130,16 +120,19 @@ jobs:
           key: ${{ env.PRIVATE_KEY }}
           envs: DOCKER_USERNAME,BACKEND_IMAGE
           script: |
-            # EC2 프로젝트 디렉토리로 이동
-            cd /home/ubuntu/web-ide-be
-
             # 최신 이미지 pull
             docker pull $DOCKER_USERNAME/$BACKEND_IMAGE:latest
 
-            # docker-compose로 모든 서비스(모니터링 포함) 실행
-            docker-compose -f docker-compose.prod.yml up -d --remove-orphans
+            # 기존 컨테이너 정리
+            docker stop webide-backend || true
+            docker rm webide-backend || true
 
-            # 불필요한 이미지 정리
-            docker image prune -f
+            # ✅ 환경변수 확인 로그 출력
+            echo "✅ .env 파일 적용 완료"
 
-            echo "배포 및 모니터링 시스템 실행 완료"
+            # 컨테이너 실행
+            docker-compose up -d
+
+            # 템플릿 이미지 미리 pull (선택 사항, 자동 pull도 되긴 함)
+            docker pull $DOCKER_USERNAME/java-template:17 || true
+            docker pull $DOCKER_USERNAME/python-template:3.11 || true

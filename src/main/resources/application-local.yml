@@ -42,3 +42,12 @@ email:
 upload:
   profile:
     local-dir: uploads/profiles/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus, health, info
+  metrics:
+    tags:
+      application: web-ide
