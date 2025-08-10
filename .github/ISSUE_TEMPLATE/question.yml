@@ -1,0 +1,63 @@
+name: ❓ 질문 (Question)
+description: 프로젝트와 관련된 질문을 남깁니다.
+title: "[QUESTION] "
+labels: [ "question" ]
+projects: [ "IDE Project" ]
+assignees: [ ]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        질문해 주셔서 감사합니다!
+        아래 항목을 작성해 주시면 더 빠르고 정확한 답변을 드릴 수 있습니다
+
+  - type: input
+    id: summary
+    attributes:
+      label: 📌 질문 요약
+      description: 질문의 핵심을 간단히 작성해 주세요.
+      placeholder:
+        예: API 응답 속도가 느린 이유가 무엇인가요?
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: 📄 질문 상세
+      description: 질문에 대한 상세 내용과 배경을 작성해 주세요.
+      placeholder: |
+        - 어떤 상황에서 발생했는지
+        - 시도해본 방법
+        - 참고할 수 있는 링크
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 🧪 관련 환경 정보 (Optional)
+      description: 질문과 관련된 환경 정보를 작성해 주세요.
+      placeholder: |
+        - OS: macOS 13.5 / Windows 11
+        - 브라우저: Chrome 120 / Safari
+        - 앱/서비스 버전: v1.2.3
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 📍 추가 참고 사항 (Optional)
+      description: 질문 답변에 도움이 될 만한 추가 내용을 작성해 주세요.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: ✅ 체크리스트
+      options:
+        - label: 중복된 질문이 아닌지 확인했습니다.
+        - label: 관련 문서/이슈를 확인했습니다.

@@ -1,0 +1,99 @@
+name: 🐞 버그 리포트 (Bug Report)
+description: 버그나 문제 상황을 보고합니다.
+title: "[BUG] "
+labels: [ "bug" ]
+projects: [ "IDE Project" ]
+assignees: [ ]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        감사합니다! 버그 리포트를 작성해 주셔서 감사합니다. 아래 항목을 가능한 자세히 입력해 주세요 🙏
+
+  - type: input
+    id: summary
+    attributes:
+      label: 📌 요약
+      description: 어떤 문제가 발생했는지 간단히 설명해 주세요.
+      placeholder:
+        예: 파일 열기 시 500 에러 발생
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: ✅ 재현 방법 (Steps to Reproduce)
+      description: 버그를 재현하는 방법을 단계별로 작성해 주세요.
+      placeholder: |
+        1. 프로젝트 목록 페이지로 이동
+        2. '프로젝트 열기' 버튼 클릭
+        3. 에러 메시지 확인
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 💻 기대 동작 (Expected Behavior)
+      description: 원래 기대했던 동작은 무엇인가요?
+    validations:
+      required: false
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: ❌ 실제 동작 (Actual Behavior)
+      description: 현재 어떤 동작이 발생하고 있나요?
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 🧪 환경 정보 (Environment)
+      description: 문제가 발생한 환경을 입력해 주세요.
+      placeholder: |
+        - OS: macOS 13.5 / Windows 11 / Ubuntu 22.04
+        - 브라우저: Chrome 120 / Safari / 앱 버전
+        - 디바이스: MacBook M2 / iPhone 14
+        - 커밋 SHA: abc123
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 📄 로그 / 콘솔 출력 (Optional)
+      description: 에러 메시지나 콘솔 출력 내용을 붙여넣어 주세요.
+      placeholder: |
+        예:
+        GET /projects/1/files 500 (Internal Server Error)
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 📸 스크린샷 / 영상 (Optional)
+      description: 문제 상황을 보여주는 이미지나 영상이 있다면 첨부해 주세요 (드래그 앤 드롭 가능).
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 📍 추가 정보 (Optional)
+      description: 버그 해결에 도움이 될 만한 기타 정보가 있다면 적어 주세요.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: ✅ 체크리스트
+      options:
+        - label: 중복된 이슈가 아닌지 확인했습니다.
+        - label: 재현 가능한 최소 조건으로 작성했습니다.
+        - label: 로그/스크린샷을 첨부했습니다 (가능한 경우).

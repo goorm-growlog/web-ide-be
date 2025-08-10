@@ -1,0 +1,95 @@
+name: 🧰 작업요청 (Task Request)
+description: 특정 작업(개발/리팩토링/운영/문서)을 요청합니다.
+title: "[TASK] "
+labels: [ "task" ]
+projects: [ "IDE Project" ]
+assignees: [ ]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        필요한 작업을 명확히 정의해 주세요. 담당자 지정/우선순위/마감 예정일 등을 포함하면 좋아요.
+
+  - type: input
+    id: summary
+    attributes:
+      label: 📌 작업 요약
+      placeholder:
+        예: 프로젝트 목록 API에 페이징 추가
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 🧾 작업 상세
+      placeholder: |
+        - 현 상태/문제
+        - 작업 범위(DoR)
+        - 완료 조건(DoD)
+        - 영향 범위/리스크
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 🛎️ 우선순위
+      options:
+        - P0 (Blocker)
+        - P1 (High)
+        - P2 (Medium)
+        - P3 (Low)
+    validations:
+      required: true
+
+  - type: input
+    id: due
+    attributes:
+      label: ⏰ 목표 기한 (Optional)
+      placeholder:
+        예: 2025-08-20
+
+  - type: textarea
+    id: dependency
+    attributes:
+      label: 🔗 선행 이슈/의존성 (Optional)
+      placeholder:
+        예: #123, #456
+
+  - type: dropdown
+    id: branch_type
+    attributes:
+      label: 🌿 브랜치 유형
+      options:
+        - feature
+        - fix
+        - chore
+        - docs
+        - refactor
+        - test
+        - perf
+        - ci
+        - build
+    validations:
+      required: true
+
+  - type: input
+    id: branch_scope
+    attributes:
+      label: 🏷️ 스코프
+      placeholder:
+        예: api, ui, infra
+    validations:
+      required: true
+
+  - type: input
+    id: branch_slug
+    attributes:
+      label: ✍️ 간단 설명 (kebab-case)
+      placeholder:
+        예: add-pagination-to-project-list
+    validations:
+      required: true
+
