@@ -1,0 +1,60 @@
+name: ✨ 기능 요청 (Feature Request)
+description: 새로운 기능, 개선 사항을 제안합니다.
+title: "[FEATURE] "
+labels: [ "enhancement" ]
+projects: [ "IDE Project" ]
+assignees: [ ]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        새로운 아이디어나 개선점을 제안해 주셔서 감사합니다!
+        아래 항목을 가능한 자세히 입력해 주세요
+
+  - type: input
+    id: summary
+    attributes:
+      label: 📌 요약
+      description: 요청하는 기능을 간단히 설명해 주세요.
+      placeholder:
+        예: 다크 모드 지원
+
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: 💡 문제 또는 배경
+      description: 이 기능이 필요한 이유나 해결하려는 문제를 설명해 주세요.
+      placeholder: |
+        예: 밤에 사용 시 화면이 너무 밝아 눈이 아픕니다.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: 🚀 제안하는 해결 방법
+      description: 어떤 방식으로 기능을 구현하면 좋을지 아이디어를 작성해 주세요.
+      placeholder: |
+        예: 설정 메뉴에 '다크 모드' 토글 스위치 추가
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 🔄 고려한 대안 (Optional)
+      description: 다른 대안이나 접근 방식이 있다면 작성해 주세요.
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 📍 추가 정보 (Optional)
+      description: 기능 구현에 도움이 될 만한 추가 내용을 작성해 주세요.
+    validations:
+      required: false

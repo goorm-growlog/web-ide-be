@@ -1,0 +1,48 @@
+name: Discord Notifications
+
+on:
+  pull_request:
+    types: [ opened, closed ]
+
+jobs:
+  notify_discord:
+    runs-on: ubuntu-latest
+    env:
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+    steps:
+      - name: Set up payload
+        id: setup
+        run: |
+          EVENT="${{ github.event.action }}"
+          REPO="${{ github.event.repository.name }}"
+          NUMBER=${{ github.event.pull_request.number }}
+          URL="${{ github.event.pull_request.html_url }}"
+          BASE="${{ github.event.pull_request.base.ref }}"
+          HEAD="${{ github.event.pull_request.head.ref }}"
+          MERGED="${{ github.event.pull_request.merged }}"
+
+          # 메시지 분기
+          if [[ "$EVENT" == "opened" ]]; then
+            MESSAGE=$(echo -e "> **PR Opened in \\\`${REPO}\\\`** [#${NUMBER}](${URL})\n> \n> \\\`${HEAD}\\\` → \\\`${BASE}\\\`")
+          elif [[ "$EVENT" == "closed" && "$MERGED" == "true" ]]; then
+            MESSAGE=$(echo -e "> **PR Merged in \\\`${REPO}\\\`** [#${NUMBER}](${URL})\n> \n> \\\`${HEAD}\\\` → \\\`${BASE}\\\`")
+          elif [[ "$EVENT" == "closed" && "$MERGED" != "true" ]]; then
+            MESSAGE=$(echo -e "> **PR Closed (not merged) in \\\`${REPO}\\\`** [#${NUMBER}](${URL})\n> \n> \\\`${HEAD}\\\` → \\\`${BASE}\\\`")
+          else
+            echo "No matched event"
+            exit 0
+          fi
+
+          echo "message<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$MESSAGE" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Send Discord notification
+        if: steps.setup.outputs.message != ''
+        run: |
+          PAYLOAD=$(jq -n --arg content "${{ steps.setup.outputs.message }}" '{"content": $content}')
+          curl -H "Content-Type: application/json" \
+            -X POST \
+            -d "$PAYLOAD" \
+            "$DISCORD_WEBHOOK_URL"
