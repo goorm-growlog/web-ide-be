@@ -1,8 +1,5 @@
 package com.growlog.webide.domain.chats.service;
 
-import java.time.Instant;
-
-import org.jetbrains.annotations.NotNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -10,7 +7,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.growlog.webide.domain.chats.dto.ChatPagingRequestDto;
-import com.growlog.webide.domain.chats.dto.ChatType;
 import com.growlog.webide.domain.chats.dto.ChattingResponseDto;
 import com.growlog.webide.domain.chats.dto.PageResponse;
 import com.growlog.webide.domain.chats.entity.Chats;
@@ -24,29 +20,12 @@ public class ChatHistoryService {
 
 	private final ChatRepository chatRepository;
 
-	@NotNull
-	private static Page<ChattingResponseDto> getChattingResponseDtos(Long projectId, Page<Chats> chats) {
-		Page<ChattingResponseDto> chatResponses = chats.map(
-			chat -> {
-				final Long userId = chat.getUser().getUserId();
-				final String username = chat.getUser().getName();
-				final String content = chat.getContent();
-				final Instant sentAt = chat.getSentAt();
-				return new ChattingResponseDto(
-					ChatType.TALK, projectId, userId, username, null, content, sentAt
-				);
-			});
-		return chatResponses;
-	}
-
 	@Transactional(readOnly = true)
 	public PageResponse<ChattingResponseDto> getHistory(Long projectId, ChatPagingRequestDto pagingDto) {
 		Pageable pageable = PageRequest.of(pagingDto.page(), pagingDto.size());
-
 		Page<Chats> chats = chatRepository.findByProjectIdWithUser(projectId, pageable);
 
-		Page<ChattingResponseDto> chatResponses = getChattingResponseDtos(
-			projectId, chats);
+		Page<ChattingResponseDto> chatResponses = chats.map(ChattingResponseDto::from);
 		return PageResponse.from(chatResponses);
 	}
 
@@ -54,11 +33,9 @@ public class ChatHistoryService {
 	public PageResponse<ChattingResponseDto> searchChatHistory(Long projectId, String keyword,
 		ChatPagingRequestDto pagingDto) {
 		Pageable pageable = PageRequest.of(pagingDto.page(), pagingDto.size());
-
 		Page<Chats> chats = chatRepository.findByProjectIdAndKeywordWithUser(projectId, keyword, pageable);
 
-		Page<ChattingResponseDto> chatResponses = getChattingResponseDtos(
-			projectId, chats);
+		Page<ChattingResponseDto> chatResponses = chats.map(ChattingResponseDto::from);
 		return PageResponse.from(chatResponses);
 	}
 
