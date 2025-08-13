@@ -3,6 +3,11 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE}
   config:
     import: optional:file:.env[.properties]
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
 
 
 springdoc:
