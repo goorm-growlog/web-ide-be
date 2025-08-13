@@ -1,9 +1,9 @@
 name: 🧰 작업요청 (Task Request)
 description: 특정 작업(개발/리팩토링/운영/문서)을 요청합니다.
 title: "[TASK] "
-labels: [ "task" ]
-projects: [ "IDE Project" ]
-assignees: [ ]
+labels: ["task"]
+projects: ["IDE Project"]
+assignees: []
 
 body:
   - type: markdown
@@ -15,8 +15,6 @@ body:
     id: summary
     attributes:
       label: 📌 작업 요약
-      placeholder:
-        예: 프로젝트 목록 API에 페이징 추가
     validations:
       required: true
 
@@ -48,15 +46,11 @@ body:
     id: due
     attributes:
       label: ⏰ 목표 기한 (Optional)
-      placeholder:
-        예: 2025-08-20
 
   - type: textarea
     id: dependency
     attributes:
       label: 🔗 선행 이슈/의존성 (Optional)
-      placeholder:
-        예: #123, #456
 
   - type: dropdown
     id: branch_type
@@ -79,8 +73,6 @@ body:
     id: branch_scope
     attributes:
       label: 🏷️ 스코프
-      placeholder:
-        예: api, ui, infra
     validations:
       required: true
 
@@ -88,8 +80,5 @@ body:
     id: branch_slug
     attributes:
       label: ✍️ 간단 설명 (kebab-case)
-      placeholder:
-        예: add-pagination-to-project-list
     validations:
       required: true
-

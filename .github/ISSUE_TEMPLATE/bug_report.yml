@@ -1,9 +1,9 @@
 name: 🐞 버그 리포트 (Bug Report)
 description: 버그나 문제 상황을 보고합니다.
 title: "[BUG] "
-labels: [ "bug" ]
-projects: [ "IDE Project" ]
-assignees: [ ]
+labels: ["bug"]
+projects: ["IDE Project"]
+assignees: []
 
 body:
   - type: markdown
@@ -16,8 +16,7 @@ body:
     attributes:
       label: 📌 요약
       description: 어떤 문제가 발생했는지 간단히 설명해 주세요.
-      placeholder:
-        예: 파일 열기 시 500 에러 발생
+      placeholder: "예: 파일 열기 시 500 에러 발생"
     validations:
       required: true
 
