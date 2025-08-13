@@ -1,6 +1,5 @@
 package com.growlog.webide.domain.files.service;
 
-import java.io.File;
 import java.util.List;
 
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -33,7 +32,6 @@ import lombok.extern.slf4j.Slf4j;
 public class FileService {
 
 	private static final String CONTAINER_BASE = "/app";
-	private final InstanceService instanceService;
 	private final SimpMessagingTemplate messagingTemplate;
 	private final ProjectRepository projectRepository;
 	private final DockerCommandService dockerCommandService;
@@ -46,7 +44,6 @@ public class FileService {
 			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
 		ActiveInstance inst = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
-		Long instanceId = inst.getId();
 
 		String cid = inst.getContainerId();
 		String rel = request.getPath().startsWith("/")
@@ -94,8 +91,6 @@ public class FileService {
 		ActiveInstance inst = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
 
-		Long instanceId = inst.getId();
-
 		String cid = inst.getContainerId();
 
 		String rel = path.startsWith("/") ? path.substring(1) : path;
@@ -134,8 +129,6 @@ public class FileService {
 	public void moveFileorDirectory(Long projectId, String fromPath, String toPath, Long userId) {
 		ActiveInstance inst = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
-
-		Long instanceId = inst.getId();
 
 		String cid = inst.getContainerId();
 
@@ -180,22 +173,6 @@ public class FileService {
 			"/topic/projects/" + projectId + "/tree",
 			msg
 		);
-	}
-
-	private boolean deleteRecursively(File file) {
-		if (file.isDirectory()) {
-			File[] children = file.listFiles();
-			if (children == null) {
-				return false;
-			} // ← 보호 코드 추가
-
-			for (File c : children) {
-				if (!deleteRecursively(c)) {
-					return false;
-				}
-			}
-		}
-		return file.delete();
 	}
 
 	public FileOpenResponseDto openFile(Long projectId, String relativePath, Long userId) {
