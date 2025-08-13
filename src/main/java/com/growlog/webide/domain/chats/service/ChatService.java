@@ -30,43 +30,45 @@ public class ChatService {
 
 	@Transactional(readOnly = true)
 	public ChattingResponseDto enter(Long projectId, Long userId) {
-
-		final Users user = userRepository.findById(userId)
-			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+		final Users user = getUsers(userId);
 
 		projectMemberRepository.findByProject_IdAndUser_UserId(projectId, userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.NOT_A_MEMBER));
 
 		final String username = user.getName();
 
-		String enterMessage = username + " joined.";
+		final String enterMessage = username + " joined.";
 
 		log.info("{} Entering project {}", username, projectId);
 		return new ChattingResponseDto(ChatType.ENTER, projectId, userId, username, user.getProfileImageUrl(),
 			enterMessage);
-
 	}
 
 	@Transactional
 	public ChattingResponseDto talk(Long projectId, Long userId, String content) {
-		Project projectRef = projectRepository.getReferenceById(projectId);
-		Users userRef = userRepository.getReferenceById(userId);
-		String username = userRef.getName();
-		Chats chat = new Chats(projectRef, userRef, content);
+		final Project projectRef = projectRepository.getReferenceById(projectId);
+		final Users user = getUsers(userId);
+		final Chats chat = new Chats(projectRef, user, content);
 
 		chatRepository.save(chat);
 
-		log.info("{} Talking Project {}", username, projectId);
-		return new ChattingResponseDto(ChatType.TALK, projectId, userId, username, null, content);
+		log.info("{} Talking Project {}", user.getName(), projectId);
+		return new ChattingResponseDto(ChatType.TALK, projectId, userId, user.getName(), null, content);
 	}
 
 	@Transactional(readOnly = true)
 	public ChattingResponseDto leave(Long projectId, Long userId) {
-		Users userRef = userRepository.getReferenceById(userId);
-		String username = userRef.getName();
-		String leaveMessage = username + " left.";
+		final Users user = getUsers(userId);
+		final String username = user.getName();
+		final String leaveMessage = username + " left.";
 
-		log.info("{} Leaving Project {}", username, projectId);
+		log.info("{} Leaving Project {}", user.getName(), projectId);
 		return new ChattingResponseDto(ChatType.LEAVE, projectId, userId, username, null, leaveMessage);
+	}
+
+	private Users getUsers(Long userId) {
+		final Users user = userRepository.findById(userId)
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+		return user;
 	}
 }
