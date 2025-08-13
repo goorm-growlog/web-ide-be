@@ -78,6 +78,6 @@ public class ActiveInstance {
 	}
 
 	public void disconnect() {
-		this.status = InstanceStatus.DISCONNECTING;
+		this.status = InstanceStatus.PENDING;
 	}
 }

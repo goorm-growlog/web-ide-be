@@ -222,7 +222,7 @@ class WorkspaceManagerServiceTest {
 		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(anyLong())).thenReturn(Optional.of(fakeProject));
 		when(activeInstanceRepository.findByUser_UserIdAndProject_IdAndStatus(
-			userId, projectId, InstanceStatus.DISCONNECTING)).thenReturn(Optional.empty());
+			userId, projectId, InstanceStatus.PENDING)).thenReturn(Optional.empty());
 		when(activeInstanceRepository.save(any(ActiveInstance.class)))
 			.thenAnswer(inv -> inv.getArgument(0));
 		when(projectMemberRepository.findByUserAndProject(any(Users.class), any(Project.class)))
@@ -282,7 +282,7 @@ class WorkspaceManagerServiceTest {
 		verify(userRepository, times(1)).findById(userId);
 		verify(projectRepository, times(1)).findById(projectId);
 		verify(activeInstanceRepository, times(1))
-			.findByUser_UserIdAndProject_IdAndStatus(userId, projectId, InstanceStatus.DISCONNECTING);
+			.findByUser_UserIdAndProject_IdAndStatus(userId, projectId, InstanceStatus.PENDING);
 		verify(dockerClientFactory, times(1)).buildDockerClient();
 		verify(mockDockerClient, times(1)).startContainerCmd(fakeContainerId);
 		verify(projectMemberRepository, times(1)).findByUserAndProject(fakeUser, fakeProject);
@@ -325,7 +325,7 @@ class WorkspaceManagerServiceTest {
 		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
 		when(activeInstanceRepository.findByUser_UserIdAndProject_IdAndStatus(userId, projectId,
-			InstanceStatus.DISCONNECTING))
+			InstanceStatus.PENDING))
 			.thenReturn(Optional.empty());
 		when(projectMemberRepository.findByUserAndProject(fakeUser, fakeProject))
 			.thenReturn(Optional.of(member));
@@ -365,13 +365,13 @@ class WorkspaceManagerServiceTest {
 			.user(fakeUser)
 			.project(fakeProject)
 			.containerId(fakeContainerId)
-			.status(InstanceStatus.DISCONNECTING).build();
+			.status(InstanceStatus.PENDING).build();
 
 		when(userRepository.findById(userId)).thenReturn(Optional.of(fakeUser));
 		when(projectMemberRepository.findByUserAndProject(fakeUser, fakeProject)).thenReturn(Optional.of(member));
 		when(projectRepository.findById(projectId)).thenReturn(Optional.of(fakeProject));
 		when(activeInstanceRepository.findByUser_UserIdAndProject_IdAndStatus(userId, projectId,
-			InstanceStatus.DISCONNECTING))
+			InstanceStatus.PENDING))
 			.thenReturn(Optional.of(existedActiveInstance));
 
 		// when
@@ -500,7 +500,7 @@ class WorkspaceManagerServiceTest {
 
 		// then
 		// 상태가 DISCONNECTING으로 변경되었는지
-		assertThat(fakeInstance.getStatus()).isEqualTo(InstanceStatus.DISCONNECTING);
+		assertThat(fakeInstance.getStatus()).isEqualTo(InstanceStatus.PENDING);
 
 		// 스케줄러 삭제 예약 메소드가 호출되었는지
 		verify(sessionScheduler, times(1)).scheduleDeletion(anyString(), anyLong(), anyLong());
@@ -545,7 +545,7 @@ class WorkspaceManagerServiceTest {
 
 		// then
 		// 1. 상태 변경 검증: 인스턴스는 DISCONNECTING, 프로젝트는 INACTIVE
-		assertThat(fakeInstance.getStatus()).isEqualTo(InstanceStatus.DISCONNECTING);
+		assertThat(fakeInstance.getStatus()).isEqualTo(InstanceStatus.PENDING);
 		assertThat(fakeProject.getStatus()).isEqualTo(ProjectStatus.INACTIVE);
 
 		// 2. 주요 메소드 호출 검증

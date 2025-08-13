@@ -166,7 +166,7 @@ public class WorkspaceManagerService {
 		// 2. 이미 해당 사용자의 활성 세션이 있는지 확인 -> activate
 		Optional<ActiveInstance> existedActiveInstance =
 			activeInstanceRepository.findByUser_UserIdAndProject_IdAndStatus(
-				userId, projectId, InstanceStatus.DISCONNECTING);
+				userId, projectId, InstanceStatus.PENDING);
 		if (existedActiveInstance.isPresent()) {
 
 			existedActiveInstance.get().activate();
