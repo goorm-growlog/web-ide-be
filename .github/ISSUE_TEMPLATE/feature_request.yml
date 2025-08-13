@@ -1,9 +1,9 @@
 name: ✨ 기능 요청 (Feature Request)
 description: 새로운 기능, 개선 사항을 제안합니다.
 title: "[FEATURE] "
-labels: [ "enhancement" ]
-projects: [ "IDE Project" ]
-assignees: [ ]
+labels: ["enhancement"]
+projects: ["IDE Project"]
+assignees: []
 
 body:
   - type: markdown
@@ -17,8 +17,7 @@ body:
     attributes:
       label: 📌 요약
       description: 요청하는 기능을 간단히 설명해 주세요.
-      placeholder:
-        예: 다크 모드 지원
+      placeholder: "예: 다크 모드 지원"
 
     validations:
       required: true

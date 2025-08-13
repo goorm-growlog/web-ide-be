@@ -1,9 +1,9 @@
 name: ❓ 질문 (Question)
 description: 프로젝트와 관련된 질문을 남깁니다.
 title: "[QUESTION] "
-labels: [ "question" ]
-projects: [ "IDE Project" ]
-assignees: [ ]
+labels: ["question"]
+projects: ["IDE Project"]
+assignees: []
 
 body:
   - type: markdown
@@ -17,8 +17,7 @@ body:
     attributes:
       label: 📌 질문 요약
       description: 질문의 핵심을 간단히 작성해 주세요.
-      placeholder:
-        예: API 응답 속도가 느린 이유가 무엇인가요?
+      placeholder: "예: API 응답 속도가 느린 이유가 무엇인가요?"
     validations:
       required: true
 
