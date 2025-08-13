@@ -1,5 +1,7 @@
 package com.growlog.webide.domain.chats.config;
 
+import java.util.Optional;
+
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
@@ -30,33 +32,47 @@ public class WebSocketEventListener {
 		final StompHeaderAccessor accessor = MessageHeaderAccessor
 			.getAccessor(event.getMessage(), StompHeaderAccessor.class);
 
+		extractSessionInfo(accessor).ifPresent(sessionInfo -> {
+			log.info("Processing leave action for userId: {} in projectId: {}", sessionInfo.userId(),
+				sessionInfo.projectId());
+
+			final ChattingResponseDto response = chatService.leave(sessionInfo.projectId(), sessionInfo.userId());
+
+			final String destination = "/topic/projects/" + sessionInfo.projectId() + "/chat";
+
+			log.info("Sending leave message to destination: {}. Payload: {}", destination, response);
+
+			template.convertAndSend(destination, response);
+		});
+	}
+
+	private static Optional<SessionInfo> extractSessionInfo(StompHeaderAccessor accessor) {
 		if (accessor == null || accessor.getSessionAttributes() == null) {
 			log.warn("Accessor or session attributes are null. Could be a connection closed before handshake.");
-			return; // 세션 종료만 됐고 handshake 전에 끊긴 경우
+			return Optional.empty();
 		}
 
-		Object userIdObj = accessor.getSessionAttributes().get("userId");
-		Object projectIdObj = accessor.getSessionAttributes().get("projectId");
+		try {
+			Object userIdObj = accessor.getSessionAttributes().get("userId");
+			Object projectIdObj = accessor.getSessionAttributes().get("projectId");
 
-		log.info("Retrieved from session -> userId: {}, projectId: {}", userIdObj, projectIdObj);
+			log.info("Retrieved from session -> userId: {}, projectId: {}", userIdObj, projectIdObj);
 
-		if (userIdObj == null || projectIdObj == null) {
-			log.warn("userId or projectId is missing from session attributes.");
-			return; // handshake는 되었지만 제대로 저장 안된 경우
+			if (userIdObj == null || projectIdObj == null) {
+				log.warn("userId or projectId is missing from session attributes.");
+				return Optional.empty();
+			}
+
+			Long userId = Long.parseLong(userIdObj.toString());
+			Long projectId = Long.parseLong(projectIdObj.toString());
+			return Optional.of(new SessionInfo(userId, projectId));
+		} catch (Exception e) {
+			log.warn("Failed to extract session info from session attributes.", e);
+			return Optional.empty();
 		}
+	}
 
-		Long userId = Long.parseLong(userIdObj.toString());
-		Long projectId = Long.parseLong(projectIdObj.toString());
-
-		log.info("Processing leave action for userId: {} in projectId: {}", userId, projectId);
-
-		final ChattingResponseDto response = chatService.leave(projectId, userId);
-
-		final String destination = "/topic/projects/" + projectId + "/chat";
-
-		log.info("Sending leave message to destination: {}. Payload: {}", destination, response);
-
-		template.convertAndSend(destination, response);
+	private record SessionInfo(Long userId, Long projectId) {
 	}
 
 }
