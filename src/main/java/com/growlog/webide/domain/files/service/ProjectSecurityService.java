@@ -22,6 +22,11 @@ public class ProjectSecurityService {
 	private final UserRepository userRepo;
 	private final ProjectMemberRepository memberRepo;
 
+	public boolean hasReadPermission(Long projectId) {
+		MemberRole role = getCurrentMemberRole(projectId);
+		return role == MemberRole.OWNER || role == MemberRole.WRITE || role == MemberRole.READ;
+	}
+
 	public boolean hasWritePermission(Long projectId) {
 		MemberRole userRole = getCurrentMemberRole(projectId);
 		return userRole == MemberRole.OWNER || userRole == MemberRole.WRITE;
