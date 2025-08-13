@@ -49,6 +49,7 @@ jobs:
           echo "DB_NAME=webide" >> .env
           echo "DB_USER_NAME=root" >> .env
           echo "DB_USER_PASSWORD=root" >> .env
+          echo "DB_PORT=3308" >> .env
           echo "JWT_SECRET=mytestsecret" >> .env
           echo "JWT_EXPIRATION=3600000" >> .env
           echo "SPRING_PROFILES_ACTIVE=local" >> .env
