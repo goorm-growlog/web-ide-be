@@ -17,7 +17,8 @@ public class SwaggerConfig {
 		final String securitySchemeName = "bearerAuth";
 
 		return new OpenAPI()
-			.addServersItem(new Server().url("https://growlog-web-ide.duckdns.org"))
+			.addServersItem(new Server().url("https://growlog-web-ide.duckdns.org").description("개발 서버"))
+			.addServersItem(new Server().url("https://localhost:8080").description("로컬 테스트 서버"))
 			.addSecurityItem(new SecurityRequirement().addList(securitySchemeName)) // Security Requirement 추가
 			.components(new Components().addSecuritySchemes(securitySchemeName,  // Security Scheme 추가
 				new SecurityScheme()
