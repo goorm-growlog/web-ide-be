@@ -9,11 +9,6 @@ import org.springframework.stereotype.Controller;
 
 import com.growlog.webide.domain.chats.dto.ChattingResponseDto;
 import com.growlog.webide.domain.chats.service.ChatService;
-import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
-import com.growlog.webide.domain.users.entity.Users;
-import com.growlog.webide.domain.users.repository.UserRepository;
-import com.growlog.webide.global.common.exception.CustomException;
-import com.growlog.webide.global.common.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,8 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 public class ChatController {
 
 	private final ChatService chatService;
-	private final UserRepository userRepository;
-	private final ProjectMemberRepository projectMemberRepository;
 
 	@MessageMapping("/projects/{projectId}/chat/enter")
 	@SendTo("/topic/projects/{projectId}/chat")
@@ -35,20 +28,10 @@ public class ChatController {
 	) {
 		final Long userId = Long.parseLong(accessor.getSessionAttributes().get("userId").toString());
 
-		final Users user = userRepository.findById(userId)
-			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
-		final String profileImageUrl = user.getProfileImageUrl();
-
-		projectMemberRepository.findByProject_IdAndUser_UserId(projectId, userId)
-			.orElseThrow(() -> new CustomException(ErrorCode.NOT_A_MEMBER));
-
-		final String username = user.getName();
-
 		accessor.getSessionAttributes().put("projectId", projectId);
 		log.info("accessor: {}", accessor);
 
-		return chatService.enter(projectId, userId, username, profileImageUrl);
+		return chatService.enter(projectId, userId);
 	}
 
 	@MessageMapping("/projects/{projectId}/chat/talk")

@@ -8,9 +8,12 @@ import com.growlog.webide.domain.chats.dto.ChattingResponseDto;
 import com.growlog.webide.domain.chats.entity.Chats;
 import com.growlog.webide.domain.chats.repository.ChatRepository;
 import com.growlog.webide.domain.projects.entity.Project;
+import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
+import com.growlog.webide.global.common.exception.CustomException;
+import com.growlog.webide.global.common.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,13 +26,24 @@ public class ChatService {
 	private final ChatRepository chatRepository;
 	private final UserRepository userRepository;
 	private final ProjectRepository projectRepository;
+	private final ProjectMemberRepository projectMemberRepository;
 
 	@Transactional(readOnly = true)
-	public ChattingResponseDto enter(Long projectId, Long userId, String username, String profileImageUrl) {
+	public ChattingResponseDto enter(Long projectId, Long userId) {
+
+		final Users user = userRepository.findById(userId)
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+		projectMemberRepository.findByProject_IdAndUser_UserId(projectId, userId)
+			.orElseThrow(() -> new CustomException(ErrorCode.NOT_A_MEMBER));
+
+		final String username = user.getName();
+
 		String enterMessage = username + " joined.";
 
 		log.info("{} Entering project {}", username, projectId);
-		return new ChattingResponseDto(ChatType.ENTER, projectId, userId, username, profileImageUrl, enterMessage);
+		return new ChattingResponseDto(ChatType.ENTER, projectId, userId, username, user.getProfileImageUrl(),
+			enterMessage);
 
 	}
 
