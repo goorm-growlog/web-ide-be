@@ -1,13 +1,10 @@
 package com.growlog.webide.domain.chats.service;
 
-import java.util.regex.Pattern;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.growlog.webide.domain.chats.dto.ChatType;
 import com.growlog.webide.domain.chats.dto.ChattingResponseDto;
-import com.growlog.webide.domain.chats.dto.CodeLink;
 import com.growlog.webide.domain.chats.entity.Chats;
 import com.growlog.webide.domain.chats.repository.ChatRepository;
 import com.growlog.webide.domain.projects.entity.Project;
@@ -23,7 +20,6 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class ChatService {
 
-	private static final Pattern CODE_LINK_PATTERN = Pattern.compile("\\[([^\\]]+)\\]\\(ide://([^:]+):(\\d+)\\)");
 	private final ChatRepository chatRepository;
 	private final UserRepository userRepository;
 	private final ProjectRepository projectRepository;
@@ -43,12 +39,11 @@ public class ChatService {
 		Users userRef = userRepository.getReferenceById(userId);
 		String username = userRef.getName();
 		Chats chat = new Chats(projectRef, userRef, content);
-		CodeLink codeLink = CodeLinkParser.parse(content);
 
 		chatRepository.save(chat);
 
 		log.info("{} Talking Project {}", username, projectId);
-		return new ChattingResponseDto(ChatType.TALK, projectId, userId, username, null, content, codeLink);
+		return new ChattingResponseDto(ChatType.TALK, projectId, userId, username, null, content);
 	}
 
 	@Transactional(readOnly = true)

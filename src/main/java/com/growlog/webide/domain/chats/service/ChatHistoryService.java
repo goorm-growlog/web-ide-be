@@ -12,7 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.growlog.webide.domain.chats.dto.ChatPagingRequestDto;
 import com.growlog.webide.domain.chats.dto.ChatType;
 import com.growlog.webide.domain.chats.dto.ChattingResponseDto;
-import com.growlog.webide.domain.chats.dto.CodeLink;
 import com.growlog.webide.domain.chats.dto.PageResponse;
 import com.growlog.webide.domain.chats.entity.Chats;
 import com.growlog.webide.domain.chats.repository.ChatRepository;
@@ -33,9 +32,8 @@ public class ChatHistoryService {
 				final String username = chat.getUser().getName();
 				final String content = chat.getContent();
 				final Instant sentAt = chat.getSentAt();
-				final CodeLink codeLink = CodeLinkParser.parse(chat.getContent());
 				return new ChattingResponseDto(
-					ChatType.TALK, projectId, userId, username, null, content, sentAt, codeLink
+					ChatType.TALK, projectId, userId, username, null, content, sentAt
 				);
 			});
 		return chatResponses;

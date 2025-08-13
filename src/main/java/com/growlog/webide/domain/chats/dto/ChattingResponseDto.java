@@ -12,17 +12,10 @@ public record ChattingResponseDto(
 	String profileImageUrl,
 	String content,
 	@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Seoul")
-	Instant sentAt,
-	CodeLink codeLink
+	Instant sentAt
 ) {
 	public ChattingResponseDto(ChatType messageType, Long projectId, Long userId, String username,
 		String profileImageUrl, String content) {
-		this(messageType, projectId, userId, username, profileImageUrl, content, Instant.now(), null);
-	}
-
-	public ChattingResponseDto(ChatType messageType, Long projectId, Long userId, String username,
-		String profileImageUrl, String content,
-		CodeLink codeLink) {
-		this(messageType, projectId, userId, username, profileImageUrl, content, Instant.now(), codeLink);
+		this(messageType, projectId, userId, username, profileImageUrl, content, Instant.now());
 	}
 }
