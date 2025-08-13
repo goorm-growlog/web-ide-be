@@ -14,7 +14,7 @@ jobs:
       mysql:
         image: mysql:8.0
         ports:
-          - 3306:3306
+          - 3308:3306
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: webide
@@ -49,6 +49,7 @@ jobs:
           echo "DB_NAME=webide" >> .env
           echo "DB_USER_NAME=root" >> .env
           echo "DB_USER_PASSWORD=root" >> .env
+          echo "DB_PORT=3308" >> .env
           echo "JWT_SECRET=mytestsecret" >> .env
           echo "JWT_EXPIRATION=3600000" >> .env
           echo "SPRING_PROFILES_ACTIVE=local" >> .env
@@ -69,7 +70,7 @@ jobs:
       - name: ⏳ Wait for MySQL to be healthy
         run: |
           for i in {1..10}; do
-            nc -z 127.0.0.1 3306 && echo "MySQL is up!" && exit 0
+            nc -z 127.0.0.1 3308 && echo "MySQL is up!" && exit 0
             echo "Waiting for MySQL..."
             sleep 3
           done
