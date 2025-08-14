@@ -68,12 +68,12 @@ public class StompHandler implements ChannelInterceptor {
 					log.warn("Already Subscribed.");
 					return null;
 				}
+				log.info("Subscribed successfully");
 			} catch (CustomException e) {
 				log.warn("Subscription denied: code={}, message={}", e.getErrorCode().getCode(), e.getMessage());
 				return null;
 			}
 		}
-		log.info("Subscribed successfully");
 		return message;
 	}
 
