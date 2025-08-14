@@ -17,8 +17,9 @@ import com.growlog.webide.domain.projects.dto.ExecutionResult;
 import com.growlog.webide.domain.projects.entity.ActiveInstance;
 import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
 import com.growlog.webide.factory.DockerClientFactory;
+import com.growlog.webide.global.common.exception.CustomException;
+import com.growlog.webide.global.common.exception.ErrorCode;
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -34,8 +35,7 @@ public class ExecutionService {
 	public CodeExecutionResponse executeCode(Long projectId, Long userId, String filePath) {
 		// 1. projectId와 userId로 containerId 조회
 		ActiveInstance activeInstance = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
-			.orElseThrow(() -> new EntityNotFoundException(
-				"ActiveInstance not found for project " + projectId + "and user " + userId));
+			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
 
 		String containerId = activeInstance.getContainerId();
 		Image imageInfo = activeInstance.getProject().getImage();

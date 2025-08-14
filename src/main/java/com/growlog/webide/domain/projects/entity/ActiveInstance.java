@@ -10,6 +10,8 @@ import com.growlog.webide.domain.users.entity.Users;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -48,6 +50,10 @@ public class ActiveInstance {
 	@Column(nullable = false, unique = true)
 	private String containerId;
 
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false)
+	private InstanceStatus status;
+
 	@Column(nullable = false)
 	private Integer webSocketPort;
 
@@ -56,10 +62,22 @@ public class ActiveInstance {
 	private LocalDateTime connectedAt;
 
 	@Builder
-	public ActiveInstance(Project project, Users user, String containerId, Integer webSocketPort) {
+	public ActiveInstance(Project project, Users user, String containerId, InstanceStatus status,
+		Integer webSocketPort) {
 		this.project = project;
 		this.user = user;
 		this.containerId = containerId;
+		this.status = status;
 		this.webSocketPort = webSocketPort;
+	}
+
+	//== 상태 변경 ==/
+	public void activate() {
+
+		this.status = InstanceStatus.ACTIVE;
+	}
+
+	public void disconnect() {
+		this.status = InstanceStatus.PENDING;
 	}
 }

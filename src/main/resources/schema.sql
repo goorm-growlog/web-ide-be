@@ -2,7 +2,7 @@
 
 -- 외래 키 제약조건을 잠시 비활성화합니다.
 SET
-FOREIGN_KEY_CHECKS = 0;
+    FOREIGN_KEY_CHECKS = 0;
 
 -- 기존 테이블들을 모두 삭제합니다.
 DROP TABLE IF EXISTS `active_instances`;
@@ -15,7 +15,7 @@ DROP TABLE IF EXISTS `file_meta`;
 
 -- 제약조건을 다시 활성화합니다.
 SET
-FOREIGN_KEY_CHECKS = 1;
+    FOREIGN_KEY_CHECKS = 1;
 
 -- =================================================================
 -- 1. 'users' 테이블 생성
@@ -45,9 +45,9 @@ CREATE TABLE `images`
     `image_name`        VARCHAR(50)  NOT NULL COMMENT '언어 이름 (예: Java, Python)',
     `version`           VARCHAR(30)  NOT NULL COMMENT '언어 버전 (예: 17, 3.11)',
     `docker_base_image` VARCHAR(100) NOT NULL COMMENT '실행 환경 Docker 이미지명',
-    `build_command`     TEXT NULL COMMENT '빌드 명령어 템플릿',
-    `run_command`       TEXT NULL COMMENT '실행 명령어 템플릿',
-    `template_code`     TEXT NULL COMMENT '초기 생성될 기본 템플릿 코드',
+    `build_command`     TEXT         NULL COMMENT '빌드 명령어 템플릿',
+    `run_command`       TEXT         NULL COMMENT '실행 명령어 템플릿',
+    `template_code`     TEXT         NULL COMMENT '초기 생성될 기본 템플릿 코드',
     `created_at`        DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성 일시',
     `updated_at`        DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정 일시',
     PRIMARY KEY (`image_id`)
@@ -60,12 +60,12 @@ CREATE TABLE `images`
 -- =================================================================
 CREATE TABLE `projects`
 (
-    `project_id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '프로젝트 ID (PK)',
-    `create_user_id`      BIGINT       NOT NULL COMMENT '개설자 ID (FK)',
-    `image_id`            BIGINT       NOT NULL COMMENT '이미지 ID (FK)',
-    `project_name`        VARCHAR(255) NOT NULL COMMENT '프로젝트명',
-    `description`         TEXT NULL COMMENT '프로젝트 설명',
-    `storage_volume_name` VARCHAR(255) NOT NULL COMMENT 'Docker 볼륨 이름',
+    `project_id`          BIGINT                     NOT NULL AUTO_INCREMENT COMMENT '프로젝트 ID (PK)',
+    `create_user_id`      BIGINT                     NOT NULL COMMENT '개설자 ID (FK)',
+    `image_id`            BIGINT                     NOT NULL COMMENT '이미지 ID (FK)',
+    `project_name`        VARCHAR(255)               NOT NULL COMMENT '프로젝트명',
+    `description`         TEXT                       NULL COMMENT '프로젝트 설명',
+    `storage_volume_name` VARCHAR(255)               NOT NULL COMMENT 'Docker 볼륨 이름',
     `status`              ENUM ('ACTIVE','INACTIVE') NOT NULL DEFAULT 'INACTIVE' COMMENT '프로젝트 상태 (ENUM)',
     `created_at`          DATETIME(6)                NOT NULL,
     `updated_at`          DATETIME(6)                NOT NULL,
@@ -82,9 +82,9 @@ CREATE TABLE `projects`
 -- =================================================================
 CREATE TABLE `project_members`
 (
-    `project_member_id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '프로젝트 멤버 ID (PK)',
-    `project_id`        BIGINT NOT NULL COMMENT '프로젝트 ID (FK)',
-    `user_id`           BIGINT NOT NULL COMMENT '사용자 ID (FK)',
+    `project_member_id` BIGINT                          NOT NULL AUTO_INCREMENT COMMENT '프로젝트 멤버 ID (PK)',
+    `project_id`        BIGINT                          NOT NULL COMMENT '프로젝트 ID (FK)',
+    `user_id`           BIGINT                          NOT NULL COMMENT '사용자 ID (FK)',
     `role`              ENUM ('OWNER', 'READ', 'WRITE') NOT NULL COMMENT '역할 (소유자, 멤버)',
     `created_at`        DATETIME(6)                     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성 일시',
     `updated_at`        DATETIME(6)                     NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정 일시',
@@ -102,12 +102,13 @@ CREATE TABLE `project_members`
 -- =================================================================
 CREATE TABLE `active_instances`
 (
-    `instance_id`     BIGINT       NOT NULL AUTO_INCREMENT COMMENT '인스턴스 ID (PK)',
-    `project_id`      BIGINT       NOT NULL COMMENT '프로젝트 ID (FK)',
-    `user_id`         BIGINT       NOT NULL COMMENT '사용자 ID (FK)',
-    `container_id`    VARCHAR(255) NOT NULL COMMENT '실행 중인 Docker 컨테이너 ID',
-    `web_socket_port` INT          NOT NULL COMMENT '웹소켓 프록시 포트',
-    `connected_at`    DATETIME(6)  NOT NULL,
+    `instance_id`     BIGINT                           NOT NULL AUTO_INCREMENT COMMENT '인스턴스 ID (PK)',
+    `project_id`      BIGINT                           NOT NULL COMMENT '프로젝트 ID (FK)',
+    `user_id`         BIGINT                           NOT NULL COMMENT '사용자 ID (FK)',
+    `container_id`    VARCHAR(255)                     NOT NULL COMMENT '실행 중인 Docker 컨테이너 ID',
+    `status`          ENUM ('ACTIVE', 'DISCONNECTING') NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE: 접송중, DISCONNECTING: 종료 후 삭제 예약',
+    `web_socket_port` INT                              NOT NULL COMMENT '웹소켓 프록시 포트',
+    `connected_at`    DATETIME(6)                      NOT NULL,
     PRIMARY KEY (`instance_id`),
     UNIQUE KEY `uk_active_instances_container_id` (`container_id`),
     CONSTRAINT `fk_active_instances_to_projects` FOREIGN KEY (`project_id`) REFERENCES `projects` (`project_id`) ON DELETE CASCADE,
@@ -121,11 +122,11 @@ CREATE TABLE `active_instances`
 -- =================================================================
 CREATE TABLE `chats`
 (
-    `chat_id`    BIGINT NOT NULL AUTO_INCREMENT COMMENT '채팅 ID (PK)',
-    `project_id` BIGINT NOT NULL COMMENT '프로젝트 ID (FK)',
-    `user_id`    BIGINT NOT NULL COMMENT '사용자 ID (FK)',
-    `content`    TEXT   NOT NULL COMMENT '채팅 내용',
-    `sent_at`    DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '채팅 전송 시간',
+    `chat_id`    BIGINT      NOT NULL AUTO_INCREMENT COMMENT '채팅 ID (PK)',
+    `project_id` BIGINT      NOT NULL COMMENT '프로젝트 ID (FK)',
+    `user_id`    BIGINT      NOT NULL COMMENT '사용자 ID (FK)',
+    `content`    TEXT        NOT NULL COMMENT '채팅 내용',
+    `sent_at`    DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '채팅 전송 시간',
     PRIMARY KEY (`chat_id`),
     CONSTRAINT `fk_chats_to_projects` FOREIGN KEY (`project_id`) REFERENCES `projects` (`project_id`) ON DELETE CASCADE,
     CONSTRAINT `fk_chats_to_users` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
@@ -138,11 +139,11 @@ CREATE TABLE `chats`
 -- =================================================================
 CREATE TABLE `file_meta`
 (
-    `id`         BIGINT       NOT NULL AUTO_INCREMENT COMMENT '파일/폴더 메타데이터 ID (PK)',
-    `project_id` BIGINT       NOT NULL COMMENT '프로젝트 ID (FK)',
-    `name`       VARCHAR(255) NOT NULL COMMENT '파일/폴더 이름',
-    `path`       VARCHAR(512) NOT NULL COMMENT '전체 경로 (예: /src/Main.java)',
-    `type`       ENUM('file', 'folder') NOT NULL COMMENT '파일 또는 폴더',
+    `id`         BIGINT                  NOT NULL AUTO_INCREMENT COMMENT '파일/폴더 메타데이터 ID (PK)',
+    `project_id` BIGINT                  NOT NULL COMMENT '프로젝트 ID (FK)',
+    `name`       VARCHAR(255)            NOT NULL COMMENT '파일/폴더 이름',
+    `path`       VARCHAR(512)            NOT NULL COMMENT '전체 경로 (예: /src/Main.java)',
+    `type`       ENUM ('file', 'folder') NOT NULL COMMENT '파일 또는 폴더',
     `deleted`    BOOLEAN DEFAULT FALSE COMMENT '삭제 여부',
 
     PRIMARY KEY (`id`),
