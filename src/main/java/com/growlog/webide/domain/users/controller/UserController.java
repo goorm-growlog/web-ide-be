@@ -14,6 +14,7 @@ import com.growlog.webide.global.common.ApiResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/users")
@@ -29,6 +30,7 @@ public class UserController {
 	)
 	@PostMapping("/signup")
 	public ResponseEntity<ApiResponse<Users>> registerMember(
+		@Valid
 		@RequestBody
 		@io.swagger.v3.oas.annotations.parameters.RequestBody(
 			description = "회원가입 요청 정보",
