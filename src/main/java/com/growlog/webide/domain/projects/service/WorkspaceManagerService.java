@@ -6,12 +6,12 @@ package com.growlog.webide.domain.projects.service;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.springframework.context.annotation.Lazy;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import com.github.dockerjava.api.DockerClient;
@@ -33,6 +33,7 @@ import com.growlog.webide.domain.projects.dto.OpenProjectResponse;
 import com.growlog.webide.domain.projects.dto.ProjectResponse;
 import com.growlog.webide.domain.projects.dto.UpdateProjectRequest;
 import com.growlog.webide.domain.projects.entity.ActiveInstance;
+import com.growlog.webide.domain.projects.entity.InstanceStatus;
 import com.growlog.webide.domain.projects.entity.MemberRole;
 import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.entity.ProjectMembers;
@@ -44,8 +45,9 @@ import com.growlog.webide.domain.templates.service.TemplateService;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.factory.DockerClientFactory;
+import com.growlog.webide.global.common.exception.CustomException;
+import com.growlog.webide.global.common.exception.ErrorCode;
 
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 
@@ -87,9 +89,9 @@ public class WorkspaceManagerService {
 
 		// 1. DB 조회
 		Users owner = userRepository.findById(userId)
-			.orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 		Image image = imageRepository.findById(request.getImageId())
-			.orElseThrow(() -> new IllegalArgumentException("Image not found"));
+			.orElseThrow(() -> new CustomException(ErrorCode.IMAGE_NOT_FOUND));
 
 		// 2. 고유한 도커 볼륨 이름 생성 및 물리적 생성
 		DockerClient dockerClient = dockerClientFactory.buildDockerClient();
@@ -151,20 +153,36 @@ public class WorkspaceManagerService {
 
 		// 1. 프로젝트 정보 및 사용할 이미지 조회
 		Users user = userRepository.findById(userId)
-			.orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 		Project project = projectRepository.findById(projectId)
-			.orElseThrow(() -> new IllegalArgumentException("Project not found: " + projectId));
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
 
 		projectMemberRepository.findByUserAndProject(user, project)
-			.orElseThrow(() -> new AccessDeniedException("User has no active session for this project."));
+			.orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
 
 		// 해당 프로젝트의 삭제 작업이 예정되어 있으면 작업 취소
 		sessionScheduler.cancelDeletion(user.getUserId(), projectId);
 
-		// 2. 이미 해당 사용자의 활성 세션이 있는지 확인
-		activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId).ifPresent(activeInstance -> {
-			throw new IllegalStateException("User already has an active session for this project.");
-		});
+		// 2. 이미 해당 사용자의 활성 세션이 있는지 확인 -> activate
+		Optional<ActiveInstance> existedActiveInstance =
+			activeInstanceRepository.findByUser_UserIdAndProject_IdAndStatus(
+				userId, projectId, InstanceStatus.PENDING);
+		if (existedActiveInstance.isPresent()) {
+
+			existedActiveInstance.get().activate();
+
+			// 해당 프로젝트가 INACTIVE 상태였으면 -> active
+			if (project.getStatus() == ProjectStatus.INACTIVE) {
+				project.activate();
+			}
+
+			return new OpenProjectResponse(
+				projectId,
+				existedActiveInstance.get().getContainerId(),
+				existedActiveInstance.get().getWebSocketPort(),
+				existedActiveInstance.get().getId()
+			);
+		}
 
 		// 3. Docker 볼륨/이미지 정보 준비 및 포트 할당
 		DockerClient dockerClient = dockerClientFactory.buildDockerClient();
@@ -248,6 +266,7 @@ public class WorkspaceManagerService {
 			.project(project)
 			.user(user)
 			.containerId(containerId)
+			.status(InstanceStatus.ACTIVE)
 			.webSocketPort(assignedPort)
 			.build();
 		activeInstanceRepository.save(instance);
@@ -310,16 +329,21 @@ public class WorkspaceManagerService {
 	 */
 	public void closeProjectSession(Long projectId, Long userId) {
 		Users user = userRepository.findById(userId)
-			.orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 		Project project = projectRepository.findById(projectId)
-			.orElseThrow(() -> new EntityNotFoundException("Project not found: " + projectId));
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
 		ActiveInstance instance = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
-			.orElseThrow(() -> new IllegalArgumentException(
-				"Active session not found for project " + projectId + "and user " + user));
+			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+
+		instance.disconnect(); // InstanceStatus.DISCONNECTING
 
 		String containerId = instance.getContainerId();
-
 		sessionScheduler.scheduleDeletion(containerId, user.getUserId(), projectId);
+
+		// 이 세션이 해당 프로젝트의 마지막 활성 세션이었는지 확인
+		if (activeInstanceRepository.countByProjectAndStatus(project, InstanceStatus.ACTIVE) == 0) {
+			project.deactivate();
+		}
 	}
 	/*
 	3-2. 컨테이너 삭제
@@ -334,23 +358,13 @@ public class WorkspaceManagerService {
 
 		// 1. 컨테이너 ID로 DB에서 ActiveInstance 정보 조회
 		ActiveInstance instance = activeInstanceRepository.findByContainerId(containerId)
-			.orElseThrow(() -> new IllegalArgumentException("ActiveInstance not found: " + containerId));
-
-		Project project = instance.getProject();
-		int portToRelease = instance.getWebSocketPort();
+			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
 
 		// 2. 물리적인 Docker 컨테이너를 중지하고 제거
 		removeContainerIfExists(dockerClient, containerId);
 
 		// 3. DB에서 ActiveInstance 레코드 삭제
 		activeInstanceRepository.delete(instance);
-		log.info("ActiveInstance deleted for container '{}'", containerId);
-
-		// 5. 이 세션이 해당 프로젝트의 마지막 세션이었는지 확인
-		if (activeInstanceRepository.countByProject(project) == 0) {
-			project.deactivate();
-			log.info("Project '{}' is now INACTIVE.", project.getProjectName());
-		}
 
 		try {
 			dockerClient.close();
@@ -382,14 +396,14 @@ public class WorkspaceManagerService {
 
 		// 1. DB에서 프로젝트 정보 조회
 		Project project = projectRepository.findById(projectId)
-			.orElseThrow(() -> new EntityNotFoundException("Project not found: " + projectId));
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
 
 		if (!project.getOwner().getUserId().equals(userId)) {
-			throw new AccessDeniedException("User " + userId + " is not authorized to delete project " + projectId);
+			throw new CustomException(ErrorCode.NO_OWNER_PERMISSION);
 		}
 
-		if (activeInstanceRepository.countByProject(project) > 0) {
-			throw new IllegalStateException("Cannot delete project with active sessions running.");
+		if (activeInstanceRepository.countByProjectAndStatus(project, InstanceStatus.ACTIVE) > 0) {
+			throw new CustomException(ErrorCode.CONTAINER_STILL_RUNNING);
 		}
 		String volumeName = project.getStorageVolumeName();
 
@@ -421,12 +435,12 @@ public class WorkspaceManagerService {
 		log.info("Updating project with ID: {}", projectId);
 
 		Users user = userRepository.findById(userId)
-			.orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 		Project project = projectRepository.findById(projectId)
-			.orElseThrow(() -> new EntityNotFoundException("Project not found: " + projectId));
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
 
 		if (!project.getOwner().getUserId().equals(userId)) {
-			throw new AccessDeniedException("User " + userId + " is not authorized to update project " + projectId);
+			throw new CustomException(ErrorCode.NO_OWNER_PERMISSION);
 		}
 
 		project.updateDetails(request.getProjectName(), request.getDescription());
@@ -437,16 +451,16 @@ public class WorkspaceManagerService {
 		log.info("Getting project details for project with ID: {}", projectId);
 
 		Users user = userRepository.findById(userId)
-			.orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 		Project project = projectRepository.findById(projectId)
-			.orElseThrow(() -> new EntityNotFoundException("Project not found: " + projectId));
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
 
 		return ProjectResponse.from(project, user);
 	}
 
-	public List<ProjectResponse> findProjectByUser(Long userId, String filterType) {
+	public List<ProjectResponse> findProjectListByUser(Long userId, String filterType) {
 		Users user = userRepository.findById(userId)
-			.orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
 		List<ProjectMembers> members;
 
