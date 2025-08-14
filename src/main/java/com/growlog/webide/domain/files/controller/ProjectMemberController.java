@@ -43,6 +43,7 @@ public class ProjectMemberController {
 
 	@Operation(summary = "프로젝트 멤버 조회", description = "프로젝트 내의 모든 유저 전체 조회")
 	@GetMapping("/{projectId}/members")
+	@PreAuthorize("@projectSecurityService.hasReadPermission(#projectId)")
 	public ApiResponse<List<MemberDto>> listMembers(
 		@PathVariable Long projectId
 	) {

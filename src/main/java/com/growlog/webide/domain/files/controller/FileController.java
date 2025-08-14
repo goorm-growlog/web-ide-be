@@ -95,6 +95,7 @@ public class FileController {
 	 */
 	@Operation(summary = "파일열기", description = "프로젝트 내 파일을 열어 내용을 반환한다.(경로는 컨테이너 작업 디렉토리 기준)")
 	@GetMapping
+	@PreAuthorize("@projectSecurityService.hasReadPermission(#projectId)")
 	public ResponseEntity<ApiResponse<FileOpenResponseDto>> openFile(
 		@Parameter(description = "프로젝트 ID", example = "1") @PathVariable Long projectId,
 
@@ -119,6 +120,7 @@ public class FileController {
 	 */
 	@Operation(summary = "파일 저장", description = "프로젝트 내 파일을 수정 및 저장한다. (경로는 컨테이너 작업 디렉토리 기준)")
 	@PutMapping
+	@PreAuthorize("@projectSecurityService.hasWritePermission(#projectId)")
 	public ResponseEntity<ApiResponse<Map<String, String>>> saveFile(
 		@Parameter(description = "프로젝트 ID", example = "1") @PathVariable Long projectId,
 
@@ -154,6 +156,7 @@ public class FileController {
 
 	@Operation(summary = "파일/폴더 이름 검색", description = "프로젝트 내 파일 또는 폴더의 이름을 기준으로 검색합니다.")
 	@GetMapping("/search")
+	@PreAuthorize("@projectSecurityService.hasReadPermission(#projectId)")
 	public ApiResponse<List<FileSearchResponseDto>> searchFiles(
 		@Parameter(description = "프로젝트 ID", example = "1") @PathVariable Long projectId,
 		@Parameter(description = "검색 키워드", example = "code") @RequestParam String query
