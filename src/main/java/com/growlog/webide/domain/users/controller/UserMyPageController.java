@@ -32,6 +32,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 
 @SecurityRequirement(name = "bearerAuth")
 @RestController
@@ -44,7 +45,8 @@ public class UserMyPageController {
 
 	@Operation(summary = "회원 이름 변경")
 	@PatchMapping("/me/name")
-	public ApiResponse<String> updateName(@RequestBody NameUpdateRequestDto requestDto,
+	public ApiResponse<String> updateName(
+		@Valid @RequestBody NameUpdateRequestDto requestDto,
 		@AuthenticationPrincipal UserPrincipal user) {
 		userService.updateName(requestDto.getName(), user.getUserId());
 		return ApiResponse.ok("Username updated successfully.");
@@ -52,7 +54,8 @@ public class UserMyPageController {
 
 	@Operation(summary = "비밀번호 변경")
 	@PatchMapping("/me/password")
-	public ApiResponse<String> updatePassword(@RequestBody PasswordUpdateRequestDto dto,
+	public ApiResponse<String> updatePassword(
+		@Valid @RequestBody PasswordUpdateRequestDto dto,
 		@AuthenticationPrincipal UserPrincipal user) {
 		userService.updatePassword(dto.getCurrentPassword(), dto.getNewPassword(), user.getUserId());
 		return ApiResponse.ok("Password updated successfully.");
@@ -60,7 +63,8 @@ public class UserMyPageController {
 
 	@Operation(summary = "비밀번호 검증")
 	@PostMapping("/verify-password")
-	public ApiResponse<Map<String, Boolean>> verifyPassword(@RequestBody PasswordVerifyRequestDto requestDto,
+	public ApiResponse<Map<String, Boolean>> verifyPassword(
+		@Valid @RequestBody PasswordVerifyRequestDto requestDto,
 		@AuthenticationPrincipal UserPrincipal user) {
 		boolean verified = userService.verifyPassword(requestDto.getPassword(), user.getUserId());
 		return ApiResponse.ok(Map.of("verified", verified));
@@ -68,7 +72,8 @@ public class UserMyPageController {
 
 	@Operation(summary = "회원 탈퇴")
 	@DeleteMapping("/me")
-	public ApiResponse<String> deleteAccount(@RequestBody DeleteRequestDto requestDto,
+	public ApiResponse<String> deleteAccount(
+		@Valid @RequestBody DeleteRequestDto requestDto,
 		@AuthenticationPrincipal UserPrincipal user) {
 		userService.deleteAccount(requestDto.getPassword(), user.getUserId());
 		return ApiResponse.ok("Account deleted successfully.");
