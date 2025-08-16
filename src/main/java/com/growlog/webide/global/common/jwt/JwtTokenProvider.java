@@ -9,6 +9,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import com.growlog.webide.domain.auth.entity.RefreshToken;
+import com.growlog.webide.domain.auth.repository.RefreshTokenRepository;
 import com.growlog.webide.global.security.CustomUserDetailService;
 
 import io.jsonwebtoken.Claims;
@@ -20,16 +22,23 @@ import io.jsonwebtoken.SignatureAlgorithm;
 public class JwtTokenProvider {
 
 	private final CustomUserDetailService customUserDetailsService;
+	private final RefreshTokenRepository refreshTokenRepository;
+
 	private String secretKey;
 	private long expiration;
+	private long refreshExpiration;
 
 	public JwtTokenProvider(
 		@Value("${jwt.secret}") final String secretKey,
 		@Value("${jwt.expiration}") final long expiration,
-		final CustomUserDetailService customUserDetailsService) {
+		@Value("${REFRESH_EXPIRATION}") final long refreshExpiration,
+		final CustomUserDetailService customUserDetailsService,
+		final RefreshTokenRepository refreshTokenRepository) {
 		this.secretKey = Base64.getEncoder().encodeToString(secretKey.getBytes());
 		this.expiration = expiration;
+		this.refreshExpiration = refreshExpiration;
 		this.customUserDetailsService = customUserDetailsService;
+		this.refreshTokenRepository = refreshTokenRepository;
 	}
 
 	public String createToken(Long userId) {
@@ -44,6 +53,20 @@ public class JwtTokenProvider {
 			.setExpiration(expirationDate)
 			.signWith(SignatureAlgorithm.HS256, secretKey)
 			.compact();
+	}
+
+	public String createRefreshToken(Long userId) {
+		Claims claims = Jwts.claims().setSubject(Long.toString(userId));
+		Date now = new Date();
+		String refreshToken = Jwts.builder()
+			.setClaims(claims)
+			.setIssuedAt(now)
+			.setExpiration(new Date(now.getTime() + refreshExpiration))
+			.signWith(SignatureAlgorithm.HS256, secretKey)
+			.compact();
+
+		refreshTokenRepository.save(new RefreshToken(userId, refreshToken));
+		return refreshToken;
 	}
 
 	public boolean validateToken(String token) {
