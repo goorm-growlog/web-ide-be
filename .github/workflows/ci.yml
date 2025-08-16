@@ -27,7 +27,7 @@ jobs:
     env:
       DB_HOST: 127.0.0.1
       DB_NAME: webide
-      DB_PORT: 3306
+      DB_PORT: 3308
       DB_USER_NAME: root
       DB_USER_PASSWORD: root
 
@@ -48,7 +48,6 @@ jobs:
         run: |
           echo "DB_HOST=127.0.0.1" >> .env
           echo "DB_NAME=webide" >> .env
-          echo "DB_PORT=3306" >> .env
           echo "DB_USER_NAME=root" >> .env
           echo "DB_USER_PASSWORD=root" >> .env
           echo "DB_PORT=3308" >> .env
