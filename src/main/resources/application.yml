@@ -3,6 +3,14 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE}
   config:
     import: optional:file:.env[.properties]
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      username: default
+      password: ${REDIS_PASSWORD}
+      ssl:
+        enabled: false
 
 
 springdoc:
