@@ -49,4 +49,32 @@ public class AuthService {
 		return userRepository.findById(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 	}
+
+	// RTR + 재사용 탐지
+	public RotatedTokens refresh(String presentedRt) {
+		if (!jwtTokenProvider.validateToken(presentedRt)) {
+			throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
+		}
+
+		Long userId = jwtTokenProvider.getUserId(presentedRt);
+
+		RefreshToken savedRt = refreshTokenRepository.findById(userId)
+			.orElseThrow(() -> new CustomException(ErrorCode.REFRESH_TOKEN_NOT_FOUND));
+
+		if (!savedRt.getRefreshToken().equals(presentedRt)) {
+			// 재사용 탐지
+			refreshTokenRepository.deleteById(userId);
+			throw new CustomException(ErrorCode.REFRESH_TOKEN_REUSED);
+		}
+
+		String newAccessToken = jwtTokenProvider.createToken(userId);
+		String newRefreshToken = jwtTokenProvider.createRefreshToken(userId);
+		refreshTokenRepository.save(new RefreshToken(userId, newAccessToken));
+
+		return new RotatedTokens(userId, null, newAccessToken, newRefreshToken);
+	}
+
+	public void logout(Long userId) {
+		refreshTokenRepository.deleteById(userId);
+	}
 }

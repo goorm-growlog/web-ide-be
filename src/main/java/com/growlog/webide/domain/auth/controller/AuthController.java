@@ -57,11 +57,35 @@ public class AuthController {
 	@PostMapping("/logout")
 	public ApiResponse<String> logout(Authentication authentication) {
 		if (authentication != null) {
+			UserPrincipal userPrincipal = (UserPrincipal)authentication.getPrincipal();
 			String email = authentication.getName(); // JWT에서 추출한 email
 			log.info("Logout requested : {}", email);
+
+			authService.logout(userPrincipal.getUserId());
 		}
 
 		// 토큰 무효화는 JWT의 경우 서버에서 관리하지 않으므로, 클라이언트 측에서 토큰을 삭제하는 방식으로 처리(프론트에서 토큰 삭제 조치)
 		return ApiResponse.ok("Logged out successfully.");
+	}
+
+	@Operation(summary = "토큰 재발급")
+	@Parameter(in = ParameterIn.COOKIE, name = "refresh", required = true, description = "Refresh Token(HttpOnly)")
+	@PostMapping("/refresh")
+	public ResponseEntity<ApiResponse<TokenResponse>> refresh(
+		@CookieValue("refresh") String presentedRt,
+		HttpServletResponse response) {
+		RotatedTokens tokens = authService.refresh(presentedRt);
+
+		// 새 Refresh Token을 쿠키로 갱신
+		ResponseCookie cookie = ResponseCookie.from("refresh", tokens.refreshToken())
+			.httpOnly(true)
+			.secure(true)
+			.sameSite("Lax")
+			.path("/auth")
+			.build();
+		response.addHeader("Set-Cookie", cookie.toString());
+
+		TokenResponse tokenResponse = new TokenResponse(tokens.accessToken());
+		return ResponseEntity.ok(ApiResponse.ok(tokenResponse));
 	}
 }
