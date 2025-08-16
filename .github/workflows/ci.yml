@@ -14,7 +14,7 @@ jobs:
       mysql:
         image: mysql:8.0
         ports:
-          - 3306:3306
+          - 3308:3306
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: webide
@@ -27,6 +27,7 @@ jobs:
     env:
       DB_HOST: 127.0.0.1
       DB_NAME: webide
+      DB_PORT: 3308
       DB_USER_NAME: root
       DB_USER_PASSWORD: root
 
@@ -43,33 +44,28 @@ jobs:
           java-version: '21'       # 프로젝트에서 사용하는 Java 버전
           distribution: 'temurin'  # Temurin은 OpenJDK 배포판 중 하나
 
-      - name: 📄 Create .env file for CI
+      - name: 📄 Create .env files for each module
         run: |
-          echo "DB_HOST=127.0.0.1" >> .env
-          echo "DB_NAME=webide" >> .env
-          echo "DB_USER_NAME=root" >> .env
-          echo "DB_USER_PASSWORD=root" >> .env
-          echo "JWT_SECRET=mytestsecret" >> .env
-          echo "JWT_EXPIRATION=3600000" >> .env
-          echo "SPRING_PROFILES_ACTIVE=local" >> .env
-          echo "MAIL_USERNAME=test@example.com" >> .env
-          echo "MAIL_PASSWORD=secret" >> .env
-          echo "MAIL_FROM=test@example.com" >> .env
-          echo "LIVEBLOCKS_ROOM_SALT=dummy-salt-for-test" >> .env
-          echo "LIVEBLOCKS_SECRET_KEY=dummy-key-for-test" >> .env
-
-        # 환경 변수 export (Spring Boot가 인식 가능하게)
-      - name: 🌱 Export .env values to environment
-        run: |
-          set -a
-          source .env
-          set +a
-
+          cat > main-server/.env <<EOL
+          DB_HOST=127.0.0.1
+          DB_NAME=webide
+          DB_USER_NAME=root
+          DB_USER_PASSWORD=root
+          DB_PORT=3308
+          JWT_SECRET=mytestsecret
+          JWT_EXPIRATION=3600000
+          SPRING_PROFILES_ACTIVE=local
+          MAIL_USERNAME=test@example.com
+          MAIL_PASSWORD=secret
+          MAIL_FROM=test@example.com
+          LIVEBLOCKS_ROOM_SALT=dummy-salt-for-test
+          LIVEBLOCKS_SECRET_KEY=dummy-key-for-test
+          EOL
 
       - name: ⏳ Wait for MySQL to be healthy
         run: |
           for i in {1..10}; do
-            nc -z 127.0.0.1 3306 && echo "MySQL is up!" && exit 0
+            nc -z 127.0.0.1 3308 && echo "MySQL is up!" && exit 0
             echo "Waiting for MySQL..."
             sleep 3
           done
