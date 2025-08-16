@@ -17,4 +17,4 @@ devcontainer.local.json
 Thumbs.db
 
 # 테스트 리소스 (선택)
-src/test/
+main-server/src/test/

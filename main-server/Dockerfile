@@ -6,7 +6,7 @@ RUN apt-get update && apt-get install -y docker.io
 # 2. 애플리케이션 코드 복사
 # 작업 디렉토리 설정(/app) 및 소스코드 복사(현재 디렉토리의 모든 파일(.)을 컨테이너의 /app 디렉토리로 복사)
 WORKDIR /app
-COPY . .
+COPY .. .
 
 # 3. 실행 가능한 JAR 파일 빌드 (테스트 생략)
 # Gradle을 사용하여 애플리케이션을 빌드하고 실행 가능한 JAR 파일 생성
