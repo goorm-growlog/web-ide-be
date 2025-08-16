@@ -46,7 +46,6 @@ jobs:
 
       - name: 📄 Create .env files for each module
         run: |
-          # 메인 서버용 .env 파일 생성
           cat > main-server/.env <<EOL
           DB_HOST=127.0.0.1
           DB_NAME=webide
@@ -62,14 +61,6 @@ jobs:
           LIVEBLOCKS_ROOM_SALT=dummy-salt-for-test
           LIVEBLOCKS_SECRET_KEY=dummy-key-for-test
           EOL
-
-        # 환경 변수 export (Spring Boot가 인식 가능하게)
-      - name: 🌱 Export .env values to environment
-        run: |
-          set -a
-          source .env
-          set +a
-
 
       - name: ⏳ Wait for MySQL to be healthy
         run: |
