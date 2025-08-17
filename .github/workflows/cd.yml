@@ -94,7 +94,7 @@ jobs:
       #  Docker 이미지 빌드 및 Push
       - name: 🐳 Docker 이미지 빌드 및 Push
         run: |
-          docker build -t $DOCKER_USERNAME/$BACKEND_IMAGE:latest -f Dockerfile .  # 이미지 빌드
+          docker build --no-cache -t $DOCKER_USERNAME/$BACKEND_IMAGE:latest -f Dockerfile .  # 이미지 빌드
           docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest                      # Docker Hub로 푸시
 
 
@@ -130,14 +130,8 @@ jobs:
             # ✅ 환경변수 확인 로그 출력
             echo "✅ .env 파일 적용 완료"
 
-
             # 컨테이너 실행
-            docker run -d --name webide-backend \
-              --env-file /home/ubuntu/web-ide-be/.env \
-              -v /home/ubuntu/web-ide-be/.env:/app/.env \
-              -v /var/run/docker.sock:/var/run/docker.sock \
-              -p 8080:8080 \
-              $DOCKER_USERNAME/$BACKEND_IMAGE:latest
+            docker-compose up -d
 
             # 템플릿 이미지 미리 pull (선택 사항, 자동 pull도 되긴 함)
             docker pull $DOCKER_USERNAME/java-template:17 || true

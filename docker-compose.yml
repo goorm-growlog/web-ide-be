@@ -1,3 +1,4 @@
+name: growlog-ide
 services:
   backend:
     image: gradle:jdk21
@@ -6,12 +7,8 @@ services:
     volumes:
       - .:/app
       - /var/run/docker.sock:/var/run/docker.sock
-    #    env_file:
-    #      - .env
-    environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/${DB_NAME}?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
-      - SPRING_DATASOURCE_USERNAME=${DB_USER_NAME}
-      - SPRING_DATASOURCE_PASSWORD=${DB_USER_PASSWORD}
+    env_file:
+      - .env
 
     working_dir: /app
     command:
@@ -22,15 +19,16 @@ services:
 
   db:
     image: mysql:8.0
-    ports:
-      - "3307:3306"
     env_file:
       - .env
+    ports:
+      - ${DB_PORT}:${DB_PORT}
     environment:
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_USER: ${DB_USER_NAME}
       MYSQL_PASSWORD: ${DB_USER_PASSWORD}
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_TCP_PORT: ${DB_PORT}
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
