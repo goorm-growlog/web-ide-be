@@ -48,3 +48,6 @@ email:
 upload:
   profile:
     local-dir: uploads/profiles/
+
+project:
+  efs-base-path: /app

@@ -55,7 +55,7 @@ public class FileController {
 		fileService.createFileorDirectory(projectId, request, user.getUserId());
 		return ApiResponse.ok(new FileResponse("File created"));
 	}
-
+/*
 	@Operation(summary = "파일/폴더 삭제", description = "파일/폴더를 삭제합니다.")
 	@DeleteMapping
 	@PreAuthorize("@projectSecurityService.hasWritePermission(#projectId)")
@@ -83,7 +83,7 @@ public class FileController {
 		return ApiResponse.ok(new FileResponse("File moved"));
 	}
 
-	/**
+	*//**
 	 * 파일 열기
 	 *
 	 * @param projectId 프로젝트 ID
@@ -92,7 +92,7 @@ public class FileController {
 	 *                  - 예: "src/Main.java" → 실제 경로: "/workspace/src/Main.java"
 	 * @param user      인증된 사용자 정보
 	 * @return 파일 내용
-	 */
+	 *//*
 	@Operation(summary = "파일열기", description = "프로젝트 내 파일을 열어 내용을 반환한다.(경로는 컨테이너 작업 디렉토리 기준)")
 	@GetMapping
 	@PreAuthorize("@projectSecurityService.hasReadPermission(#projectId)")
@@ -108,7 +108,7 @@ public class FileController {
 		return ResponseEntity.ok(ApiResponse.ok(response));
 	}
 
-	/**
+	*//**
 	 * 파일 저장 API
 	 *
 	 * @param projectId  프로젝트 ID
@@ -117,7 +117,7 @@ public class FileController {
 	 *                   - 예: "src/Main.java"
 	 * @param user       인증된 사용자 정보
 	 * @return 저장 성공 메시지
-	 */
+	 *//*
 	@Operation(summary = "파일 저장", description = "프로젝트 내 파일을 수정 및 저장한다. (경로는 컨테이너 작업 디렉토리 기준)")
 	@PutMapping
 	@PreAuthorize("@projectSecurityService.hasWritePermission(#projectId)")
@@ -163,6 +163,6 @@ public class FileController {
 	) {
 		List<FileSearchResponseDto> results = fileService.searchFilesByName(projectId, query);
 		return ApiResponse.ok(results);
-	}
+	}*/
 
 }

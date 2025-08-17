@@ -38,3 +38,6 @@ spring:
         bucket: ${S3_BUCKET_NAME}   # 버킷 이름
       stack:
         auto: false
+
+project:
+  efs-base-path: /app
