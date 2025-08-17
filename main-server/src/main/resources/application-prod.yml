@@ -40,4 +40,4 @@ spring:
         auto: false
 
 project:
-  efs-base-path: /app
+  efs-base-path: /mnt/efs
