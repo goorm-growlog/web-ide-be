@@ -62,7 +62,7 @@ jobs:
           LIVEBLOCKS_ROOM_SALT=dummy-salt-for-test
           LIVEBLOCKS_SECRET_KEY=dummy-key-for-test
           REDIS_HOST=secret
-          REDIS_PORT=secret
+          REDIS_PORT=15884
           REDIS_USERNAME=default
           REDIS_PASSWORD=secret
           EOL
