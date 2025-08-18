@@ -54,12 +54,17 @@ jobs:
           echo "DB_PORT=3308" >> .env
           echo "JWT_SECRET=mytestsecret" >> .env
           echo "JWT_EXPIRATION=3600000" >> .env
+          echo "REFRESH_EXPIRATION=604800" >> .env
           echo "SPRING_PROFILES_ACTIVE=local" >> .env
           echo "MAIL_USERNAME=test@example.com" >> .env
           echo "MAIL_PASSWORD=secret" >> .env
           echo "MAIL_FROM=test@example.com" >> .env
           echo "LIVEBLOCKS_ROOM_SALT=dummy-salt-for-test" >> .env
           echo "LIVEBLOCKS_SECRET_KEY=dummy-key-for-test" >> .env
+          echo "REDIS_HOST=secret" >> .env
+          echo "REDIS_PORT=secret" >> .env
+          echo "REDIS_USERNAME=default" >> .env
+          echo "REDIS_PASSWORD=secret" >> .env
 
         # 환경 변수 export (Spring Boot가 인식 가능하게)
       - name: 🌱 Export .env values to environment

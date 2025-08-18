@@ -53,6 +53,7 @@ jobs:
 
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
           echo "JWT_EXPIRATION=3600000" >> .env
+          echo "REFRESH_EXPIRATION=604800" >> .env
 
           echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
           echo "MAIL_PASSWORD=\"${{ secrets.MAIL_PASSWORD }}\"" >> .env
@@ -64,6 +65,11 @@ jobs:
           echo "TEMPLATE_DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> .env
 
           echo "SPRING_PROFILES_ACTIVE=prod" >> .env
+
+          echo "REDIS_HOST=${{ secrets.REDIS_HOST }}" >> .env
+          echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> .env
+          echo "REDIS_USERNAME=${{ REDIS_USERNAME }}" >> .env
+          echo "REDIS_PASSWORD=${{ REDIS_PASSWORD }}" >> .env
 
       - name: 🔍 디버깅 .env 줄 번호 확인
         run: cat -n .env
