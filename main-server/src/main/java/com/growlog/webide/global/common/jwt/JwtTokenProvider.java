@@ -26,16 +26,19 @@ public class JwtTokenProvider {
 
 	private String secretKey;
 	private long expiration;
+	private String refreshSecretKey;
 	private long refreshExpiration;
 
 	public JwtTokenProvider(
-		@Value("${jwt.secret}") final String secretKey,
-		@Value("${jwt.expiration}") final long expiration,
-		@Value("${REFRESH_EXPIRATION}") final long refreshExpiration,
+		@Value("${jwt.access.secret}") final String secretKey,
+		@Value("${jwt.access.expiration}") final long expiration,
+		@Value("${jwt.refresh.secret}") final String refreshSecretKey,
+		@Value("${jwt.refresh.expiration}") final long refreshExpiration,
 		final CustomUserDetailService customUserDetailsService,
 		final RefreshTokenRepository refreshTokenRepository) {
 		this.secretKey = Base64.getEncoder().encodeToString(secretKey.getBytes());
 		this.expiration = expiration;
+		this.refreshSecretKey = refreshSecretKey;
 		this.refreshExpiration = refreshExpiration;
 		this.customUserDetailsService = customUserDetailsService;
 		this.refreshTokenRepository = refreshTokenRepository;
@@ -62,7 +65,7 @@ public class JwtTokenProvider {
 			.setClaims(claims)
 			.setIssuedAt(now)
 			.setExpiration(new Date(now.getTime() + refreshExpiration))
-			.signWith(SignatureAlgorithm.HS256, secretKey)
+			.signWith(SignatureAlgorithm.HS256, refreshSecretKey)
 			.compact();
 
 		refreshTokenRepository.save(new RefreshToken(userId, refreshToken));

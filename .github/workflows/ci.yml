@@ -54,6 +54,7 @@ jobs:
           DB_PORT=3308
           JWT_SECRET=mytestsecret
           JWT_EXPIRATION=3600000
+          REFRESH_EXPIRATION=mytestsecret
           REFRESH_EXPIRATION=604800
           SPRING_PROFILES_ACTIVE=local
           MAIL_USERNAME=test@example.com
