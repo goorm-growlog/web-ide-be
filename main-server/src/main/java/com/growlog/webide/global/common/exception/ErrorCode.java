@@ -56,6 +56,7 @@ public enum ErrorCode {
 	INSTANCE_NOT_FOUND("INSTANCE_NOT_FOUND", "Instance not found."),
 	IMAGE_NOT_FOUND("IMAGE_NOT_FOUND", "Image not found."),
 	INVALID_FILE_PATH("INVALID_FILE_PATH", "Invalid file path."),
+	CANNOT_MOVE_TO_SUBFOLDER("CANNOT_MOVE_TO_SUBFOLDER", "Unable to move to the folder below"),
 
 	CONTAINER_STILL_RUNNING("CONTAINER_STILL_RUNNING", "Active container still running."),
 

@@ -13,4 +13,7 @@ public interface FileMetaRepository extends JpaRepository<FileMeta, Long> {
 	List<FileMeta> findByProjectIdAndNameContainingIgnoreCaseAndDeletedFalse(Long projectId, String name);
 
 	List<FileMeta> findAllByProjectIdAndDeletedFalse(Long projectId);
+
+	// 특정 경로로 시작하는 모든 파일/폴더 메타데이터를 조회하는 메서드
+	List<FileMeta> findByProjectIdAndPathStartingWith(Long projectId, String path);
 }

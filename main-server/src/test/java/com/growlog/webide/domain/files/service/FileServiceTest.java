@@ -1,5 +1,6 @@
 package com.growlog.webide.domain.files.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -12,14 +13,19 @@ import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.assertj.core.api.Assertions;
+import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -151,6 +157,8 @@ class FileServiceTest {
 		assertEquals(ErrorCode.FILE_ALREADY_EXISTS, exception.getErrorCode());
 	}
 
+	/*delete*/
+
 	@Test
 	@DisplayName("파일 삭제 - 성공")
 	void deleteFile_success() throws Exception {
@@ -248,6 +256,93 @@ class FileServiceTest {
 		// 권한 체크에서 실패했으므로, 그 이후의 작업(DB 조회, 저장, 메시지 전송)은 절대 호출되면 안 됨
 		then(fileMetaRepository).should(never()).findByProjectIdAndPath(anyLong(), anyString());
 		then(fileMetaRepository).should(never()).save(any(FileMeta.class));
+		then(messagingTemplate).should(never()).convertAndSend(anyString(), any(Objects.class));
+	}
+
+
+	/*move*/
+	@Test
+	@DisplayName("폴더 이동 - 성공")
+	void moveDirectory_success() throws Exception {
+		// given
+		Long projectId = 1L;
+		Long userId = 123L;
+		String fromPath = "src";
+		String toPath = "source";
+
+		Project fakeProject = Project.builder().build();
+		ReflectionTestUtils.setField(fakeProject, "id", projectId);
+
+		// 이동할 폴더와 그 안의 파일에 대한 FileMeta를 미리 준비
+		FileMeta dirMeta = FileMeta.of(fakeProject, fromPath, "folder");
+		FileMeta fileMeta = FileMeta.of(fakeProject, fromPath + "/main.java", "file");
+		List<FileMeta> metasToMove = Arrays.asList(dirMeta, fileMeta);
+
+		// 가상 파일 시스템에 실제 폴더와 파일을 생성
+		Path sourceDir = jimfs.getPath("/app", String.valueOf(projectId), fromPath);
+		Path sourceFile = sourceDir.resolve("main.java");
+		Files.createDirectories(sourceDir);
+		Files.createFile(sourceFile);
+
+		// Mock 객체 행동 정의
+		given(projectRepository.findById(projectId)).willReturn(Optional.of(fakeProject));
+		willDoNothing().given(permissionService).checkWriteAccess(fakeProject, userId);
+		given(fileMetaRepository.findByProjectIdAndPathStartingWith(projectId, fromPath)).willReturn(metasToMove);
+
+		// when
+		fileService.moveFileorDirectory(projectId, fromPath, toPath, userId);
+
+		// then
+		// 1. 파일 시스템 검증
+		Path targetDir = jimfs.getPath("/app", String.valueOf(projectId), toPath);
+		Path targetFile = targetDir.resolve("main.java");
+
+		assertFalse(Files.exists(sourceDir), "원본 폴더는 삭제되어야 합니다.");
+		assertTrue(Files.exists(targetDir), "대상 폴더가 생성되어야 합니다.");
+		assertTrue(Files.exists(targetFile), "내부 파일도 함께 이동해야 합니다.");
+
+		// 2. DB 저장 로직 검증 (ArgumentCaptor 사용)
+		ArgumentCaptor<List<FileMeta>> captor = ArgumentCaptor.forClass(List.class);
+		then(fileMetaRepository).should(times(1)).saveAll(captor.capture());
+
+		List<FileMeta> savedMetas = captor.getValue();
+		assertThat(savedMetas).hasSize(2); // 2개의 객체가 저장되었는지 확인
+		// 각 객체의 경로가 올바르게 변경되었는지 확인
+		assertThat(savedMetas).anyMatch(meta -> meta.getPath().equals(toPath)); // "source"
+		assertThat(savedMetas).anyMatch(meta -> meta.getPath().equals(toPath + "/main.java")); // "source/main.java"
+
+		// 3. WebSocket 메시지 전송 검증
+		then(messagingTemplate).should(times(1)).convertAndSend(anyString(), any(Object.class));
+	}
+
+	@Test
+	@DisplayName("폴더 이동 - 실패 (자신의 하위 폴더로 이동)")
+	void moveDirectory_fail_CannotMoveToSubfolder() throws Exception {
+		// given
+		Long projectId = 1L;
+		Long userId = 123L;
+		String fromPath = "src";
+		String toPath = "src/child"; // 자신의 하위 폴더로 이동 시도
+
+		Project fakeProject = Project.builder().build();
+		ReflectionTestUtils.setField(fakeProject, "id", projectId);
+
+		Path sourceDir = jimfs.getPath("/app", String.valueOf(projectId), fromPath);
+		Files.createDirectories(sourceDir);
+
+		given(projectRepository.findById(projectId)).willReturn(Optional.of(fakeProject));
+		willDoNothing().given(permissionService).checkWriteAccess(fakeProject, userId);
+
+		// when & then
+		CustomException exception = assertThrows(CustomException.class, () -> {
+			fileService.moveFileorDirectory(projectId, fromPath, toPath, userId);
+		});
+
+		assertEquals(ErrorCode.CANNOT_MOVE_TO_SUBFOLDER, exception.getErrorCode());
+
+		// 실패했으므로 파일 시스템이나 DB에 어떤 변경도 일어나면 안 됨
+		then(fileMetaRepository).should(never()).findByProjectIdAndPathStartingWith(anyLong(), anyString());
+		then(fileMetaRepository).should(never()).saveAll(any());
 		then(messagingTemplate).should(never()).convertAndSend(anyString(), any(Objects.class));
 	}
 

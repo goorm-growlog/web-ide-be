@@ -7,6 +7,8 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import com.growlog.webide.domain.files.dto.CreateFileRequest;
 import com.growlog.webide.domain.files.dto.tree.TreeAddEventDto;
+import com.growlog.webide.domain.files.dto.tree.TreeMoveEventDto;
 import com.growlog.webide.domain.files.dto.tree.TreeRemoveEventDto;
 import com.growlog.webide.domain.files.dto.tree.WebSocketMessage;
 import com.growlog.webide.domain.files.entity.FileMeta;
@@ -25,6 +28,7 @@ import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -170,56 +174,88 @@ public class FileService {
 
 	}
 
-	/*
+	@Transactional
 	public void moveFileorDirectory(Long projectId, String fromPath, String toPath, Long userId) {
-		ActiveInstance inst = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
-			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+		Project project = projectRepository.findById(projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
+		permissionService.checkWriteAccess(project, userId);
 
-		String cid = inst.getContainerId();
-
-		String from = fromPath.startsWith("/") ? fromPath.substring(1) : fromPath;
-		String to = toPath.startsWith("/") ? toPath.substring(1) : toPath;
-
-		String fullFrom = CONTAINER_BASE + "/" + from;
-		String fullTo = CONTAINER_BASE + "/" + to;
-
-		String parent = fullTo.contains("/")
-			? fullTo.substring(0, fullTo.lastIndexOf('/'))
-			: CONTAINER_BASE;
+		Path sourcePath;
+		Path targetPath;
 
 		try {
-			// (1) mkdir -p <parent>
-			dockerCommandService.execInContainer(cid,
-				String.format("mkdir -p \"%s\"", parent)
-			);
-			// (2) mv <fullFrom> <fullTo>
-			dockerCommandService.execInContainer(cid,
-				String.format("mv \"%s\" \"%s\"", fullFrom, fullTo)
-			);
-		} catch (CustomException ce) {
-			throw ce;
-		} catch (Exception e) {
-			log.error("Failed move file or directory in container.", e);
+			//EFS 상의 원본(source) 및 대상(target) 경로 계산
+			sourcePath = resolveProjectPath(projectId, fromPath);
+			targetPath = resolveProjectPath(projectId, toPath);
+		} catch (IOException e) {
+			throw new CustomException(ErrorCode.INVALID_FILE_PATH);
+		}
+
+		//조건 확인
+		//원본 파일이 존재하지 않으면
+		if (!Files.exists(sourcePath)) {
+			throw new CustomException(ErrorCode.FILE_NOT_FOUND);
+		}
+
+		//이동하려는 파일이 이미 있으면
+		if (Files.exists(targetPath)) {
+			throw new CustomException(ErrorCode.FILE_ALREADY_EXISTS);
+		}
+
+		// 자기 자신의 하위 폴더로 이동하는 것 방지
+		if (targetPath.startsWith(sourcePath)) {
+			throw new CustomException(ErrorCode.CANNOT_MOVE_TO_SUBFOLDER);
+		}
+
+		try {
+			//EFS 파일 시스템 작업 (mkdir -p + mv)
+			//대상 경로의 부모 디렉터리가 없으면 생성
+			Files.createDirectories(targetPath.getParent());
+
+			Files.move(sourcePath, targetPath);
+		} catch (IOException e) {
+			log.error("Failed to move file or directory on EFS. from: {}, to: {}", sourcePath, targetPath, e);
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 
-		FileMeta meta = fileMetaRepository.findByProjectIdAndPath(projectId, fromPath)
-			.orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+		//DB 메타데이터 업데이트
+		// 이동할 대상과 그 하위의 모든 파일/폴더 메타데이터를 DB에서 조회
+		List<FileMeta> metasToMove = fileMetaRepository.findByProjectIdAndPathStartingWith(projectId, fromPath);
+		if (metasToMove.isEmpty()) {
+			// 실제 파일은 있으나 DB에 정보가 없는 경우. 에러를 던지거나 경고 로그를 남길 수 있음.
+			log.warn("File was moved on EFS, but no corresponding metadata found in DB for path starting with: {}",
+				fromPath);
+			// 이 경우에도 WebSocket 이벤트는 보내주는 것이 UI 일관성에 좋을 수 있습니다.
+		}
 
-		meta.updatePath(toPath);
-		fileMetaRepository.save(meta);
+		for (FileMeta meta : metasToMove) {
+			String oldPath = meta.getPath();
+			// 기존 경로의 시작 부분(fromPath)을 새로운 경로(toPath)로 교체
+			String newPath = oldPath.replaceFirst(Pattern.quote(fromPath), toPath);
+			meta.updatePath(newPath);
+		}
+		fileMetaRepository.saveAll(metasToMove); // 변경된 모든 메타데이터를 한번에 저장
 
 		// ✅ WebSocket 이벤트 푸시
-		WebSocketMessage msg = new WebSocketMessage(
-			"tree:move",
-			new TreeMoveEventDto(meta.getId(), fromPath, toPath)
-		);
-		messagingTemplate.convertAndSend(
-			"/topic/projects/" + projectId + "/tree",
-			msg
-		);
+		// 가장 상위의 메타데이터 ID를 사용
+		FileMeta rootMeta = metasToMove.stream()
+			.filter(m -> m.getPath().equals(toPath)) // 경로가 업데이트 되었으므로 toPath와 비교
+			.findFirst()
+			.orElse(null); // 만약 DB에 정보가 없었다면 null일 수 있음
+
+		if (rootMeta != null) {
+			WebSocketMessage msg = new WebSocketMessage(
+				"tree:move",
+				new TreeMoveEventDto(rootMeta.getId(), fromPath, toPath)
+			);
+			messagingTemplate.convertAndSend(
+				"/topic/projects/" + projectId + "/tree",
+				msg
+			);
+		}
 	}
 
+	/*
 	public FileOpenResponseDto openFile(Long projectId, String relativePath, Long userId) {
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
