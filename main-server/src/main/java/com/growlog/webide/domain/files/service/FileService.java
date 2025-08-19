@@ -20,7 +20,6 @@ import com.growlog.webide.domain.files.dto.tree.WebSocketMessage;
 import com.growlog.webide.domain.files.entity.FileMeta;
 import com.growlog.webide.domain.files.repository.FileMetaRepository;
 import com.growlog.webide.domain.permissions.service.ProjectPermissionService;
-import com.growlog.webide.domain.projects.entity.ActiveInstance;
 import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.global.common.exception.CustomException;
@@ -107,19 +106,13 @@ public class FileService {
 		log.info("9. DB 저장 완료. WebSocket 이벤트 전송 시작.");
 
 		// ✅ WebSocket 이벤트 푸시
-		WebSocketMessage msg = new WebSocketMessage(
-			"tree:add",
-			new TreeAddEventDto(fileMeta.getId(), request.getPath(), request.getType())
-		);
+		WebSocketMessage msg = new WebSocketMessage("tree:add",
+			new TreeAddEventDto(fileMeta.getId(), request.getPath(), request.getType()));
 		log.info("[WS ▶ add] sending tree:add → projectId={}", projectId);
-		messagingTemplate.convertAndSend(
-			"/topic/projects/" + projectId + "/tree",
-			msg
-		);
+		messagingTemplate.convertAndSend("/topic/projects/" + projectId + "/tree", msg);
 
 		log.info("--- SERVICE END ---");
 	}
-
 
 	public void deleteFileorDirectory(Long projectId, String path, Long userId) {
 		Project project = projectRepository.findById(projectId)
@@ -147,20 +140,19 @@ public class FileService {
 				if (Files.isDirectory(targetPath)) {
 					// 디렉터리인 경우, 재귀적으로 삭제
 					try (Stream<Path> walk = Files.walk(targetPath)) {
-						walk.sorted(Comparator.reverseOrder())
-							.forEach(p -> {
-								try {
-									Files.delete(p);
-								} catch (IOException ex) {
-									throw new UncheckedIOException(ex);
-								}
-							});
+						walk.sorted(Comparator.reverseOrder()).forEach(p -> {
+							try {
+								Files.delete(p);
+							} catch (IOException ex) {
+								throw new UncheckedIOException(ex);
+							}
+						});
 					}
 				} else {
 					// 파일인 경우, 바로 삭제
 					Files.delete(targetPath);
 				}
-			}else {
+			} else {
 				log.warn("File not found on EFS, but metadata exists. Path: {}", targetPath);
 			}
 		} catch (UncheckedIOException | IOException e) {
@@ -173,14 +165,8 @@ public class FileService {
 		fileMetaRepository.save(meta);
 
 		// ✅ WebSocket 이벤트 푸시
-		WebSocketMessage msg = new WebSocketMessage(
-			"tree:remove",
-			new TreeRemoveEventDto(meta.getId(), path)
-		);
-		messagingTemplate.convertAndSend(
-			"/topic/projects/" + projectId + "/tree",
-			msg
-		);
+		WebSocketMessage msg = new WebSocketMessage("tree:remove", new TreeRemoveEventDto(meta.getId(), path));
+		messagingTemplate.convertAndSend("/topic/projects/" + projectId + "/tree", msg);
 
 	}
 

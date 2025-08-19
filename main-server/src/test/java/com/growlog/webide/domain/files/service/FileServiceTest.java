@@ -185,7 +185,8 @@ class FileServiceTest {
 		then(permissionService).should(times(1)).checkWriteAccess(fakeProject, userId);
 		then(fileMetaRepository).should(times(1)).save(fakeFileMeta);
 		assertTrue(fakeFileMeta.isDeleted(), "FileMeta의 isDeleted 플래그가 true여야 합니다.");
-		then(messagingTemplate).should(times(1)).convertAndSend(eq("/topic/projects/" + projectId + "/tree"), any(WebSocketMessage.class));
+		then(messagingTemplate).should(times(1))
+			.convertAndSend(eq("/topic/projects/" + projectId + "/tree"), any(WebSocketMessage.class));
 
 
 	}
