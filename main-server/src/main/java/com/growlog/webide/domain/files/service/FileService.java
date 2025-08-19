@@ -1,10 +1,13 @@
 package com.growlog.webide.domain.files.service;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.stream.Stream;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -12,10 +15,12 @@ import org.springframework.stereotype.Service;
 
 import com.growlog.webide.domain.files.dto.CreateFileRequest;
 import com.growlog.webide.domain.files.dto.tree.TreeAddEventDto;
+import com.growlog.webide.domain.files.dto.tree.TreeRemoveEventDto;
 import com.growlog.webide.domain.files.dto.tree.WebSocketMessage;
 import com.growlog.webide.domain.files.entity.FileMeta;
 import com.growlog.webide.domain.files.repository.FileMetaRepository;
 import com.growlog.webide.domain.permissions.service.ProjectPermissionService;
+import com.growlog.webide.domain.projects.entity.ActiveInstance;
 import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.global.common.exception.CustomException;
@@ -115,31 +120,55 @@ public class FileService {
 		log.info("--- SERVICE END ---");
 	}
 
-/*
+
 	public void deleteFileorDirectory(Long projectId, String path, Long userId) {
-		ActiveInstance inst = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
-			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+		Project project = projectRepository.findById(projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
 
-		String cid = inst.getContainerId();
+		//쓰기(삭제) 권한 확인
+		//파일 삭제는 쓰기(and 오너) 권한을 가진 사람만 가능(읽기 권한이 아닌 사람.)
+		permissionService.checkWriteAccess(project, userId);
 
-		String rel = path.startsWith("/") ? path.substring(1) : path;
+		//db에서 파일 메타 정보 조회
+		FileMeta meta = fileMetaRepository.findByProjectIdAndPath(projectId, path)
+			.orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
-		String full = CONTAINER_BASE + "/" + rel;
-
-		// exec rm -rf
+		Path targetPath;
 		try {
-			dockerCommandService.execInContainer(cid,
-				String.format("rm -rf \"%s\"", full)
-			);
-		} catch (CustomException ce) {
-			throw ce;
-		} catch (Exception e) {
-			log.error("Failed to delete file or directory in container.", e);
+			// efs 상의 실제 파일/폴더 경로 계산
+			targetPath = resolveProjectPath(projectId, path);
+		} catch (IOException e) {
+			throw new CustomException(ErrorCode.INVALID_FILE_PATH);
+		}
+
+		//java nio api를 사용한 파일/폴더 삭제
+		try {
+			if (Files.exists(targetPath)) {
+				if (Files.isDirectory(targetPath)) {
+					// 디렉터리인 경우, 재귀적으로 삭제
+					try (Stream<Path> walk = Files.walk(targetPath)) {
+						walk.sorted(Comparator.reverseOrder())
+							.forEach(p -> {
+								try {
+									Files.delete(p);
+								} catch (IOException ex) {
+									throw new UncheckedIOException(ex);
+								}
+							});
+					}
+				} else {
+					// 파일인 경우, 바로 삭제
+					Files.delete(targetPath);
+				}
+			}else {
+				log.warn("File not found on EFS, but metadata exists. Path: {}", targetPath);
+			}
+		} catch (UncheckedIOException | IOException e) {
+			log.error("Failed to delete file or directory on EFS. Path: {}", targetPath, e);
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 
-		FileMeta meta = fileMetaRepository.findByProjectIdAndPath(projectId, path)
-			.orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+		//db에서 메타데이터 삭제
 		meta.markDeleted();
 		fileMetaRepository.save(meta);
 
@@ -155,6 +184,7 @@ public class FileService {
 
 	}
 
+	/*
 	public void moveFileorDirectory(Long projectId, String fromPath, String toPath, Long userId) {
 		ActiveInstance inst = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));

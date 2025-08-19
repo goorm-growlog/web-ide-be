@@ -12,6 +12,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.junit.jupiter.api.AfterEach;
@@ -54,12 +55,6 @@ class FileServiceTest {
 
 	@Mock
 	private ProjectRepository projectRepository;
-
-	/*@Mock
-	private ActiveInstanceRepository activeInstanceRepository;*/
-
-	/*@Mock
-	private DockerCommandService dockerCommandService;*/
 
 	@Mock
 	private ProjectPermissionService permissionService;
@@ -132,13 +127,13 @@ class FileServiceTest {
 		// given - 테스트를 위한 환경과 데이터를 준비하는 단계
 		Long projectId = 1L;
 		Long userId = 123L;
-		String filePath = "src/main.js";
+		String filePath = "src/main.java";
 		CreateFileRequest request = new CreateFileRequest(filePath, "file");
 		Project fakeProject = Project.builder().build();
 		ReflectionTestUtils.setField(fakeProject, "id", projectId);
 
 		// 테스트를 위해 미리 가상 파일 시스템에 파일을 생성해 둠 (실패 조건)
-		Path targetPath = jimfs.getPath("/app/1/src/main.js");
+		Path targetPath = jimfs.getPath("/app/1/src/main.java");
 		Files.createDirectories(targetPath.getParent());
 		Files.createFile(targetPath);
 
@@ -154,6 +149,105 @@ class FileServiceTest {
 
 		// 발생한 예외가 올바른 종류인지 검증 (then)
 		assertEquals(ErrorCode.FILE_ALREADY_EXISTS, exception.getErrorCode());
+	}
+
+	@Test
+	@DisplayName("파일 삭제 - 성공")
+	void deleteFile_success() throws Exception {
+		//given
+		Long projectId = 1L;
+		long userId = 123L;
+		String filePath = "src/main.java";
+
+		Project fakeProject = Project.builder().build();
+		ReflectionTestUtils.setField(fakeProject, "id", projectId);
+
+		FileMeta fakeFileMeta = FileMeta.of(fakeProject, filePath, "file");
+
+		//삭제할 파일을 미리 가상 파일 시스템에 생성
+		Path targetPath = jimfs.getPath("/app/1/src/main.java");
+		Files.createDirectories(targetPath.getParent());
+		Files.createFile(targetPath);
+		assertTrue(Files.exists(targetPath), "삭제 테스트를 위해 파일이 미리 존재해야 합니다.");
+
+		// Mock 객체의 행동 정의
+		given(projectRepository.findById(projectId)).willReturn(Optional.of(fakeProject));
+		willDoNothing().given(permissionService).checkWriteAccess(fakeProject, userId); // BDDMockito 스타일
+		given(fileMetaRepository.findByProjectIdAndPath(projectId, filePath)).willReturn(Optional.of(fakeFileMeta));
+		given(fileMetaRepository.save(any(FileMeta.class))).willReturn(fakeFileMeta);
+
+		// when - 실제 테스트할 메서드를 실행하는 단계
+		fileService.deleteFileorDirectory(projectId, filePath, userId);
+
+		// then - 실행 결과가 예상과 맞는지 검증하는 단계
+		assertFalse(Files.exists(targetPath), "파일이 성공적으로 삭제되어야 합니다.");
+
+		then(permissionService).should(times(1)).checkWriteAccess(fakeProject, userId);
+		then(fileMetaRepository).should(times(1)).save(fakeFileMeta);
+		assertTrue(fakeFileMeta.isDeleted(), "FileMeta의 isDeleted 플래그가 true여야 합니다.");
+		then(messagingTemplate).should(times(1)).convertAndSend(eq("/topic/projects/" + projectId + "/tree"), any(WebSocketMessage.class));
+
+
+	}
+
+	@Test
+	@DisplayName("디렉터리 삭제 - 성공 (하위 파일 포함)")
+	void deleteDirectory_success() throws Exception {
+		// given
+		Long projectId = 1L;
+		Long userId = 123L;
+		String dirPath = "src";
+		Project fakeProject = Project.builder().build();
+		ReflectionTestUtils.setField(fakeProject, "id", projectId);
+		FileMeta fakeDirMeta = FileMeta.of(fakeProject, dirPath, "folder");
+
+		// 삭제할 디렉터리와 그 안의 파일을 미리 생성
+		Path targetDir = jimfs.getPath("/app/1/src");
+		Path innerFile = targetDir.resolve("main.java");
+		Files.createDirectories(targetDir);
+		Files.createFile(innerFile);
+		assertTrue(Files.exists(targetDir) && Files.exists(innerFile), "테스트용 디렉터리와 파일이 존재해야 합니다.");
+
+		given(projectRepository.findById(projectId)).willReturn(Optional.of(fakeProject));
+		willDoNothing().given(permissionService).checkWriteAccess(fakeProject, userId);
+		given(fileMetaRepository.findByProjectIdAndPath(projectId, dirPath)).willReturn(Optional.of(fakeDirMeta));
+
+		// when
+		fileService.deleteFileorDirectory(projectId, dirPath, userId);
+
+		// then
+		assertFalse(Files.exists(targetDir), "디렉터리가 삭제되어야 합니다.");
+		assertFalse(Files.exists(innerFile), "디렉터리 내부 파일도 함께 삭제되어야 합니다.");
+		then(fileMetaRepository).should(times(1)).save(fakeDirMeta);
+		then(messagingTemplate).should(times(1)).convertAndSend(anyString(), any(WebSocketMessage.class));
+	}
+
+	@Test
+	@DisplayName("파일 삭제 - 실패 (쓰기 권한 없음)")
+	void deleteFile_fail_NoWritePermission() {
+		// given
+		Long projectId = 1L;
+		Long userId = 123L;
+		String filePath = "src/main.java";
+		Project fakeProject = Project.builder().build();
+		ReflectionTestUtils.setField(fakeProject, "id", projectId);
+
+		given(projectRepository.findById(projectId)).willReturn(Optional.of(fakeProject));
+		// permissionService.checkWriteAccess가 호출되면 예외를 던지도록 설정
+		willThrow(new CustomException(ErrorCode.NO_WRITE_PERMISSION))
+			.given(permissionService).checkWriteAccess(fakeProject, userId);
+
+		// when & then
+		CustomException exception = assertThrows(CustomException.class, () -> {
+			fileService.deleteFileorDirectory(projectId, filePath, userId);
+		});
+
+		assertEquals(ErrorCode.NO_WRITE_PERMISSION, exception.getErrorCode());
+
+		// 권한 체크에서 실패했으므로, 그 이후의 작업(DB 조회, 저장, 메시지 전송)은 절대 호출되면 안 됨
+		then(fileMetaRepository).should(never()).findByProjectIdAndPath(anyLong(), anyString());
+		then(fileMetaRepository).should(never()).save(any(FileMeta.class));
+		then(messagingTemplate).should(never()).convertAndSend(anyString(), any(Objects.class));
 	}
 
 

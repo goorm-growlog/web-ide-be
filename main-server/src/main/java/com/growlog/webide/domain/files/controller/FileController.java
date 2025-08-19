@@ -55,7 +55,7 @@ public class FileController {
 		fileService.createFileorDirectory(projectId, request, user.getUserId());
 		return ApiResponse.ok(new FileResponse("File created"));
 	}
-/*
+
 	@Operation(summary = "파일/폴더 삭제", description = "파일/폴더를 삭제합니다.")
 	@DeleteMapping
 	@PreAuthorize("@projectSecurityService.hasWritePermission(#projectId)")
@@ -69,6 +69,7 @@ public class FileController {
 		return ApiResponse.ok(new FileResponse("File deleted"));
 	}
 
+	/*
 	@Operation(summary = "파일/폴더 이름 변경 및 이동", description = "파일/폴더의 이름을 변경하거나 위치를 변경합니다.")
 	@PatchMapping
 	@PreAuthorize("@projectSecurityService.hasWritePermission(#projectId)")
