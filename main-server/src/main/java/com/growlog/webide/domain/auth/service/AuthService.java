@@ -69,7 +69,7 @@ public class AuthService {
 
 		String newAccessToken = jwtTokenProvider.createToken(userId);
 		String newRefreshToken = jwtTokenProvider.createRefreshToken(userId);
-		refreshTokenRepository.save(new RefreshToken(userId, newAccessToken));
+		refreshTokenRepository.save(new RefreshToken(userId, newRefreshToken));
 
 		return new RotatedTokens(userId, null, newAccessToken, newRefreshToken);
 	}
