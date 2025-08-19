@@ -54,12 +54,17 @@ jobs:
           DB_PORT=3308
           JWT_SECRET=mytestsecret
           JWT_EXPIRATION=3600000
+          REFRESH_EXPIRATION=604800
           SPRING_PROFILES_ACTIVE=local
           MAIL_USERNAME=test@example.com
           MAIL_PASSWORD=secret
           MAIL_FROM=test@example.com
           LIVEBLOCKS_ROOM_SALT=dummy-salt-for-test
           LIVEBLOCKS_SECRET_KEY=dummy-key-for-test
+          REDIS_HOST=secret
+          REDIS_PORT=15884
+          REDIS_USERNAME=default
+          REDIS_PASSWORD=secret
           EOL
 
       - name: ⏳ Wait for MySQL to be healthy
