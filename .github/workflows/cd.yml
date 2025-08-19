@@ -100,7 +100,8 @@ jobs:
       #  Docker 이미지 빌드 및 Push
       - name: 🐳 Docker 이미지 빌드 및 Push
         run: |
-          docker build --no-cache -t $DOCKER_USERNAME/$BACKEND_IMAGE:latest -f Dockerfile .  # 이미지 빌드
+          docker build --no-cache -t $DOCKER_USERNAME/$BACKEND_IMAGE:latest \
+          -f main-server/Dockerfile main-server                                   # 이미지 빌드
           docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest                      # Docker Hub로 푸시
 
 
