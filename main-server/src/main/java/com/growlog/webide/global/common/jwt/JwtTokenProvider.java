@@ -72,6 +72,7 @@ public class JwtTokenProvider {
 		return refreshToken;
 	}
 
+	// TODO: validateRefreshToken 분리 (secretKey 아닌 refreshSecretKey)
 	public boolean validateToken(String token) {
 		try {
 			Jwts.parser()
