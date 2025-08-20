@@ -74,16 +74,7 @@ public class FileService {
 			throw new CustomException(ErrorCode.INVALID_FILE_PATH);
 		}
 
-		log.info("3. Files.exists()로 파일 존재 여부 확인 시작");
-		//동일한 파일/폴더 체크
-		if (Files.exists(targetPath)) {
-			log.error("!!! 문제 발생: 파일 생성 로직 이전에 파일이 이미 존재함: {}", targetPath);
-			throw new CustomException(ErrorCode.FILE_ALREADY_EXISTS);
-		}
-
-		//파일/폴더 정보를 db에 저장
-		log.info("8. DB에 메타데이터 저장 시작");
-		FileMeta fileMeta = fileMetaRepository.save(FileMeta.of(project, request.getPath(), request.getType()));
+		FileMeta fileMeta = FileMeta.of(project, request.getPath(), request.getType());
 
 		try {
 			log.info("4. 파일이 존재하지 않음을 확인. 생성 로직으로 진행.");
@@ -104,6 +95,11 @@ public class FileService {
 				throw new CustomException(ErrorCode.BAD_REQUEST);
 			}
 
+			fileMetaRepository.save(fileMeta);
+
+		}catch (java.nio.file.FileAlreadyExistsException e) {
+			log.error("Race Condition or Inconsistent State: File already exists on EFS. path: {}", targetPath, e);
+			throw new CustomException(ErrorCode.FILE_ALREADY_EXISTS);
 		} catch (IOException e) {
 			log.error("IO 예외 발생.", e);
 			log.error("Failed to create file or directory on EFS.", e);
