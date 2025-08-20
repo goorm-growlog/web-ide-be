@@ -68,7 +68,7 @@ public class ChatService {
 		try {
 			messageJson = objectMapper.writeValueAsString(response);
 		} catch (JsonProcessingException e) {
-			throw new RuntimeException(e);
+			throw new RuntimeException("Failed to serialize chat message to JSON", e);
 		}
 		redisTemplate.opsForList().rightPush(key, messageJson);
 		redisTemplate.expire(key, Duration.ofDays(1));
