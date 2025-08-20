@@ -8,6 +8,5 @@ spring:
   rabbitmq:
     host: localhost
     port: 5672
-    stream:
-      username: admin
-      password: admin
+    username: admin
+    password: admin
