@@ -62,13 +62,13 @@ public class ChatHistoryService {
 						})
 						.filter(Objects::nonNull)
 						.collect(Collectors.toList());
-					return PageResponse.from(messages, 0, size, listSize.intValue());
+					return PageResponse.from(messages, 0, size, listSize);
 				}
 			}
 		}
 
 		// Redis 메시지 없거나 이후 페이지 조회 (db)
-		Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+		Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "sentAt"));
 		Page<Chats> chats = chatRepository.findByProjectIdWithUser(projectId, pageable);
 
 		Page<ChattingResponseDto> chatResponses = chats.map(ChattingResponseDto::from);
