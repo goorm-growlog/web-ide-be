@@ -18,4 +18,13 @@ public record PageResponse<ChattingResponseDto>(
 			page.getTotalPages()
 		);
 	}
+
+	public static <T> PageResponse<T> from(List<T> content, int page, int size, int total) {
+		return new PageResponse<>(
+			content,
+			page,
+			size,
+			total
+		);
+	}
 }
