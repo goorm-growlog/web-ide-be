@@ -16,6 +16,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import com.growlog.webide.domain.files.dto.CreateFileRequest;
+import com.growlog.webide.domain.files.dto.FileOpenResponseDto;
 import com.growlog.webide.domain.files.dto.tree.TreeAddEventDto;
 import com.growlog.webide.domain.files.dto.tree.TreeMoveEventDto;
 import com.growlog.webide.domain.files.dto.tree.TreeRemoveEventDto;
@@ -256,7 +257,6 @@ public class FileService {
 		}
 	}
 
-	/*
 	public FileOpenResponseDto openFile(Long projectId, String relativePath, Long userId) {
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
@@ -264,19 +264,30 @@ public class FileService {
 		// 권한 확인
 		permissionService.checkReadAccess(project, userId);
 
-		ActiveInstance instance = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
-			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+		Path targetPath;
+		try {
+			//실제 파일 경로 계산
+			targetPath = resolveProjectPath(projectId, relativePath);
+		} catch (IOException e) {
+			throw new CustomException(ErrorCode.INVALID_FILE_PATH);
+		}
 
-		String containerId = instance.getContainerId();
+		//파일 존재 여부 확인
+		if (!Files.exists(targetPath) || Files.isDirectory(targetPath)) {
+			throw new CustomException(ErrorCode.FILE_NOT_FOUND);
+		}
 
-		// 👉 로그 추가 (디버깅용)
-		log.info("📂 Open file - containerId: {}, path: {}", containerId, relativePath);
+		try {
+			String fileContent = Files.readString(targetPath);
 
-		String fileContent = dockerCommandService.readFileContent(containerId, relativePath);
-
-		return FileOpenResponseDto.of(projectId, relativePath, fileContent, true); // editable은 write 권한 체크 결과로 설정 가능
+			return FileOpenResponseDto.of(projectId, relativePath, fileContent, true); // editable은 write 권한 체크 결과로 설정 가능
+		} catch (IOException e) {
+			log.error("Failed to read file on EFS. path: {}", targetPath, e);
+			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
+		}
 	}
 
+	/*
 	public void saveFile(Long projectId, String relativePath, String content, Long userId) {
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));

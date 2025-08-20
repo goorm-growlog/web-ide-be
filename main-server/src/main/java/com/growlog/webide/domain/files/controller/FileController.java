@@ -1,8 +1,10 @@
 package com.growlog.webide.domain.files.controller;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,12 +14,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.growlog.webide.domain.files.dto.CreateFileRequest;
+import com.growlog.webide.domain.files.dto.FileOpenResponseDto;
 import com.growlog.webide.domain.files.dto.FileResponse;
 import com.growlog.webide.domain.files.service.FileService;
 import com.growlog.webide.global.common.ApiResponse;
 import com.growlog.webide.global.security.UserPrincipal;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -70,7 +74,7 @@ public class FileController {
 		return ApiResponse.ok(new FileResponse("File moved"));
 	}
 
-	/*
+
 	/**
 	 * 파일 열기
 	 *
@@ -80,7 +84,7 @@ public class FileController {
 	 *                  - 예: "src/Main.java" → 실제 경로: "/workspace/src/Main.java"
 	 * @param user      인증된 사용자 정보
 	 * @return 파일 내용
-	 *//*
+	 */
 	@Operation(summary = "파일열기", description = "프로젝트 내 파일을 열어 내용을 반환한다.(경로는 컨테이너 작업 디렉토리 기준)")
 	@GetMapping
 	@PreAuthorize("@projectSecurityService.hasReadPermission(#projectId)")
@@ -96,7 +100,8 @@ public class FileController {
 		return ResponseEntity.ok(ApiResponse.ok(response));
 	}
 
-	*//**
+
+	/**
 	 * 파일 저장 API
 	 *
 	 * @param projectId  프로젝트 ID
