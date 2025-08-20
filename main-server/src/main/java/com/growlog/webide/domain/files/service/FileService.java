@@ -287,23 +287,37 @@ public class FileService {
 		}
 	}
 
-	/*
+
 	public void saveFile(Long projectId, String relativePath, String content, Long userId) {
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
 
 		permissionService.checkWriteAccess(project, userId);
 
-		ActiveInstance instance = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
-			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+		Path targetPath;
+		try {
+			targetPath = resolveProjectPath(projectId, relativePath);
+		} catch (IOException e) {
+			throw new CustomException(ErrorCode.INVALID_FILE_PATH);
+		}
 
-		String containerId = instance.getContainerId();
-		dockerCommandService.writeFileContent(containerId, relativePath, content);
+		//파일이 존재하는지 확인
+		fileMetaRepository.findByProjectIdAndPathAndDeletedFalse(projectId, relativePath)
+			.orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
-		log.info("✅ File saved successfully. - containerId: {}, path: {}", containerId, relativePath);
+		try {
+			Files.createDirectories(targetPath.getParent());
+
+			Files.writeString(targetPath, content);
+
+			log.info("✅ File saved successfully. - path: {}", targetPath);
+		} catch (IOException e) {
+			log.error("Failed to save file on EFS. path: {}", targetPath, e);
+			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
+		}
 	}
 
-	public List<FileSearchResponseDto> searchFilesByName(Long projectId, String query) {
+	/*public List<FileSearchResponseDto> searchFilesByName(Long projectId, String query) {
 		return fileMetaRepository.findByProjectIdAndNameContainingIgnoreCaseAndDeletedFalse(projectId, query)
 			.stream()
 			.map(FileSearchResponseDto::from)
