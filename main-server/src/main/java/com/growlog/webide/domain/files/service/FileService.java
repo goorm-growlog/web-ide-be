@@ -280,13 +280,13 @@ public class FileService {
 		try {
 			String fileContent = Files.readString(targetPath);
 
-			return FileOpenResponseDto.of(projectId, relativePath, fileContent, true); // editable은 write 권한 체크 결과로 설정 가능
+			return FileOpenResponseDto.of(projectId, relativePath, fileContent,
+				true); // editable은 write 권한 체크 결과로 설정 가능
 		} catch (IOException e) {
 			log.error("Failed to read file on EFS. path: {}", targetPath, e);
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 	}
-
 
 	public void saveFile(Long projectId, String relativePath, String content, Long userId) {
 		Project project = projectRepository.findById(projectId)
