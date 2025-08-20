@@ -97,7 +97,7 @@ public class FileService {
 
 			fileMetaRepository.save(fileMeta);
 
-		}catch (java.nio.file.FileAlreadyExistsException e) {
+		} catch (java.nio.file.FileAlreadyExistsException e) {
 			log.error("Race Condition or Inconsistent State: File already exists on EFS. path: {}", targetPath, e);
 			throw new CustomException(ErrorCode.FILE_ALREADY_EXISTS);
 		} catch (IOException e) {
