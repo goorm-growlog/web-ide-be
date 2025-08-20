@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 @EnableRabbit
-public class RabbitMQConfig {
+public class RabbitmqConfig {
 
 	public static final String EXCHANGE_NAME = "webide.exchange";
 	public static final String QUEUE_NAME = "code.execution.queue";
