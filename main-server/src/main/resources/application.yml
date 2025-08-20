@@ -35,3 +35,11 @@ template:
 jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION}
+
+rabbitmq:
+  exchange:
+    name: webide.exchange
+  queue:
+    name: code.execution.queue
+  routing:
+    key: code.run

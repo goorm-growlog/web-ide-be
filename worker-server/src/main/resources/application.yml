@@ -3,3 +3,11 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE}
   config:
     import: optional:file:.env[.properties]
+
+rabbitmq:
+  exchange:
+    name: webide.exchange
+  queue:
+    name: code.execution.queue
+  routing:
+    key: code.run
