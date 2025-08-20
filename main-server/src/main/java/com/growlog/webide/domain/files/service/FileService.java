@@ -52,13 +52,14 @@ public class FileService {
 		this.fileSystem = fileSystem;
 	}
 
+	@Transactional
 	public void createFileorDirectory(Long projectId, CreateFileRequest request, Long userId) {
 		log.info("--- SERVICE START: createFileorDirectory 진입 ---");
 		//프로젝트 정보 가져오기
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
 
-		if (fileMetaRepository.findByProjectIdAndPath(projectId, request.getPath()).isPresent()) {
+		if (fileMetaRepository.findByProjectIdAndPathAndDeletedFalse(projectId, request.getPath()).isPresent()) {
 			throw new CustomException(ErrorCode.FILE_ALREADY_EXISTS);
 		}
 
@@ -78,6 +79,10 @@ public class FileService {
 			log.error("!!! 문제 발생: 파일 생성 로직 이전에 파일이 이미 존재함: {}", targetPath);
 			throw new CustomException(ErrorCode.FILE_ALREADY_EXISTS);
 		}
+
+		//파일/폴더 정보를 db에 저장
+		log.info("8. DB에 메타데이터 저장 시작");
+		FileMeta fileMeta = fileMetaRepository.save(FileMeta.of(project, request.getPath(), request.getType()));
 
 		try {
 			log.info("4. 파일이 존재하지 않음을 확인. 생성 로직으로 진행.");
@@ -104,11 +109,7 @@ public class FileService {
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 
-		//파일/폴더 정보를 db에 저장
-		log.info("8. DB에 메타데이터 저장 시작");
-		FileMeta fileMeta = fileMetaRepository.save(FileMeta.of(project, request.getPath(), request.getType()));
 		log.info("9. DB 저장 완료. WebSocket 이벤트 전송 시작.");
-
 		// ✅ WebSocket 이벤트 푸시
 		WebSocketMessage msg = new WebSocketMessage("tree:add",
 			new TreeAddEventDto(fileMeta.getId(), request.getPath(), request.getType()));
@@ -127,7 +128,7 @@ public class FileService {
 		permissionService.checkWriteAccess(project, userId);
 
 		//db에서 파일 메타 정보 조회
-		FileMeta meta = fileMetaRepository.findByProjectIdAndPath(projectId, path)
+		FileMeta meta = fileMetaRepository.findByProjectIdAndPathAndDeletedFalse(projectId, path)
 			.orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
 		Path targetPath;

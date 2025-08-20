@@ -11,7 +11,7 @@ spring:
     database-platform: org.hibernate.dialect.MySQLDialect
     open-in-view: true
     hibernate:
-      ddl-auto: create #none
+      ddl-auto: none
     show-sql: true
     properties:
       hibernate:

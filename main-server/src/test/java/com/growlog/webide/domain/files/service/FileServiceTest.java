@@ -1,25 +1,30 @@
 package com.growlog.webide.domain.files.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.BDDMockito.*;
+import static org.mockito.BDDMockito.any;
+import static org.mockito.BDDMockito.anyLong;
+import static org.mockito.BDDMockito.anyString;
+import static org.mockito.BDDMockito.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.never;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.times;
+import static org.mockito.BDDMockito.willDoNothing;
+import static org.mockito.BDDMockito.willThrow;
 
 import java.io.IOException;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-import org.assertj.core.api.Assertions;
-import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -35,20 +40,16 @@ import org.springframework.test.util.ReflectionTestUtils;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.growlog.webide.domain.files.dto.CreateFileRequest;
-import com.growlog.webide.domain.files.dto.FileOpenResponseDto;
 import com.growlog.webide.domain.files.dto.tree.WebSocketMessage;
 import com.growlog.webide.domain.files.entity.FileMeta;
 import com.growlog.webide.domain.files.repository.FileMetaRepository;
 import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.permissions.service.ProjectPermissionService;
-import com.growlog.webide.domain.projects.entity.ActiveInstance;
 import com.growlog.webide.domain.projects.entity.Project;
-import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
-import com.growlog.webide.global.docker.DockerCommandService;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -84,12 +85,10 @@ class FileServiceTest {
 		ReflectionTestUtils.setField(fileService, "efsBasePath", "/app");
 	}
 
-
 	@AfterEach
 	void tearDown() throws Exception {
 		jimfs.close(); // 테스트 끝날 때마다 메모리 파일시스템 닫기
 	}
-
 
 	@Test
 	@DisplayName("파일 생성 - 성공")
@@ -146,7 +145,6 @@ class FileServiceTest {
 		// Mock 객체의 행동 정의
 		given(projectRepository.findById(projectId)).willReturn(Optional.of(fakeProject));
 
-
 		// when & then - 예외가 발생하는 것을 실행하고 동시에 검증하는 단계
 		CustomException exception = assertThrows(CustomException.class, () -> {
 			// 이 블록 안에서 예외가 발생할 것으로 기대함 (when)
@@ -162,41 +160,39 @@ class FileServiceTest {
 	@Test
 	@DisplayName("파일 삭제 - 성공")
 	void deleteFile_success() throws Exception {
-		//given
+		// given
 		Long projectId = 1L;
 		long userId = 123L;
 		String filePath = "src/main.java";
 
 		Project fakeProject = Project.builder().build();
 		ReflectionTestUtils.setField(fakeProject, "id", projectId);
-
 		FileMeta fakeFileMeta = FileMeta.of(fakeProject, filePath, "file");
 
-		//삭제할 파일을 미리 가상 파일 시스템에 생성
-		Path targetPath = jimfs.getPath("/app/1/src/main.java");
+		// 가상 파일 시스템에 삭제할 파일 미리 생성
+		Path targetPath = jimfs.getPath("/app", String.valueOf(projectId), filePath);
 		Files.createDirectories(targetPath.getParent());
 		Files.createFile(targetPath);
 		assertTrue(Files.exists(targetPath), "삭제 테스트를 위해 파일이 미리 존재해야 합니다.");
 
 		// Mock 객체의 행동 정의
-		given(projectRepository.findById(projectId)).willReturn(Optional.of(fakeProject));
-		willDoNothing().given(permissionService).checkWriteAccess(fakeProject, userId); // BDDMockito 스타일
-		given(fileMetaRepository.findByProjectIdAndPath(projectId, filePath)).willReturn(Optional.of(fakeFileMeta));
-		given(fileMetaRepository.save(any(FileMeta.class))).willReturn(fakeFileMeta);
+		given(projectRepository.findById(eq(projectId))).willReturn(Optional.of(fakeProject));
+		willDoNothing().given(permissionService).checkWriteAccess(eq(fakeProject), eq(userId));
 
-		// when - 실제 테스트할 메서드를 실행하는 단계
+		given(fileMetaRepository.findByProjectIdAndPathAndDeletedFalse(eq(projectId), eq(filePath)))
+			.willReturn(Optional.of(fakeFileMeta));
+
+		// when
 		fileService.deleteFileorDirectory(projectId, filePath, userId);
 
-		// then - 실행 결과가 예상과 맞는지 검증하는 단계
+		// then
 		assertFalse(Files.exists(targetPath), "파일이 성공적으로 삭제되어야 합니다.");
-
-		then(permissionService).should(times(1)).checkWriteAccess(fakeProject, userId);
-		then(fileMetaRepository).should(times(1)).save(fakeFileMeta);
+		then(permissionService).should(times(1)).checkWriteAccess(eq(fakeProject), eq(userId));
+		then(fileMetaRepository).should(times(1)).save(eq(fakeFileMeta));
 		assertTrue(fakeFileMeta.isDeleted(), "FileMeta의 isDeleted 플래그가 true여야 합니다.");
+
 		then(messagingTemplate).should(times(1))
-			.convertAndSend(eq("/topic/projects/" + projectId + "/tree"), any(WebSocketMessage.class));
-
-
+			.convertAndSend(eq("/topic/projects/" + projectId + "/tree"), any(Object.class));
 	}
 
 	@Test
@@ -206,12 +202,13 @@ class FileServiceTest {
 		Long projectId = 1L;
 		Long userId = 123L;
 		String dirPath = "src";
+
 		Project fakeProject = Project.builder().build();
 		ReflectionTestUtils.setField(fakeProject, "id", projectId);
 		FileMeta fakeDirMeta = FileMeta.of(fakeProject, dirPath, "folder");
 
 		// 삭제할 디렉터리와 그 안의 파일을 미리 생성
-		Path targetDir = jimfs.getPath("/app/1/src");
+		Path targetDir = jimfs.getPath("/app", String.valueOf(projectId), dirPath);
 		Path innerFile = targetDir.resolve("main.java");
 		Files.createDirectories(targetDir);
 		Files.createFile(innerFile);
@@ -219,7 +216,8 @@ class FileServiceTest {
 
 		given(projectRepository.findById(projectId)).willReturn(Optional.of(fakeProject));
 		willDoNothing().given(permissionService).checkWriteAccess(fakeProject, userId);
-		given(fileMetaRepository.findByProjectIdAndPath(projectId, dirPath)).willReturn(Optional.of(fakeDirMeta));
+		given(fileMetaRepository.findByProjectIdAndPathAndDeletedFalse(eq(projectId), eq(dirPath)))
+			.willReturn(Optional.of(fakeDirMeta));
 
 		// when
 		fileService.deleteFileorDirectory(projectId, dirPath, userId);
@@ -258,7 +256,6 @@ class FileServiceTest {
 		then(fileMetaRepository).should(never()).save(any(FileMeta.class));
 		then(messagingTemplate).should(never()).convertAndSend(anyString(), any(Objects.class));
 	}
-
 
 	/*move*/
 	@Test
