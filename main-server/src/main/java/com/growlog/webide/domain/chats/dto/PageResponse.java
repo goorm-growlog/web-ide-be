@@ -19,12 +19,16 @@ public record PageResponse<ChattingResponseDto>(
 		);
 	}
 
-	public static <T> PageResponse<T> from(List<T> content, int page, int size, int total) {
+	public static <T> PageResponse<T> from(List<T> content, int page, int size, long total) {
+		int totalPages = 0;
+		if (total > 0) {
+			totalPages = (size > 0) ? (int)Math.ceil((double)total / size) : 1;
+		}
 		return new PageResponse<>(
 			content,
 			page,
-			size,
-			total
+			total,
+			totalPages
 		);
 	}
 }
