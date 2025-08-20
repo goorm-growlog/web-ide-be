@@ -120,6 +120,7 @@ public class FileService {
 		log.info("--- SERVICE END ---");
 	}
 
+	@Transactional
 	public void deleteFileorDirectory(Long projectId, String path, Long userId) {
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
@@ -223,11 +224,12 @@ public class FileService {
 		//DB 메타데이터 업데이트
 		// 이동할 대상과 그 하위의 모든 파일/폴더 메타데이터를 DB에서 조회
 		List<FileMeta> metasToMove = fileMetaRepository.findByProjectIdAndPathStartingWith(projectId, fromPath);
+
 		if (metasToMove.isEmpty()) {
 			// 실제 파일은 있으나 DB에 정보가 없는 경우. 에러를 던지거나 경고 로그를 남길 수 있음.
 			log.warn("File was moved on EFS, but no corresponding metadata found in DB for path starting with: {}",
 				fromPath);
-			// 이 경우에도 WebSocket 이벤트는 보내주는 것이 UI 일관성에 좋을 수 있습니다.
+			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 
 		for (FileMeta meta : metasToMove) {
