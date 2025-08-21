@@ -1,13 +1,22 @@
 package com.growlog.webide.domain.files.service;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import com.growlog.webide.domain.files.dto.CreateFileRequest;
 import com.growlog.webide.domain.files.dto.FileOpenResponseDto;
-import com.growlog.webide.domain.files.dto.FileSearchResponseDto;
 import com.growlog.webide.domain.files.dto.tree.TreeAddEventDto;
 import com.growlog.webide.domain.files.dto.tree.TreeMoveEventDto;
 import com.growlog.webide.domain.files.dto.tree.TreeRemoveEventDto;
@@ -15,14 +24,12 @@ import com.growlog.webide.domain.files.dto.tree.WebSocketMessage;
 import com.growlog.webide.domain.files.entity.FileMeta;
 import com.growlog.webide.domain.files.repository.FileMetaRepository;
 import com.growlog.webide.domain.permissions.service.ProjectPermissionService;
-import com.growlog.webide.domain.projects.entity.ActiveInstance;
 import com.growlog.webide.domain.projects.entity.Project;
-import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
-import com.growlog.webide.global.docker.DockerCommandService;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,149 +37,222 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class FileService {
+	@Value("${efs.base-path}") // application.yml에 설정한 값을 가져옴
+	private String efsBasePath;
 
-	private static final String CONTAINER_BASE = "/app";
 	private final SimpMessagingTemplate messagingTemplate;
 	private final ProjectRepository projectRepository;
-	private final DockerCommandService dockerCommandService;
 	private final ProjectPermissionService permissionService;
-	private final ActiveInstanceRepository activeInstanceRepository;
 	private final FileMetaRepository fileMetaRepository;
 
+	// 기본 파일시스템 (운영에서는 EFS 마운트 경로)
+	private FileSystem fileSystem = FileSystems.getDefault();
+
+	//테스트에서 주입을 위한 setter
+	public void setFileSystem(FileSystem fileSystem) {
+		this.fileSystem = fileSystem;
+	}
+
+	@Transactional
 	public void createFileorDirectory(Long projectId, CreateFileRequest request, Long userId) {
+		log.info("--- SERVICE START: createFileorDirectory 진입 ---");
+		//프로젝트 정보 가져오기
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
-		ActiveInstance inst = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
-			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
 
-		String cid = inst.getContainerId();
-		String rel = request.getPath().startsWith("/")
-			? request.getPath().substring(1)
-			: request.getPath();
-		String full = CONTAINER_BASE + "/" + rel;
+		if (fileMetaRepository.findByProjectIdAndPathAndDeletedFalse(projectId, request.getPath()).isPresent()) {
+			throw new CustomException(ErrorCode.FILE_ALREADY_EXISTS);
+		}
+
+		Path targetPath;
+		try {
+			log.info("resolveProjectPath 호출 시작");
+			//파일 경로 찾기
+			targetPath = resolveProjectPath(projectId, request.getPath());
+			log.info("경로 계산 완료: {}", targetPath);
+		} catch (IOException e) {
+			throw new CustomException(ErrorCode.INVALID_FILE_PATH);
+		}
+
+		FileMeta fileMeta = FileMeta.of(project, request.getPath(), request.getType());
 
 		try {
+			log.info("파일이 존재하지 않음을 확인. 생성 로직으로 진행.");
 			if ("file".equalsIgnoreCase(request.getType())) {
 				// 부모 폴더 생성
-				String parent = full.contains("/")
-					? full.substring(0, full.lastIndexOf('/'))
-					: CONTAINER_BASE;
-				dockerCommandService.execInContainer(cid, "mkdir -p \"" + parent + "\"");
+				log.info("부모 디렉토리 생성 시도: {}", targetPath.getParent());
+				Files.createDirectories(targetPath.getParent());
+
 				// 빈 파일 만들기
-				dockerCommandService.execInContainer(cid, "touch \"" + full + "\"");
+				log.info("파일 생성 시도: {}", targetPath);
+				Files.createFile(targetPath);
 
 			} else if ("folder".equalsIgnoreCase(request.getType())) {
-				dockerCommandService.execInContainer(cid, "mkdir -p \"" + full + "\"");
+				//폴더 생성
+				log.info("디렉토리 생성 시도: {}", targetPath);
+				Files.createDirectories(targetPath);
 			} else {
 				throw new CustomException(ErrorCode.BAD_REQUEST);
 			}
-		} catch (CustomException ce) {
-			throw ce;
-		} catch (Exception e) {
-			log.error("Failed to create file in container.", e);
+
+			fileMetaRepository.save(fileMeta);
+
+		} catch (java.nio.file.FileAlreadyExistsException e) {
+			log.error("Race Condition or Inconsistent State: File already exists on EFS. path: {}", targetPath, e);
+			throw new CustomException(ErrorCode.FILE_ALREADY_EXISTS);
+		} catch (IOException e) {
+			log.error("IO 예외 발생.", e);
+			log.error("Failed to create file or directory on EFS.", e);
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 
-		FileMeta fileMeta = fileMetaRepository.save(FileMeta.of(project, request.getPath(), request.getType()));
-
+		log.info("9. DB 저장 완료. WebSocket 이벤트 전송 시작.");
 		// ✅ WebSocket 이벤트 푸시
-		WebSocketMessage msg = new WebSocketMessage(
-			"tree:add",
-			new TreeAddEventDto(fileMeta.getId(), request.getPath(), request.getType())
-		);
+		WebSocketMessage msg = new WebSocketMessage("tree:add",
+			new TreeAddEventDto(fileMeta.getId(), request.getPath(), request.getType()));
 		log.info("[WS ▶ add] sending tree:add → projectId={}", projectId);
-		messagingTemplate.convertAndSend(
-			"/topic/projects/" + projectId + "/tree",
-			msg
-		);
+		messagingTemplate.convertAndSend("/topic/projects/" + projectId + "/tree", msg);
+
+		log.info("--- SERVICE END ---");
 	}
 
+	@Transactional
 	public void deleteFileorDirectory(Long projectId, String path, Long userId) {
-		ActiveInstance inst = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
-			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+		Project project = projectRepository.findById(projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
 
-		String cid = inst.getContainerId();
+		//쓰기(삭제) 권한 확인
+		//파일 삭제는 쓰기(and 오너) 권한을 가진 사람만 가능(읽기 권한이 아닌 사람.)
+		permissionService.checkWriteAccess(project, userId);
 
-		String rel = path.startsWith("/") ? path.substring(1) : path;
+		//db에서 파일 메타 정보 조회
+		FileMeta meta = fileMetaRepository.findByProjectIdAndPathAndDeletedFalse(projectId, path)
+			.orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
-		String full = CONTAINER_BASE + "/" + rel;
-
-		// exec rm -rf
+		Path targetPath;
 		try {
-			dockerCommandService.execInContainer(cid,
-				String.format("rm -rf \"%s\"", full)
-			);
-		} catch (CustomException ce) {
-			throw ce;
-		} catch (Exception e) {
-			log.error("Failed to delete file or directory in container.", e);
+			// efs 상의 실제 파일/폴더 경로 계산
+			targetPath = resolveProjectPath(projectId, path);
+		} catch (IOException e) {
+			throw new CustomException(ErrorCode.INVALID_FILE_PATH);
+		}
+
+		//java nio api를 사용한 파일/폴더 삭제
+		try {
+			if (Files.exists(targetPath)) {
+				if (Files.isDirectory(targetPath)) {
+					// 디렉터리인 경우, 재귀적으로 삭제
+					try (Stream<Path> walk = Files.walk(targetPath)) {
+						walk.sorted(Comparator.reverseOrder()).forEach(p -> {
+							try {
+								Files.delete(p);
+							} catch (IOException ex) {
+								throw new UncheckedIOException(ex);
+							}
+						});
+					}
+				} else {
+					// 파일인 경우, 바로 삭제
+					Files.delete(targetPath);
+				}
+			} else {
+				log.warn("File not found on EFS, but metadata exists. Path: {}", targetPath);
+			}
+		} catch (UncheckedIOException | IOException e) {
+			log.error("Failed to delete file or directory on EFS. Path: {}", targetPath, e);
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 
-		FileMeta meta = fileMetaRepository.findByProjectIdAndPath(projectId, path)
-			.orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+		//db에서 메타데이터 삭제
 		meta.markDeleted();
 		fileMetaRepository.save(meta);
 
 		// ✅ WebSocket 이벤트 푸시
-		WebSocketMessage msg = new WebSocketMessage(
-			"tree:remove",
-			new TreeRemoveEventDto(meta.getId(), path)
-		);
-		messagingTemplate.convertAndSend(
-			"/topic/projects/" + projectId + "/tree",
-			msg
-		);
+		WebSocketMessage msg = new WebSocketMessage("tree:remove", new TreeRemoveEventDto(meta.getId(), path));
+		messagingTemplate.convertAndSend("/topic/projects/" + projectId + "/tree", msg);
 
 	}
 
+	@Transactional
 	public void moveFileorDirectory(Long projectId, String fromPath, String toPath, Long userId) {
-		ActiveInstance inst = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
-			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+		Project project = projectRepository.findById(projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
+		permissionService.checkWriteAccess(project, userId);
 
-		String cid = inst.getContainerId();
-
-		String from = fromPath.startsWith("/") ? fromPath.substring(1) : fromPath;
-		String to = toPath.startsWith("/") ? toPath.substring(1) : toPath;
-
-		String fullFrom = CONTAINER_BASE + "/" + from;
-		String fullTo = CONTAINER_BASE + "/" + to;
-
-		String parent = fullTo.contains("/")
-			? fullTo.substring(0, fullTo.lastIndexOf('/'))
-			: CONTAINER_BASE;
+		Path sourcePath;
+		Path targetPath;
 
 		try {
-			// (1) mkdir -p <parent>
-			dockerCommandService.execInContainer(cid,
-				String.format("mkdir -p \"%s\"", parent)
-			);
-			// (2) mv <fullFrom> <fullTo>
-			dockerCommandService.execInContainer(cid,
-				String.format("mv \"%s\" \"%s\"", fullFrom, fullTo)
-			);
-		} catch (CustomException ce) {
-			throw ce;
-		} catch (Exception e) {
-			log.error("Failed move file or directory in container.", e);
+			//EFS 상의 원본(source) 및 대상(target) 경로 계산
+			sourcePath = resolveProjectPath(projectId, fromPath);
+			targetPath = resolveProjectPath(projectId, toPath);
+		} catch (IOException e) {
+			throw new CustomException(ErrorCode.INVALID_FILE_PATH);
+		}
+
+		//조건 확인
+		//원본 파일이 존재하지 않으면
+		if (!Files.exists(sourcePath)) {
+			throw new CustomException(ErrorCode.FILE_NOT_FOUND);
+		}
+
+		//이동하려는 파일이 이미 있으면
+		if (Files.exists(targetPath)) {
+			throw new CustomException(ErrorCode.FILE_ALREADY_EXISTS);
+		}
+
+		// 자기 자신의 하위 폴더로 이동하는 것 방지
+		if (targetPath.startsWith(sourcePath)) {
+			throw new CustomException(ErrorCode.CANNOT_MOVE_TO_SUBFOLDER);
+		}
+
+		try {
+			//EFS 파일 시스템 작업 (mkdir -p + mv)
+			//대상 경로의 부모 디렉터리가 없으면 생성
+			Files.createDirectories(targetPath.getParent());
+
+			Files.move(sourcePath, targetPath);
+		} catch (IOException e) {
+			log.error("Failed to move file or directory on EFS. from: {}, to: {}", sourcePath, targetPath, e);
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 
-		FileMeta meta = fileMetaRepository.findByProjectIdAndPath(projectId, fromPath)
-			.orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
+		//DB 메타데이터 업데이트
+		// 이동할 대상과 그 하위의 모든 파일/폴더 메타데이터를 DB에서 조회
+		List<FileMeta> metasToMove = fileMetaRepository.findByProjectIdAndPathStartingWith(projectId, fromPath);
 
-		meta.updatePath(toPath);
-		fileMetaRepository.save(meta);
+		if (metasToMove.isEmpty()) {
+			// 실제 파일은 있으나 DB에 정보가 없는 경우. 에러를 던지거나 경고 로그를 남길 수 있음.
+			log.warn("File was moved on EFS, but no corresponding metadata found in DB for path starting with: {}",
+				fromPath);
+			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
+		}
+
+		for (FileMeta meta : metasToMove) {
+			String oldPath = meta.getPath();
+			// 기존 경로의 시작 부분(fromPath)을 새로운 경로(toPath)로 교체
+			String newPath = oldPath.replaceFirst(Pattern.quote(fromPath), toPath);
+			meta.updatePath(newPath);
+		}
+		fileMetaRepository.saveAll(metasToMove); // 변경된 모든 메타데이터를 한번에 저장
 
 		// ✅ WebSocket 이벤트 푸시
-		WebSocketMessage msg = new WebSocketMessage(
-			"tree:move",
-			new TreeMoveEventDto(meta.getId(), fromPath, toPath)
-		);
-		messagingTemplate.convertAndSend(
-			"/topic/projects/" + projectId + "/tree",
-			msg
-		);
+		// 가장 상위의 메타데이터 ID를 사용
+		FileMeta rootMeta = metasToMove.stream()
+			.filter(m -> m.getPath().equals(toPath)) // 경로가 업데이트 되었으므로 toPath와 비교
+			.findFirst()
+			.orElse(null); // 만약 DB에 정보가 없었다면 null일 수 있음
+
+		if (rootMeta != null) {
+			WebSocketMessage msg = new WebSocketMessage(
+				"tree:move",
+				new TreeMoveEventDto(rootMeta.getId(), fromPath, toPath)
+			);
+			messagingTemplate.convertAndSend(
+				"/topic/projects/" + projectId + "/tree",
+				msg
+			);
+		}
 	}
 
 	public FileOpenResponseDto openFile(Long projectId, String relativePath, Long userId) {
@@ -182,17 +262,28 @@ public class FileService {
 		// 권한 확인
 		permissionService.checkReadAccess(project, userId);
 
-		ActiveInstance instance = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
-			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+		Path targetPath;
+		try {
+			//실제 파일 경로 계산
+			targetPath = resolveProjectPath(projectId, relativePath);
+		} catch (IOException e) {
+			throw new CustomException(ErrorCode.INVALID_FILE_PATH);
+		}
 
-		String containerId = instance.getContainerId();
+		//파일 존재 여부 확인
+		if (!Files.exists(targetPath) || Files.isDirectory(targetPath)) {
+			throw new CustomException(ErrorCode.FILE_NOT_FOUND);
+		}
 
-		// 👉 로그 추가 (디버깅용)
-		log.info("📂 Open file - containerId: {}, path: {}", containerId, relativePath);
+		try {
+			String fileContent = Files.readString(targetPath);
 
-		String fileContent = dockerCommandService.readFileContent(containerId, relativePath);
-
-		return FileOpenResponseDto.of(projectId, relativePath, fileContent, true); // editable은 write 권한 체크 결과로 설정 가능
+			return FileOpenResponseDto.of(projectId, relativePath, fileContent,
+				true); // editable은 write 권한 체크 결과로 설정 가능
+		} catch (IOException e) {
+			log.error("Failed to read file on EFS. path: {}", targetPath, e);
+			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
+		}
 	}
 
 	public void saveFile(Long projectId, String relativePath, String content, Long userId) {
@@ -201,20 +292,61 @@ public class FileService {
 
 		permissionService.checkWriteAccess(project, userId);
 
-		ActiveInstance instance = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
-			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+		Path targetPath;
+		try {
+			targetPath = resolveProjectPath(projectId, relativePath);
+		} catch (IOException e) {
+			throw new CustomException(ErrorCode.INVALID_FILE_PATH);
+		}
 
-		String containerId = instance.getContainerId();
-		dockerCommandService.writeFileContent(containerId, relativePath, content);
+		//파일이 존재하는지 확인
+		fileMetaRepository.findByProjectIdAndPathAndDeletedFalse(projectId, relativePath)
+			.orElseThrow(() -> new CustomException(ErrorCode.FILE_NOT_FOUND));
 
-		log.info("✅ File saved successfully. - containerId: {}, path: {}", containerId, relativePath);
+		try {
+			Files.createDirectories(targetPath.getParent());
+
+			Files.writeString(targetPath, content);
+
+			log.info("✅ File saved successfully. - path: {}", targetPath);
+		} catch (IOException e) {
+			log.error("Failed to save file on EFS. path: {}", targetPath, e);
+			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
+		}
 	}
 
-	public List<FileSearchResponseDto> searchFilesByName(Long projectId, String query) {
+	/*public List<FileSearchResponseDto> searchFilesByName(Long projectId, String query) {
 		return fileMetaRepository.findByProjectIdAndNameContainingIgnoreCaseAndDeletedFalse(projectId, query)
 			.stream()
 			.map(FileSearchResponseDto::from)
 			.toList();
+	}*/
+
+	//입력한 파일 전체 경로 생성
+	private Path resolveProjectPath(Long projectId, String relativePath) throws IOException {
+		//프로젝트별 기본 경로 생성 (ex: /app/123)
+		Path projectRoot = fileSystem.getPath(efsBasePath, String.valueOf(projectId));
+		log.info("Resolved project path: {}", projectRoot);
+
+		if (relativePath == null || !relativePath.startsWith("/")) {
+			throw new CustomException(ErrorCode.BAD_REQUEST);
+		}
+
+		// 클라이언트가 보낸 경로에서 맨앞의 '/' 제거
+		// 만약 relativePath가 "/"로 시작하면 첫 글자를 제외하고, 아니면 그대로 사용
+		String cleanRelativePath = relativePath.substring(1);
+		log.info("Clean relative path: {}", cleanRelativePath);
+
+		//전체 경로 생성 (ex: /app/123/src/main.java)
+		// normalize()는 ../ 같은 경로 조작을 방지
+		Path fullPath = projectRoot.resolve(cleanRelativePath);
+		log.info("Resolved project path: {}", fullPath);
+
+		if (!fullPath.startsWith(projectRoot)) {
+			throw new CustomException(ErrorCode.PATH_NOT_ALLOWED);
+		}
+
+		return fullPath;
 	}
 
 }
