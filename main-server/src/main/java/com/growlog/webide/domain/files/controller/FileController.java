@@ -50,7 +50,8 @@ public class FileController {
 		@RequestBody CreateFileRequest request,
 		@AuthenticationPrincipal UserPrincipal user
 	) {
-		fileService.createFileorDirectory(projectId, request, user.getUserId());
+		fileService.createFileOrDirectory(projectId, request, user.getUserId());
+
 		return ApiResponse.ok(new FileResponse("File/Folder created"));
 	}
 
@@ -63,7 +64,7 @@ public class FileController {
 		@AuthenticationPrincipal UserPrincipal user
 	) {
 		log.info("[DELETE 요청] projectId={}, filePath={}", projectId, filePath);
-		fileService.deleteFileorDirectory(projectId, filePath, user.getUserId());
+		fileService.deleteFileOrDirectory(projectId, filePath, user.getUserId());
 		return ApiResponse.ok(new FileResponse("File/Folder deleted"));
 	}
 
@@ -76,11 +77,10 @@ public class FileController {
 		@RequestParam String toPath,
 		@AuthenticationPrincipal UserPrincipal user
 	) {
-		fileService.moveFileorDirectory(projectId, fromPath, toPath, user.getUserId());
+		fileService.moveFileOrDirectory(projectId, fromPath, toPath, user.getUserId());
 		log.info("[FILE MOVE] Parameters: {}, {}, {}, {}", projectId, fromPath, toPath, user.getUserId());
 		return ApiResponse.ok(new FileResponse("File/Folder moved"));
 	}
-
 
 	/**
 	 * 파일 열기
@@ -106,7 +106,6 @@ public class FileController {
 		FileOpenResponseDto response = fileService.openFile(projectId, path, user.getUserId());
 		return ResponseEntity.ok(ApiResponse.ok(response));
 	}
-
 
 	/**
 	 * 파일 저장 API
@@ -141,7 +140,7 @@ public class FileController {
 		@RequestBody FileSaveRequestDto requestDto,
 		@AuthenticationPrincipal UserPrincipal user) {
 		try {
-			fileService.saveFile(projectId, requestDto.getPath(), requestDto.getContent(), user.getUserId());
+			fileService.saveFileToStorage(projectId, requestDto.getPath(), requestDto.getContent(), user.getUserId());
 			return ResponseEntity.ok(ApiResponse.ok(Map.of("message", "File saved")));
 		} catch (CustomException e) {
 			HttpStatus status = switch (e.getErrorCode()) {

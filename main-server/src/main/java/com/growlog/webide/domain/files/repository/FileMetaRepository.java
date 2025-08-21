@@ -19,4 +19,7 @@ public interface FileMetaRepository extends JpaRepository<FileMeta, Long> {
 
 	// 삭제되지 않은 데이터 중에서 경로로 조회 (생성 시 중복 체크용)
 	Optional<FileMeta> findByProjectIdAndPathAndDeletedFalse(Long projectId, String path);
+
+	//여러 경로를 한 번에 조회하기 위한 메서드
+	List<FileMeta> findByProjectIdAndPathInAndDeletedFalse(Long projectId, List<String> paths);
 }

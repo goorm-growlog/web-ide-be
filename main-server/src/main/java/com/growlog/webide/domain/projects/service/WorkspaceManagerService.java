@@ -21,6 +21,7 @@ import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.exception.NotFoundException;
 import com.github.dockerjava.api.model.PullResponseItem;
+import com.growlog.webide.domain.files.repository.FileMetaRepository;
 import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.images.repository.ImageRepository;
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
@@ -57,12 +58,20 @@ public class WorkspaceManagerService {
 	private final SessionScheduler sessionScheduler;
 	private final UserRepository userRepository;
 	private final ProjectMemberRepository projectMemberRepository;
-	private final TemplateService templateService;
+	private final ProjectFileMetaService projectFileMetaService;
+	@Value("${efs.base-path}")
+	private String projectsBasePath;
+	@Value("${efs.templates-path}")
+	private String templatesBasePath;
 
-	public WorkspaceManagerService(DockerClientFactory dockerClientFactory, ProjectRepository projectRepository,
-		ActiveInstanceRepository activeInstanceRepository, ImageRepository imageRepository,
-		@Lazy SessionScheduler sessionScheduler, UserRepository userRepository,
-		ProjectMemberRepository projectMemberRepository, TemplateService templateService) {
+	public WorkspaceManagerService(DockerClientFactory dockerClientFactory,
+		ProjectRepository projectRepository,
+		ActiveInstanceRepository activeInstanceRepository,
+		ImageRepository imageRepository,
+		@Lazy SessionScheduler sessionScheduler,
+		UserRepository userRepository,
+		ProjectMemberRepository projectMemberRepository,
+		ProjectFileMetaService projectFileMetaService) {
 		this.dockerClientFactory = dockerClientFactory;
 		this.projectRepository = projectRepository;
 		this.activeInstanceRepository = activeInstanceRepository;
@@ -70,14 +79,8 @@ public class WorkspaceManagerService {
 		this.sessionScheduler = sessionScheduler;
 		this.userRepository = userRepository;
 		this.projectMemberRepository = projectMemberRepository;
-		this.templateService = templateService;
+		this.projectFileMetaService = projectFileMetaService;
 	}
-
-	@Value("${efs.base-path}")
-	private String projectsBasePath;
-
-	@Value("${efs.templates-path}")
-	private String templatesBasePath;
 
 	/*
 	1. 프로젝트 생성 (Create Project)
@@ -103,13 +106,14 @@ public class WorkspaceManagerService {
 		Project createdProject = projectRepository.save(project);
 		Long projectId = createdProject.getId();
 
+		Path projectPath = Path.of(projectsBasePath, String.valueOf(projectId));
+		Path templatePath = Path.of(templatesBasePath,
+			String.valueOf(image.getImageName()) + "-" + String.valueOf(image.getVersion()));
+
 		try {
-			Path projectPath = Path.of(projectsBasePath, String.valueOf(projectId));
 			Files.createDirectories(projectPath);
 			log.info("Created EFS directory for project '{}'", projectPath);
 
-			Path templatePath = Path.of(templatesBasePath,
-				String.valueOf(image.getImageName()) + "-" + String.valueOf(image.getVersion()));
 			if (Files.exists(templatePath) && Files.isDirectory(templatePath)) {
 				copyDirectory(templatePath, projectPath);
 				log.info("Copied template '{}' to '{}'", templatePath.getFileName(), projectPath);
@@ -128,6 +132,9 @@ public class WorkspaceManagerService {
 			.build();
 		createdProject.addProjectMember(member);
 		projectMemberRepository.save(member);
+
+		// 5. file metadata 저장
+		projectFileMetaService.saveFileMetadataForProject(project, projectPath);
 
 		return ProjectResponse.from(createdProject, owner);
 	}

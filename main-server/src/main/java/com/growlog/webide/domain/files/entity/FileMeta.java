@@ -52,9 +52,13 @@ public class FileMeta {
 		this.deletedAt = deletedAt;
 	}
 
-	public static FileMeta of(Project project, String path, String type) {
+	public static FileMeta relativePath(Project project, String path, String type) {
 		String name = path.substring(path.lastIndexOf('/') + 1);
 		return new FileMeta(null, project, name, path, type, false, null);
+	}
+
+	public static FileMeta absolutePath(Project project, String path, String type) {
+		return FileMeta.relativePath(project, "/" + path, type);
 	}
 
 	public void markDeleted() {

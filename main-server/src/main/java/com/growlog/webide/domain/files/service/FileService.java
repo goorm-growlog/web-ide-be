@@ -1,19 +1,26 @@
 package com.growlog.webide.domain.files.service;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import com.growlog.webide.domain.files.dto.CreateFileRequest;
 import com.growlog.webide.domain.files.dto.FileOpenResponseDto;
@@ -29,16 +36,14 @@ import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
 
-import jakarta.transaction.Transactional;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class FileService {
-	@Value("${efs.base-path}") // application.yml에 설정한 값을 가져옴
-	private String efsBasePath;
+	private static final String FILE = "file";
+	private static final String FOLDER = "folder";
+	private final String efsBasePath;
 
 	private final SimpMessagingTemplate messagingTemplate;
 	private final ProjectRepository projectRepository;
@@ -46,84 +51,55 @@ public class FileService {
 	private final FileMetaRepository fileMetaRepository;
 
 	// 기본 파일시스템 (운영에서는 EFS 마운트 경로)
-	private FileSystem fileSystem = FileSystems.getDefault();
+	private final FileSystem fileSystem;
 
-	//테스트에서 주입을 위한 setter
-	public void setFileSystem(FileSystem fileSystem) {
-		this.fileSystem = fileSystem;
+	public FileService(@Value("${efs.base-path}") String efsBasePath,
+		SimpMessagingTemplate messagingTemplate,
+		ProjectRepository projectRepository,
+		ProjectPermissionService permissionService,
+		FileMetaRepository fileMetaRepository) {
+		this.efsBasePath = efsBasePath;
+		this.messagingTemplate = messagingTemplate;
+		this.projectRepository = projectRepository;
+		this.permissionService = permissionService;
+		this.fileMetaRepository = fileMetaRepository;
+		this.fileSystem = FileSystems.getDefault();
+	}
+
+	// TODO: validation
+	private static void checkRequest(CreateFileRequest request) {
+		if (!(FILE.equals(request.getType()) || FOLDER.equals(request.getType()))) {
+			throw new CustomException(ErrorCode.BAD_REQUEST);
+		}
 	}
 
 	@Transactional
-	public void createFileorDirectory(Long projectId, CreateFileRequest request, Long userId) {
-		log.info("--- SERVICE START: createFileorDirectory 진입 ---");
-		//프로젝트 정보 가져오기
-		Project project = projectRepository.findById(projectId)
-			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
+	public void createFileOrDirectory(Long projectId, CreateFileRequest request, Long userId) {
+		checkRequest(request);
+		permissionService.checkWriteAccess(userId, projectId);
+		checkAlreadyExistsFile(projectId, request.getPath());
 
-		if (fileMetaRepository.findByProjectIdAndPathAndDeletedFalse(projectId, request.getPath()).isPresent()) {
-			throw new CustomException(ErrorCode.FILE_ALREADY_EXISTS);
-		}
+		Project project = findProjectById(projectId);
+		File file = new File(request.getPath());
 
-		Path targetPath;
-		try {
-			log.info("resolveProjectPath 호출 시작");
-			//파일 경로 찾기
-			targetPath = resolveProjectPath(projectId, request.getPath());
-			log.info("경로 계산 완료: {}", targetPath);
-		} catch (IOException e) {
-			throw new CustomException(ErrorCode.INVALID_FILE_PATH);
-		}
+		// Save DB
+		saveAllParentFolders(file, project);
+		Long fileMetaId = saveFileMeta(request, project);
 
-		FileMeta fileMeta = FileMeta.of(project, request.getPath(), request.getType());
+		// Save EFS
+		saveFileOrDirectoryEfs(projectId, request.getType(), request.getPath());
 
-		try {
-			log.info("파일이 존재하지 않음을 확인. 생성 로직으로 진행.");
-			if ("file".equalsIgnoreCase(request.getType())) {
-				// 부모 폴더 생성
-				log.info("부모 디렉토리 생성 시도: {}", targetPath.getParent());
-				Files.createDirectories(targetPath.getParent());
-
-				// 빈 파일 만들기
-				log.info("파일 생성 시도: {}", targetPath);
-				Files.createFile(targetPath);
-
-			} else if ("folder".equalsIgnoreCase(request.getType())) {
-				//폴더 생성
-				log.info("디렉토리 생성 시도: {}", targetPath);
-				Files.createDirectories(targetPath);
-			} else {
-				throw new CustomException(ErrorCode.BAD_REQUEST);
-			}
-
-			fileMetaRepository.save(fileMeta);
-
-		} catch (java.nio.file.FileAlreadyExistsException e) {
-			log.error("Race Condition or Inconsistent State: File already exists on EFS. path: {}", targetPath, e);
-			throw new CustomException(ErrorCode.FILE_ALREADY_EXISTS);
-		} catch (IOException e) {
-			log.error("IO 예외 발생.", e);
-			log.error("Failed to create file or directory on EFS.", e);
-			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
-		}
-
-		log.info("9. DB 저장 완료. WebSocket 이벤트 전송 시작.");
-		// ✅ WebSocket 이벤트 푸시
-		WebSocketMessage msg = new WebSocketMessage("tree:add",
-			new TreeAddEventDto(fileMeta.getId(), request.getPath(), request.getType()));
-		log.info("[WS ▶ add] sending tree:add → projectId={}", projectId);
-		messagingTemplate.convertAndSend("/topic/projects/" + projectId + "/tree", msg);
-
-		log.info("--- SERVICE END ---");
+		sendEvent(new WebSocketMessage("tree:add",
+			new TreeAddEventDto(fileMetaId, request.getPath(), request.getType())), projectId);
 	}
 
 	@Transactional
-	public void deleteFileorDirectory(Long projectId, String path, Long userId) {
-		Project project = projectRepository.findById(projectId)
-			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
+	public void deleteFileOrDirectory(Long projectId, String path, Long userId) {
+		Project project = findProjectById(projectId);
 
 		//쓰기(삭제) 권한 확인
 		//파일 삭제는 쓰기(and 오너) 권한을 가진 사람만 가능(읽기 권한이 아닌 사람.)
-		permissionService.checkWriteAccess(project, userId);
+		permissionService.checkWriteAccess(userId, project.getId());
 
 		//db에서 파일 메타 정보 조회
 		FileMeta meta = fileMetaRepository.findByProjectIdAndPathAndDeletedFalse(projectId, path)
@@ -168,16 +144,13 @@ public class FileService {
 		fileMetaRepository.save(meta);
 
 		// ✅ WebSocket 이벤트 푸시
-		WebSocketMessage msg = new WebSocketMessage("tree:remove", new TreeRemoveEventDto(meta.getId(), path));
-		messagingTemplate.convertAndSend("/topic/projects/" + projectId + "/tree", msg);
-
+		sendEvent(new WebSocketMessage("tree:remove", new TreeRemoveEventDto(meta.getId(), path)), projectId);
 	}
 
 	@Transactional
-	public void moveFileorDirectory(Long projectId, String fromPath, String toPath, Long userId) {
-		Project project = projectRepository.findById(projectId)
-			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
-		permissionService.checkWriteAccess(project, userId);
+	public void moveFileOrDirectory(Long projectId, String fromPath, String toPath, Long userId) {
+		Project project = findProjectById(projectId);
+		permissionService.checkWriteAccess(userId, project.getId());
 
 		Path sourcePath;
 		Path targetPath;
@@ -192,7 +165,8 @@ public class FileService {
 
 		//조건 확인
 		//원본 파일이 존재하지 않으면
-		if (!Files.exists(sourcePath)) {
+		boolean fileMetaRepository2 = !Files.exists(sourcePath);
+		if (fileMetaRepository2) {
 			throw new CustomException(ErrorCode.FILE_NOT_FOUND);
 		}
 
@@ -238,26 +212,17 @@ public class FileService {
 
 		// ✅ WebSocket 이벤트 푸시
 		// 가장 상위의 메타데이터 ID를 사용
-		FileMeta rootMeta = metasToMove.stream()
+		metasToMove.stream()
 			.filter(m -> m.getPath().equals(toPath)) // 경로가 업데이트 되었으므로 toPath와 비교
 			.findFirst()
-			.orElse(null); // 만약 DB에 정보가 없었다면 null일 수 있음
+			.ifPresent(rootMeta -> sendEvent(
+				new WebSocketMessage("tree:move", new TreeMoveEventDto(rootMeta.getId(), fromPath, toPath)),
+				projectId));
 
-		if (rootMeta != null) {
-			WebSocketMessage msg = new WebSocketMessage(
-				"tree:move",
-				new TreeMoveEventDto(rootMeta.getId(), fromPath, toPath)
-			);
-			messagingTemplate.convertAndSend(
-				"/topic/projects/" + projectId + "/tree",
-				msg
-			);
-		}
 	}
 
 	public FileOpenResponseDto openFile(Long projectId, String relativePath, Long userId) {
-		Project project = projectRepository.findById(projectId)
-			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
+		Project project = findProjectById(projectId);
 
 		// 권한 확인
 		permissionService.checkReadAccess(project, userId);
@@ -286,11 +251,18 @@ public class FileService {
 		}
 	}
 
-	public void saveFile(Long projectId, String relativePath, String content, Long userId) {
-		Project project = projectRepository.findById(projectId)
-			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
+	/*public List<FileSearchResponseDto> searchFilesByName(Long projectId, String query) {
+		return fileMetaRepository.findByProjectIdAndNameContainingIgnoreCaseAndDeletedFalse(projectId, query)
+			.stream()
+			.map(FileSearchResponseDto::from)
+			.toList();
+	}*/
 
-		permissionService.checkWriteAccess(project, userId);
+	@Transactional(readOnly = true)
+	public void saveFileToStorage(Long projectId, String relativePath, String content, Long userId) {
+		Project project = findProjectById(projectId);
+
+		permissionService.checkWriteAccess(userId, project.getId());
 
 		Path targetPath;
 		try {
@@ -305,9 +277,7 @@ public class FileService {
 
 		try {
 			Files.createDirectories(targetPath.getParent());
-
 			Files.writeString(targetPath, content);
-
 			log.info("✅ File saved successfully. - path: {}", targetPath);
 		} catch (IOException e) {
 			log.error("Failed to save file on EFS. path: {}", targetPath, e);
@@ -315,38 +285,109 @@ public class FileService {
 		}
 	}
 
-	/*public List<FileSearchResponseDto> searchFilesByName(Long projectId, String query) {
-		return fileMetaRepository.findByProjectIdAndNameContainingIgnoreCaseAndDeletedFalse(projectId, query)
-			.stream()
-			.map(FileSearchResponseDto::from)
-			.toList();
-	}*/
+	private Long saveFileMeta(CreateFileRequest request, Project project) {
+		FileMeta fileMeta = FileMeta.relativePath(project, request.getPath(), request.getType());
+		fileMetaRepository.save(fileMeta);
+		return fileMeta.getId();
+	}
+
+	private Project findProjectById(Long projectId) {
+		return projectRepository.findById(projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
+	}
 
 	//입력한 파일 전체 경로 생성
 	private Path resolveProjectPath(Long projectId, String relativePath) throws IOException {
 		//프로젝트별 기본 경로 생성 (ex: /app/123)
 		Path projectRoot = fileSystem.getPath(efsBasePath, String.valueOf(projectId));
-		log.info("Resolved project path: {}", projectRoot);
+		log.info("Resolved project path: {}, {}", projectRoot, relativePath);
 
 		if (relativePath == null || !relativePath.startsWith("/")) {
 			throw new CustomException(ErrorCode.BAD_REQUEST);
 		}
 
-		// 클라이언트가 보낸 경로에서 맨앞의 '/' 제거
-		// 만약 relativePath가 "/"로 시작하면 첫 글자를 제외하고, 아니면 그대로 사용
-		String cleanRelativePath = relativePath.substring(1);
-		log.info("Clean relative path: {}", cleanRelativePath);
+		Path fullPath = getFullPath(relativePath, projectRoot);
 
-		//전체 경로 생성 (ex: /app/123/src/main.java)
-		// normalize()는 ../ 같은 경로 조작을 방지
-		Path fullPath = projectRoot.resolve(cleanRelativePath);
 		log.info("Resolved project path: {}", fullPath);
+		log.info("fullPath: {}, projectRoot: {}", fullPath, projectRoot);
 
 		if (!fullPath.startsWith(projectRoot)) {
 			throw new CustomException(ErrorCode.PATH_NOT_ALLOWED);
 		}
 
 		return fullPath;
+	}
+
+	/**
+	 * 전체 경로 생성 (ex: /app/123/src/main.java)
+	 * Path.resolve 는 상대 경로만 인식
+	 *
+	 * @param relativePath
+	 * @param projectRoot
+	 * @return
+	 */
+	private Path getFullPath(String relativePath, Path projectRoot) {
+		log.info("Clean relative path: {}", relativePath);
+		return projectRoot.resolve(relativePath.substring(1));
+	}
+
+	private void checkAlreadyExistsFile(Long projectId, String path) {
+		if (fileMetaRepository.findByProjectIdAndPathAndDeletedFalse(projectId, path).isPresent()) {
+			throw new CustomException(ErrorCode.FILE_ALREADY_EXISTS);
+		}
+	}
+
+	private void sendEvent(WebSocketMessage fileMeta, Long projectId) {
+		messagingTemplate.convertAndSend("/topic/projects/" + projectId + "/tree", fileMeta);
+	}
+
+	private void saveFileOrDirectoryEfs(Long projectId, String type, String path) {
+		try {
+			Path targetPath = resolveProjectPath(projectId, path);
+			if (FILE.equals(type)) {
+				Files.createDirectories(targetPath.getParent());
+				Files.createFile(targetPath);
+			}
+
+			if (FOLDER.equalsIgnoreCase(type)) {
+				Files.createDirectories(targetPath);
+			}
+		} catch (FileAlreadyExistsException e) {
+			log.error("Race Condition or Inconsistent State: File already exists on EFS. path: {}", e.getFile(), e);
+			throw new CustomException(ErrorCode.FILE_ALREADY_EXISTS);
+		} catch (IOException e) {
+			log.error("IO 예외 발생.", e);
+			log.error("Failed to create file or directory on EFS.", e);
+			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
+		}
+	}
+
+	private void saveAllParentFolders(File file, Project project) {
+		if (StringUtils.hasText(file.getParent())) {
+			List<String> parents = new ArrayList<>();
+
+			File parent = file.getParentFile();
+
+			while (parent != null) {
+				parents.add(parent.getPath());
+				parent = parent.getParentFile();
+			}
+
+			Set<String> existingPaths = fileMetaRepository
+				.findByProjectIdAndPathInAndDeletedFalse(project.getId(), parents)
+				.stream()
+				.map(FileMeta::getPath)
+				.collect(Collectors.toSet());
+
+			List<FileMeta> newFoldersToSave = parents.stream()
+				.filter(path -> !existingPaths.contains(path))
+				.map(path -> FileMeta.relativePath(project, path, "folder"))
+				.toList();
+
+			if (!newFoldersToSave.isEmpty()) {
+				fileMetaRepository.saveAll(newFoldersToSave);
+			}
+		}
 	}
 
 }
