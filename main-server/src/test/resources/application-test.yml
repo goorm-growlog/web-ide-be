@@ -1,0 +1,19 @@
+# 이 파일은 오직 테스트를 실행할 때만 사용되는 설정입니다.
+spring:
+  # H2: 테스트가 실행되는 동안에만 메모리에서 동작하는 1회용 가상 데이터베이스입니다.
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      # create-drop: 테스트 시작 시 DB 테이블을 만들고, 끝나면 깨끗하게 삭제합니다.
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        # H2 데이터베이스에 맞는 문법을 사용하도록 설정합니다.
+        dialect: org.hibernate.dialect.H2Dialect
+    # SQL 로그는 테스트 시에 켜두면 디버깅에 유용합니다.
+    show-sql: true

@@ -55,11 +55,14 @@ public enum ErrorCode {
 	FILE_OPERATION_FAILED("FILE_OPERATION_FAILED", "An error occurred during file operation."),
 	INSTANCE_NOT_FOUND("INSTANCE_NOT_FOUND", "Instance not found."),
 	IMAGE_NOT_FOUND("IMAGE_NOT_FOUND", "Image not found."),
+	INVALID_FILE_PATH("INVALID_FILE_PATH", "Invalid file path."),
+	CANNOT_MOVE_TO_SUBFOLDER("CANNOT_MOVE_TO_SUBFOLDER", "Unable to move to the folder below"),
 
 	CONTAINER_STILL_RUNNING("CONTAINER_STILL_RUNNING", "Active container still running."),
 
 	MEMBER_ALREADY_EXISTS("MEMBER_ALREADY_EXISTS", "This user is already a member of the project."),
 	MEMBER_NOT_FOUND("MEMBER_NOT_FOUND", "Project member not found."),
+	PATH_NOT_ALLOWED("PATH_NOT_ALLOWED", "Path is not allowed."),
 
 	// 채팅 관련
 	KEYWORD_NOT_FOUND("KEYWORD_NOT_FOUND", "Search keyword cannot be empty.");
