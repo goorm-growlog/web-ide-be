@@ -12,8 +12,6 @@ import lombok.Setter;
 public class OpenProjectResponse {
 
 	public Long projectId;
-	public String containerId;
-	private Integer webSocketPort;
 	private Long instanceId;
 
 	// TODO: webSocketPort 삭제 또는 이름 수정 (= hostPort)
