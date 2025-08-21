@@ -4,28 +4,23 @@ package com.growlog.webide.domain.projects.service;
  *  프로젝트 생성부터 사용자의 세션(컨테이너) 관리, 종료까지 전체적인 생명주기를 조율하고 관리
  * */
 
+import static org.apache.commons.io.file.PathUtils.copyDirectory;
+
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
-import com.github.dockerjava.api.command.CreateContainerResponse;
-import com.github.dockerjava.api.command.InspectContainerResponse;
 import com.github.dockerjava.api.exception.NotFoundException;
-import com.github.dockerjava.api.model.Bind;
-import com.github.dockerjava.api.model.ExposedPort;
-import com.github.dockerjava.api.model.HostConfig;
-import com.github.dockerjava.api.model.InternetProtocol;
-import com.github.dockerjava.api.model.Ports;
 import com.github.dockerjava.api.model.PullResponseItem;
-import com.github.dockerjava.api.model.Volume;
 import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.images.repository.ImageRepository;
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
@@ -37,7 +32,6 @@ import com.growlog.webide.domain.projects.entity.InstanceStatus;
 import com.growlog.webide.domain.projects.entity.MemberRole;
 import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.entity.ProjectMembers;
-import com.growlog.webide.domain.projects.entity.ProjectStatus;
 import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
 import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
@@ -79,6 +73,12 @@ public class WorkspaceManagerService {
 		this.templateService = templateService;
 	}
 
+	@Value("${efs.base-path}")
+	private String projectsBasePath;
+
+	@Value("${efs.templates-path}")
+	private String templatesBasePath;
+
 	/*
 	1. 프로젝트 생성 (Create Project)
 	Docker 볼륨 생성, 프로젝트 메타데이터 DB에 저장
@@ -93,43 +93,33 @@ public class WorkspaceManagerService {
 		Image image = imageRepository.findById(request.getImageId())
 			.orElseThrow(() -> new CustomException(ErrorCode.IMAGE_NOT_FOUND));
 
-		// 2. 고유한 도커 볼륨 이름 생성 및 물리적 생성
-		DockerClient dockerClient = dockerClientFactory.buildDockerClient();
-		String volumeName = "project-vol-" + UUID.randomUUID();
-		try {
-			dockerClient.createVolumeCmd().withName(volumeName).exec();
-			log.info("Docker volume create: {}", volumeName);
-
-			log.info("Volume name for template application: {}", volumeName);
-			templateService.applyTemplate(image.getImageName(), image.getVersion(), volumeName);
-
-			dockerClient.listVolumesCmd().exec().getVolumes().forEach(volume -> {
-				if (volume.getName().equals(volumeName)) {
-					System.out.println("Information of the created volume:");
-					System.out.println("  Name: " + volume.getName());
-					System.out.println("  Driver: " + volume.getDriver());
-					System.out.println("  Mount point: " + volume.getMountpoint());
-				}
-			});
-		} catch (Exception e) {
-			throw new RuntimeException("Error creating volume: " + e.getMessage());
-		} finally {
-			try {
-				dockerClient.close();
-			} catch (IOException e) {
-				log.warn("Error closing DockerClient", e);
-			}
-		}
-
 		// 3. Project 엔티티 생성 및 DB 저장
 		Project project = Project.builder()
 			.owner(owner)
 			.projectName(request.getProjectName())
 			.description(request.getDescription())
-			.storageVolumeName(volumeName)
 			.image(image)
 			.build();
 		Project createdProject = projectRepository.save(project);
+		Long projectId = createdProject.getId();
+
+		try {
+			Path projectPath = Path.of(projectsBasePath, String.valueOf(projectId));
+			Files.createDirectories(projectPath);
+			log.info("Created EFS directory for project '{}'", projectPath);
+
+			Path templatePath = Path.of(templatesBasePath,
+				String.valueOf(image.getImageName()) + "-" + String.valueOf(image.getVersion()));
+			if (Files.exists(templatePath) && Files.isDirectory(templatePath)) {
+				copyDirectory(templatePath, projectPath);
+				log.info("Copied template '{}' to '{}'", templatePath.getFileName(), projectPath);
+			} else {
+				log.warn("Template '{}' does not exist", templatePath.getFileName());
+			}
+		} catch (IOException e) {
+			log.error("Failed to set up EFS directory for project: {}", projectId, e);
+			throw new RuntimeException("Error during project file system setup for project id: " + projectId, e);
+		}
 
 		// 4. ProjectMembers 엔티티 생성 및 DB 저장
 		ProjectMembers member = ProjectMembers.builder()
@@ -160,129 +150,15 @@ public class WorkspaceManagerService {
 		projectMemberRepository.findByUserAndProject(user, project)
 			.orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
 
-		// 해당 프로젝트의 삭제 작업이 예정되어 있으면 작업 취소
-		sessionScheduler.cancelDeletion(user.getUserId(), projectId);
-
-		// 2. 이미 해당 사용자의 활성 세션이 있는지 확인 -> activate
-		Optional<ActiveInstance> existedActiveInstance =
-			activeInstanceRepository.findByUser_UserIdAndProject_IdAndStatus(
-				userId, projectId, InstanceStatus.PENDING);
-		if (existedActiveInstance.isPresent()) {
-
-			existedActiveInstance.get().activate();
-
-			// 해당 프로젝트가 INACTIVE 상태였으면 -> active
-			if (project.getStatus() == ProjectStatus.INACTIVE) {
-				project.activate();
-			}
-
-			return new OpenProjectResponse(
-				projectId,
-				existedActiveInstance.get().getContainerId(),
-				existedActiveInstance.get().getWebSocketPort(),
-				existedActiveInstance.get().getId()
-			);
-		}
-
-		// 3. Docker 볼륨/이미지 정보 준비 및 포트 할당
-		DockerClient dockerClient = dockerClientFactory.buildDockerClient();
-
-		String volumeName = project.getStorageVolumeName();
-		String imageName = project.getImage().getDockerBaseImage();
-
-		ExposedPort internalPort = new ExposedPort(8080, InternetProtocol.TCP);
-		Ports portBindings = new Ports();
-		portBindings.bind(internalPort, Ports.Binding.empty());
-
-		// 3-1. Docker 이미지가 로컬에 존재하는지 확인하고, 없으면 pull
-		pullImageIfNotExists(dockerClient, imageName);
-
-		// 4. Docker 컨테이너 생성 및 실행 (docker run...)
-		// 3-1. 볼륨 마운트 설정 (-v 옵션)
-		HostConfig hostConfig = new HostConfig()
-			.withBinds(new Bind(volumeName, new Volume("/app")))
-			.withPortBindings(portBindings);
-
-		// 3-2. 컨테이너 생성
-		CreateContainerResponse container = dockerClient.createContainerCmd(imageName)
-			.withHostConfig(hostConfig)
-			.withExposedPorts(internalPort)
-			.withTty(true)
-			.withCmd("/bin/sh") // 컨테이너 실행 시 기본 명령어
-			.exec();
-		String containerId = container.getId();
-
-		// 3-3. 컨테이너 시작
-		dockerClient.startContainerCmd(containerId).exec();
-		log.info("Container '{}' started", containerId);
-
-		int assignedPort = -1;
-		int maxRetries = 5; // 최대 5번까지 재시도
-		long delayMillis = 200; // 매 시도 사이 0.2초 대기
-
-		for (int i = 0; i < maxRetries; i++) {
-			InspectContainerResponse inspectResponse = dockerClient.inspectContainerCmd(containerId).exec();
-			Ports.Binding[] bindings = inspectResponse.getNetworkSettings().getPorts().getBindings().get(internalPort);
-
-			if (bindings != null && bindings.length > 0 && bindings[0].getHostPortSpec() != null) {
-				assignedPort = Integer.parseInt(bindings[0].getHostPortSpec());
-				log.info("Attempt {}: Container '{}' assigned to host port: {}", i + 1, containerId, assignedPort);
-				break; // 성공! 루프를 빠져나감
-			}
-
-			log.warn("""
-				Attempt {}: Could not find port bindings yet for container '{}'.
-				Retrying in {}ms...""", i + 1, containerId, delayMillis);
-			try {
-				Thread.sleep(delayMillis); // 잠시 대기
-			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-				// 대기 중 인터럽트가 발생하면, 정리하고 예외를 던짐
-				removeContainerIfExists(dockerClient, containerId);
-				throw new RuntimeException("Port binding check was interrupted for container: " + containerId, e);
-			}
-		}
-
-		if (assignedPort == -1) {
-			// 최대 재시도 횟수(5번)를 모두 소진했는데도 포트를 찾지 못한 경우
-			removeContainerIfExists(dockerClient, containerId);
-			throw new RuntimeException("""
-				Could not find port bindings for container: " + containerId + " after " + maxRetries + " retries.""");
-		}
-
-		// 3-4. 실행된 컨테이너 검사해 실제로 할당된 포트 확인
-		// InspectContainerResponse inspectResponse = dockerClient.inspectContainerCmd(containerId).exec();
-		// Ports.Binding[] bindings = inspectResponse.getNetworkSettings().getPorts().getBindings().get(internalPort);
-		//
-		// if (bindings == null || bindings.length == 0) {
-		// 	removeContainerIfExists(dockerClient, containerId);
-		// 	throw new RuntimeException("Could not find port bindings for container: " + containerId);
-		// }
-		// int assignedPort = Integer.parseInt(bindings[0].getHostPortSpec());
-		// log.info("Container '{}' assigned to host port: {}", containerId, assignedPort);
-
 		// 4. 활성 세션 정보(ActiveInstance)를 DB에 기록
 		ActiveInstance instance = ActiveInstance.builder()
 			.project(project)
 			.user(user)
-			.containerId(containerId)
 			.status(InstanceStatus.ACTIVE)
-			.webSocketPort(assignedPort)
 			.build();
 		activeInstanceRepository.save(instance);
 
-		// 5. 프로젝트 상태 변경
-		if (project.getStatus() == ProjectStatus.INACTIVE) {
-			project.activate();
-		}
-
-		try {
-			dockerClient.close();
-		} catch (IOException e) {
-			log.warn("Error closing DockerClient", e);
-		}
-
-		return new OpenProjectResponse(projectId, containerId, assignedPort, instance.getId());
+		return new OpenProjectResponse(projectId, instance.getId());
 	}
 
 	/**
@@ -405,29 +281,9 @@ public class WorkspaceManagerService {
 		if (activeInstanceRepository.countByProjectAndStatus(project, InstanceStatus.ACTIVE) > 0) {
 			throw new CustomException(ErrorCode.CONTAINER_STILL_RUNNING);
 		}
-		String volumeName = project.getStorageVolumeName();
 
 		// 2. db에서 프로젝트 레코드 먼저 삭제
 		projectRepository.delete(project);
-		log.info("Project record deleted from DB for volume: {}", volumeName);
-
-		// 3. 물리적인 Docker 볼륨 삭제 (별도의 DockerClient 생성 및 사용)
-		DockerClient dockerClient = dockerClientFactory.buildDockerClient();
-		try {
-			dockerClient.removeVolumeCmd(volumeName).exec();
-			log.info("Docker volume '{}' successfully removed.", volumeName);
-		} catch (NotFoundException e) {
-			log.warn("Docker volume '{}' not found.", volumeName);
-		} catch (Exception e) {
-			log.error("Error removing docker volume '{}': {}", volumeName, e.getMessage());
-			throw new RuntimeException("Failed to remove volume: " + volumeName, e);
-		} finally {
-			try {
-				dockerClient.close();
-			} catch (IOException e) {
-				log.warn("Error closing DockerClient after deleting volume", e);
-			}
-		}
 	}
 
 	@Transactional

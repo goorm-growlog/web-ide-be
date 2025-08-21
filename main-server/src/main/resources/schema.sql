@@ -60,17 +60,15 @@ CREATE TABLE `images`
 -- =================================================================
 CREATE TABLE `projects`
 (
-    `project_id`          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '프로젝트 ID (PK)',
-    `create_user_id`      BIGINT       NOT NULL COMMENT '개설자 ID (FK)',
-    `image_id`            BIGINT       NOT NULL COMMENT '이미지 ID (FK)',
-    `project_name`        VARCHAR(255) NOT NULL COMMENT '프로젝트명',
-    `description`         TEXT NULL COMMENT '프로젝트 설명',
-    `storage_volume_name` VARCHAR(255) NOT NULL COMMENT 'Docker 볼륨 이름',
+    `project_id`          BIGINT                     NOT NULL AUTO_INCREMENT COMMENT '프로젝트 ID (PK)',
+    `create_user_id`      BIGINT                     NOT NULL COMMENT '개설자 ID (FK)',
+    `image_id`            BIGINT                     NOT NULL COMMENT '이미지 ID (FK)',
+    `project_name`        VARCHAR(255)               NOT NULL COMMENT '프로젝트명',
+    `description`         TEXT                       NULL COMMENT '프로젝트 설명',
     `status`              ENUM ('ACTIVE','INACTIVE') NOT NULL DEFAULT 'INACTIVE' COMMENT '프로젝트 상태 (ENUM)',
     `created_at`          DATETIME(6)                NOT NULL,
     `updated_at`          DATETIME(6)                NOT NULL,
     PRIMARY KEY (`project_id`),
-    UNIQUE KEY `uk_projects_storage_volume_name` (`storage_volume_name`),
     CONSTRAINT `fk_projects_to_users` FOREIGN KEY (`create_user_id`) REFERENCES `users` (`user_id`),
     CONSTRAINT `fk_projects_to_images` FOREIGN KEY (`image_id`) REFERENCES `images` (`image_id`)
 ) ENGINE = InnoDB

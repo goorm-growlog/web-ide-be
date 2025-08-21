@@ -51,9 +51,6 @@ public class Project {
 	@Column(nullable = false)
 	private String projectName;
 
-	@Column(nullable = false, unique = true)
-	private String storageVolumeName;
-
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "image_id", nullable = false)
 	private Image image;
@@ -76,7 +73,6 @@ public class Project {
 	public Project(Users owner, String projectName, String storageVolumeName, Image image, String description) {
 		this.owner = owner;
 		this.projectName = projectName;
-		this.storageVolumeName = storageVolumeName;
 		this.image = image;
 		this.description = description;
 		this.status = ProjectStatus.INACTIVE; // 최초 생성 시 PENDING 상태
