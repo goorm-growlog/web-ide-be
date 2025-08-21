@@ -41,5 +41,5 @@ out/
 # 업로드 폴더 무시
 uploads/
 
-# Local file storage for docker dev environment
-/storage
+efs/projects/*
+!efs/projects/.gitkeep
