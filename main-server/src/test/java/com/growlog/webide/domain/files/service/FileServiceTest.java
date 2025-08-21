@@ -101,7 +101,7 @@ class FileServiceTest {
 
 		Long projectId = 1L;
 		Long userId = 123L;
-		String filePath = "src/main.java";
+		String filePath = "/src/main.java";
 		CreateFileRequest request = new CreateFileRequest(filePath, "file");
 
 		Users fakeOwner = Users.builder().build();
@@ -132,7 +132,7 @@ class FileServiceTest {
 		// given - 테스트를 위한 환경과 데이터를 준비하는 단계
 		Long projectId = 1L;
 		Long userId = 123L;
-		String filePath = "src/main.java";
+		String filePath = "/src/main.java";
 		CreateFileRequest request = new CreateFileRequest(filePath, "file");
 		Project fakeProject = Project.builder().build();
 		ReflectionTestUtils.setField(fakeProject, "id", projectId);
@@ -163,7 +163,7 @@ class FileServiceTest {
 		// given
 		Long projectId = 1L;
 		long userId = 123L;
-		String filePath = "src/main.java";
+		String filePath = "/src/main.java";
 
 		Project fakeProject = Project.builder().build();
 		ReflectionTestUtils.setField(fakeProject, "id", projectId);
@@ -201,7 +201,7 @@ class FileServiceTest {
 		// given
 		Long projectId = 1L;
 		Long userId = 123L;
-		String dirPath = "src";
+		String dirPath = "/src";
 
 		Project fakeProject = Project.builder().build();
 		ReflectionTestUtils.setField(fakeProject, "id", projectId);
@@ -235,7 +235,7 @@ class FileServiceTest {
 		// given
 		Long projectId = 1L;
 		Long userId = 123L;
-		String filePath = "src/main.java";
+		String filePath = "/src/main.java";
 		Project fakeProject = Project.builder().build();
 		ReflectionTestUtils.setField(fakeProject, "id", projectId);
 
@@ -264,8 +264,8 @@ class FileServiceTest {
 		// given
 		Long projectId = 1L;
 		Long userId = 123L;
-		String fromPath = "src";
-		String toPath = "source";
+		String fromPath = "/src";
+		String toPath = "/source";
 
 		Project fakeProject = Project.builder().build();
 		ReflectionTestUtils.setField(fakeProject, "id", projectId);
@@ -318,8 +318,8 @@ class FileServiceTest {
 		// given
 		Long projectId = 1L;
 		Long userId = 123L;
-		String fromPath = "src";
-		String toPath = "src/child"; // 자신의 하위 폴더로 이동 시도
+		String fromPath = "/src";
+		String toPath = "/src/child"; // 자신의 하위 폴더로 이동 시도
 
 		Project fakeProject = Project.builder().build();
 		ReflectionTestUtils.setField(fakeProject, "id", projectId);
