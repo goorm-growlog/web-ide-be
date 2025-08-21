@@ -37,7 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class FileService {
-	@Value("${project.efs-base-path}") // application.yml에 설정한 값을 가져옴
+	@Value("${efs.base-path}") // application.yml에 설정한 값을 가져옴
 	private String efsBasePath;
 
 	private final SimpMessagingTemplate messagingTemplate;
@@ -66,10 +66,10 @@ public class FileService {
 
 		Path targetPath;
 		try {
-			log.info("1. resolveProjectPath 호출 시작");
+			log.info("resolveProjectPath 호출 시작");
 			//파일 경로 찾기
 			targetPath = resolveProjectPath(projectId, request.getPath());
-			log.info("2. 경로 계산 완료: {}", targetPath);
+			log.info("경로 계산 완료: {}", targetPath);
 		} catch (IOException e) {
 			throw new CustomException(ErrorCode.INVALID_FILE_PATH);
 		}
@@ -77,19 +77,19 @@ public class FileService {
 		FileMeta fileMeta = FileMeta.of(project, request.getPath(), request.getType());
 
 		try {
-			log.info("4. 파일이 존재하지 않음을 확인. 생성 로직으로 진행.");
+			log.info("파일이 존재하지 않음을 확인. 생성 로직으로 진행.");
 			if ("file".equalsIgnoreCase(request.getType())) {
 				// 부모 폴더 생성
-				log.info("5a. 부모 디렉토리 생성 시도: {}", targetPath.getParent());
+				log.info("부모 디렉토리 생성 시도: {}", targetPath.getParent());
 				Files.createDirectories(targetPath.getParent());
 
 				// 빈 파일 만들기
-				log.info("6a. 파일 생성 시도: {}", targetPath);
+				log.info("파일 생성 시도: {}", targetPath);
 				Files.createFile(targetPath);
 
 			} else if ("folder".equalsIgnoreCase(request.getType())) {
 				//폴더 생성
-				log.info("5b. 디렉토리 생성 시도: {}", targetPath);
+				log.info("디렉토리 생성 시도: {}", targetPath);
 				Files.createDirectories(targetPath);
 			} else {
 				throw new CustomException(ErrorCode.BAD_REQUEST);
@@ -326,14 +326,26 @@ public class FileService {
 	private Path resolveProjectPath(Long projectId, String relativePath) throws IOException {
 		//프로젝트별 기본 경로 생성 (ex: /app/123)
 		Path projectRoot = fileSystem.getPath(efsBasePath, String.valueOf(projectId));
+		log.info("Resolved project path: {}", projectRoot);
+
+		if (relativePath == null || !relativePath.startsWith("/")) {
+			throw new CustomException(ErrorCode.BAD_REQUEST);
+		}
+
+		// 클라이언트가 보낸 경로에서 맨앞의 '/' 제거
+		// 만약 relativePath가 "/"로 시작하면 첫 글자를 제외하고, 아니면 그대로 사용
+		String cleanRelativePath = relativePath.substring(1);
+		log.info("Clean relative path: {}", cleanRelativePath);
 
 		//전체 경로 생성 (ex: /app/123/src/main.java)
 		// normalize()는 ../ 같은 경로 조작을 방지
-		Path fullPath = projectRoot.resolve(relativePath).normalize();
+		Path fullPath = projectRoot.resolve(cleanRelativePath);
+		log.info("Resolved project path: {}", fullPath);
 
 		if (!fullPath.startsWith(projectRoot)) {
 			throw new CustomException(ErrorCode.PATH_NOT_ALLOWED);
 		}
+
 		return fullPath;
 	}
 

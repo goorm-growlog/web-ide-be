@@ -39,5 +39,6 @@ spring:
       stack:
         auto: false
 
-project:
-  efs-base-path: /mnt/efs
+efs:
+  base-path: /mnt/efs/projects
+  templates-path: /mnt/efs/templates

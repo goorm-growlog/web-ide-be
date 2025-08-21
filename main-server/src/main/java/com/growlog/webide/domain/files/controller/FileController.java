@@ -42,7 +42,7 @@ public class FileController {
 
 	private final FileService fileService;
 
-	@Operation(summary = "파일/폴더 생성", description = "새로운 파일이나 폴더를 생성합니다.")
+	@Operation(summary = "파일/폴더 생성", description = "새로운 파일이나 폴더를 생성합니다. 경로는 /를 붙여주어야 합니다.")
 	@PostMapping
 	@PreAuthorize("@projectSecurityService.hasWritePermission(#projectId)")
 	public ApiResponse<FileResponse> createFile(
@@ -51,10 +51,10 @@ public class FileController {
 		@AuthenticationPrincipal UserPrincipal user
 	) {
 		fileService.createFileorDirectory(projectId, request, user.getUserId());
-		return ApiResponse.ok(new FileResponse("File created"));
+		return ApiResponse.ok(new FileResponse("File/Folder created"));
 	}
 
-	@Operation(summary = "파일/폴더 삭제", description = "파일/폴더를 삭제합니다.")
+	@Operation(summary = "파일/폴더 삭제", description = "파일/폴더를 삭제합니다. 경로는 /를 붙여주어야 합니다.")
 	@DeleteMapping
 	@PreAuthorize("@projectSecurityService.hasWritePermission(#projectId)")
 	public ApiResponse<FileResponse> deleteFile(
@@ -64,10 +64,10 @@ public class FileController {
 	) {
 		log.info("[DELETE 요청] projectId={}, filePath={}", projectId, filePath);
 		fileService.deleteFileorDirectory(projectId, filePath, user.getUserId());
-		return ApiResponse.ok(new FileResponse("File deleted"));
+		return ApiResponse.ok(new FileResponse("File/Folder deleted"));
 	}
 
-	@Operation(summary = "파일/폴더 이름 변경 및 이동", description = "파일/폴더의 이름을 변경하거나 위치를 변경합니다.")
+	@Operation(summary = "파일/폴더 이름 변경 및 이동", description = "파일/폴더의 이름을 변경하거나 위치를 변경합니다. 경로는 /를 붙여주어야 합니다.")
 	@PatchMapping
 	@PreAuthorize("@projectSecurityService.hasWritePermission(#projectId)")
 	public ApiResponse<FileResponse> moveFile(
@@ -78,7 +78,7 @@ public class FileController {
 	) {
 		fileService.moveFileorDirectory(projectId, fromPath, toPath, user.getUserId());
 		log.info("[FILE MOVE] Parameters: {}, {}, {}, {}", projectId, fromPath, toPath, user.getUserId());
-		return ApiResponse.ok(new FileResponse("File moved"));
+		return ApiResponse.ok(new FileResponse("File/Folder moved"));
 	}
 
 
@@ -88,7 +88,7 @@ public class FileController {
 	 * @param projectId 프로젝트 ID
 	 * @param path      파일 경로
 	 *                  - 루트 작업 디렉토리(`/workspace`) 기준의 상대 경로입니다.
-	 *                  - 예: "src/Main.java" → 실제 경로: "/workspace/src/Main.java"
+	 *                  - 예: "/src/Main.java" → 실제 경로: "/workspace/src/Main.java"
 	 * @param user      인증된 사용자 정보
 	 * @return 파일 내용
 	 */
@@ -100,8 +100,8 @@ public class FileController {
 
 		@Parameter(description = """
 			파일 경로는 컨테이너의 루트 작업 디렉토리(`/app`) 기준.
-			예: "src/Main.java" → 실제 경로: "/app/src/Main.java"
-			""", example = "src/Main.java") @RequestParam String path, @AuthenticationPrincipal UserPrincipal user) {
+			예: "/src/Main.java" → 실제 경로: "/app/src/Main.java"
+			""", example = "/src/Main.java") @RequestParam String path, @AuthenticationPrincipal UserPrincipal user) {
 
 		FileOpenResponseDto response = fileService.openFile(projectId, path, user.getUserId());
 		return ResponseEntity.ok(ApiResponse.ok(response));
@@ -114,7 +114,7 @@ public class FileController {
 	 * @param projectId  프로젝트 ID
 	 * @param requestDto 저장할 파일 경로 및 내용
 	 *                   - path 값은 컨테이너 루트 디렉토리(`/workspace`)를 기준으로 한 상대 경로입니다.
-	 *                   - 예: "src/Main.java"
+	 *                   - 예: "/src/Main.java"
 	 * @param user       인증된 사용자 정보
 	 * @return 저장 성공 메시지
 	 */
@@ -129,7 +129,7 @@ public class FileController {
 			required = true,
 			content = @io.swagger.v3.oas.annotations.media.Content(
 				schema = @Schema(example = "{\n"
-					+ "  \"path\": \"src/Main.java\",\n"
+					+ "  \"path\": \"/src/Main.java\",\n"
 					+ "  \"content\": \"public class Main {\\n"
 					+ "    public static void main(String[] args) {\\n"
 					+ "      System.out.println(\\\"Updated!\\\");\\n"
