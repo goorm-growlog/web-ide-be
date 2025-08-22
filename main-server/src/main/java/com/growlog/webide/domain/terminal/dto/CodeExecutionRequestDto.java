@@ -7,7 +7,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class QueueMessageDto {
+public class CodeExecutionRequestDto {
 	private Long projectId;
 	private String filePath;
 	private Long userId;
