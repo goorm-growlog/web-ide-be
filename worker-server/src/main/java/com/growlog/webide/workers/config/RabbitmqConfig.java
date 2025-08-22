@@ -5,6 +5,8 @@ import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.annotation.EnableRabbit;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,5 +39,12 @@ public class RabbitmqConfig {
 	public Binding binding(Queue queue, TopicExchange exchange) {
 		// 교환기와 큐를 연결하여, 라우팅 키가 일치하는 메시지를 큐로 보냅니다.
 		return BindingBuilder.bind(queue).to(exchange).with(routingKey);
+	}
+
+	@Bean
+	public MessageConverter jsonMessageConverter() {
+		// Producer(main-server)가 JSON으로 보낸 메시지를 DTO 객체로 자동 변환하기 위해
+		// 동일한 MessageConverter를 설정합니다.
+		return new Jackson2JsonMessageConverter();
 	}
 }
