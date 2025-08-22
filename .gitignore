@@ -40,3 +40,6 @@ out/
 
 # 업로드 폴더 무시
 uploads/
+
+efs/projects/*
+!efs/projects/.gitkeep

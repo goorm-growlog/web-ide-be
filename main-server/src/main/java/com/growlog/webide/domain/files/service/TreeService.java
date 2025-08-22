@@ -48,7 +48,7 @@ public class TreeService {
 		for (String absPath : dirPaths) {
 			String relPath = toRelPath(absPath);
 			if (relPath != null && !metaMap.containsKey(relPath)) {
-				FileMeta saved = fileMetaRepository.save(FileMeta.of(project, relPath, "folder"));
+				FileMeta saved = fileMetaRepository.save(FileMeta.relativePath(project, relPath, "folder"));
 				metaMap.put(relPath, saved);
 			}
 		}
@@ -56,7 +56,7 @@ public class TreeService {
 		for (String absPath : filePaths) {
 			String relPath = toRelPath(absPath);
 			if (relPath != null && !metaMap.containsKey(relPath)) {
-				FileMeta saved = fileMetaRepository.save(FileMeta.of(project, relPath, "file"));
+				FileMeta saved = fileMetaRepository.save(FileMeta.relativePath(project, relPath, "file"));
 				metaMap.put(relPath, saved);
 			}
 		}
