@@ -1,4 +1,4 @@
-package com.growlog.webide.workers.work;
+package com.growlog.webide.workers.execution.dto;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
