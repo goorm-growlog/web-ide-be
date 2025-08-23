@@ -1,9 +1,9 @@
 name: 🧰 작업요청 (Task Request)
 description: 특정 작업(개발/리팩토링/운영/문서)을 요청합니다.
 title: "[TASK] "
-labels: ["task"]
-projects: ["IDE Project"]
-assignees: []
+labels: [ "task" ]
+projects: [ "IDE Project" ]
+assignees: [ ]
 
 body:
   - type: markdown

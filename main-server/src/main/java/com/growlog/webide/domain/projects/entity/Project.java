@@ -42,7 +42,7 @@ public class Project {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	@Column(name = "project_id")
-	private long id;
+	private Long id;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "create_user_id", nullable = false)
@@ -50,9 +50,6 @@ public class Project {
 
 	@Column(nullable = false)
 	private String projectName;
-
-	@Column(nullable = false, unique = true)
-	private String storageVolumeName;
 
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "image_id", nullable = false)
@@ -76,7 +73,6 @@ public class Project {
 	public Project(Users owner, String projectName, String storageVolumeName, Image image, String description) {
 		this.owner = owner;
 		this.projectName = projectName;
-		this.storageVolumeName = storageVolumeName;
 		this.image = image;
 		this.description = description;
 		this.status = ProjectStatus.INACTIVE; // 최초 생성 시 PENDING 상태

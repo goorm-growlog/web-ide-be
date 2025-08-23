@@ -24,28 +24,6 @@ public class WebSocketEventListener {
 	private final SimpMessagingTemplate template;
 	private final ChatService chatService;
 
-	@Transactional(readOnly = true)
-	@EventListener
-	public void webSocketDisconnectListener(SessionDisconnectEvent event) {
-		log.info("WebSocket session disconnected: {}", event.getSessionId());
-
-		final StompHeaderAccessor accessor = MessageHeaderAccessor
-			.getAccessor(event.getMessage(), StompHeaderAccessor.class);
-
-		extractSessionInfo(accessor).ifPresent(sessionInfo -> {
-			log.info("Processing leave action for userId: {} in projectId: {}", sessionInfo.userId(),
-				sessionInfo.projectId());
-
-			final ChattingResponseDto response = chatService.leave(sessionInfo.projectId(), sessionInfo.userId());
-
-			final String destination = "/topic/projects/" + sessionInfo.projectId() + "/chat";
-
-			log.info("Sending leave message to destination: {}. Payload: {}", destination, response);
-
-			template.convertAndSend(destination, response);
-		});
-	}
-
 	private static Optional<SessionInfo> extractSessionInfo(StompHeaderAccessor accessor) {
 		if (accessor == null || accessor.getSessionAttributes() == null) {
 			log.warn("Accessor or session attributes are null. Could be a connection closed before handshake.");
@@ -70,6 +48,28 @@ public class WebSocketEventListener {
 			log.warn("Failed to extract session info from session attributes.", e);
 			return Optional.empty();
 		}
+	}
+
+	@Transactional(readOnly = true)
+	@EventListener
+	public void webSocketDisconnectListener(SessionDisconnectEvent event) {
+		log.info("WebSocket session disconnected: {}", event.getSessionId());
+
+		final StompHeaderAccessor accessor = MessageHeaderAccessor
+			.getAccessor(event.getMessage(), StompHeaderAccessor.class);
+
+		extractSessionInfo(accessor).ifPresent(sessionInfo -> {
+			log.info("Processing leave action for userId: {} in projectId: {}", sessionInfo.userId(),
+				sessionInfo.projectId());
+
+			final ChattingResponseDto response = chatService.leave(sessionInfo.projectId(), sessionInfo.userId());
+
+			final String destination = "/topic/projects/" + sessionInfo.projectId() + "/chat";
+
+			log.info("Sending leave message to destination: {}. Payload: {}", destination, response);
+
+			template.convertAndSend(destination, response);
+		});
 	}
 
 	private record SessionInfo(Long userId, Long projectId) {

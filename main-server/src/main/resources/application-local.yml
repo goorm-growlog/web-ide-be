@@ -48,3 +48,7 @@ email:
 upload:
   profile:
     local-dir: uploads/profiles/
+
+efs:
+  base-path: ./efs/projects
+  templates-path: ./efs/templates

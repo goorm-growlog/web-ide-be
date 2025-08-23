@@ -5,6 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.growlog.webide.domain.projects.entity.MemberRole;
 import com.growlog.webide.domain.projects.entity.Project;
+import com.growlog.webide.domain.projects.entity.ProjectMembers;
 import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
@@ -20,14 +21,14 @@ public class ProjectPermissionService {
 	@Transactional(readOnly = true)
 	public MemberRole getMyRole(Long projectId, UserPrincipal userPrincipal) {
 		return projectMemberRepository.findByProject_IdAndUser_UserId(projectId, userPrincipal.getUserId())
-			.map(pm -> pm.getRole())
+			.map(ProjectMembers::getRole)
 			.orElseThrow(() -> new CustomException(ErrorCode.NOT_A_MEMBER));
 	}
 
 	@Transactional(readOnly = true)
 	public void checkReadAccess(Project project, Long userId) {
 		MemberRole role = projectMemberRepository.findByProject_IdAndUser_UserId(project.getId(), userId)
-			.map(pm -> pm.getRole())
+			.map(ProjectMembers::getRole)
 			.orElseThrow(() -> new CustomException(ErrorCode.NOT_A_MEMBER));
 
 		if (!(role == MemberRole.OWNER || role == MemberRole.WRITE || role == MemberRole.READ)) {
@@ -36,9 +37,9 @@ public class ProjectPermissionService {
 	}
 
 	@Transactional(readOnly = true)
-	public void checkWriteAccess(Project project, Long userId) {
-		MemberRole role = projectMemberRepository.findByProject_IdAndUser_UserId(project.getId(), userId)
-			.map(pm -> pm.getRole())
+	public void checkWriteAccess(Long userId, Long projectId) {
+		MemberRole role = projectMemberRepository.findByProject_IdAndUser_UserId(projectId, userId)
+			.map(ProjectMembers::getRole)
 			.orElseThrow(() -> new CustomException(ErrorCode.NOT_A_MEMBER));
 
 		if (!(role == MemberRole.WRITE || role == MemberRole.OWNER)) {
