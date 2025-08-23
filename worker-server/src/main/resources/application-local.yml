@@ -6,7 +6,7 @@ spring:
     password: ${DB_USER_PASSWORD}
 
   rabbitmq:
-    host: localhost
+    host: rabbitmq
     port: 5672
     username: admin
     password: admin

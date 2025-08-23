@@ -35,3 +35,23 @@ template:
 jwt:
   secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION}
+
+# 코드 실행 관련 RabbitMQ 설정
+code-execution:
+  rabbitmq:
+    exchange:
+      name: code.execution.exchange
+    queue:
+      name: code.execution.queue
+    routing:
+      key: code.execution.routing-key
+
+# 터미널 명령어 관련 RabbitMQ 설정
+terminal-command:
+  rabbitmq:
+    exchange:
+      name: terminal.command.exchange
+    queue:
+      name: terminal.command.queue
+    routing:
+      key: terminal.command.routing-key
