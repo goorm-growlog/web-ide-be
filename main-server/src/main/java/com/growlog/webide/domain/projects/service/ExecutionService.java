@@ -14,8 +14,8 @@ import com.github.dockerjava.api.model.StreamType;
 import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.projects.dto.CodeExecutionResponse;
 import com.growlog.webide.domain.projects.dto.ExecutionResult;
-import com.growlog.webide.domain.projects.entity.ActiveInstance;
-import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
+import com.growlog.webide.domain.projects.entity.ActiveSession;
+import com.growlog.webide.domain.projects.repository.ActiveSessionRepository;
 import com.growlog.webide.factory.DockerClientFactory;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
@@ -29,12 +29,12 @@ import lombok.extern.slf4j.Slf4j;
 public class ExecutionService {
 
 	private final DockerClientFactory dockerClientFactory;
-	private final ActiveInstanceRepository activeInstanceRepository;
+	private final ActiveSessionRepository activeSessionRepository;
 
 	// 특정 프로젝트의 워크스페이스에서 코드 실행함
 	public CodeExecutionResponse executeCode(Long projectId, Long userId, String filePath) {
 		// 1. projectId와 userId로 containerId 조회
-		ActiveInstance activeInstance = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
+		ActiveSession activeInstance = activeSessionRepository.findByUser_UserIdAndProject_Id(userId, projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
 
 		String containerId = activeInstance.getContainerId();

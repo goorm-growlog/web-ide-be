@@ -3,7 +3,7 @@
 -- 이후 생성 api 추가시 pk 없는 코드로 변경하여 더미테이터 넣어줘야 함.
 
 DELETE
-FROM active_instances;
+FROM active_sessions;
 DELETE
 FROM project_members;
 DELETE

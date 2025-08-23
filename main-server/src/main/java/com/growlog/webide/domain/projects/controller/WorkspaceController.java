@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
-import com.growlog.webide.domain.projects.dto.OpenProjectResponse;
 import com.growlog.webide.domain.projects.dto.ProjectResponse;
 import com.growlog.webide.domain.projects.dto.UpdateProjectRequest;
 import com.growlog.webide.domain.projects.service.WorkspaceManagerService;
@@ -46,13 +45,13 @@ public class WorkspaceController {
 
 	@Operation(summary = "프로젝트 열기(컨테이너 실행)", description = "사용자를 위한 개인 컨테이너를 실행하고 접속 정보를 반환합니다.")
 	@PostMapping("/{projectId}/open")
-	public ResponseEntity<ApiResponse<OpenProjectResponse>> openProject(
+	public ResponseEntity<ApiResponse<String>> openProject(
 		@PathVariable Long projectId,
 		@AuthenticationPrincipal UserPrincipal userPrincipal
 	) {
 		Long userId = userPrincipal.getUserId();
-		OpenProjectResponse response = workspaceManagerService.openProject(projectId, userId);
-		return ResponseEntity.ok(ApiResponse.ok(response));
+		workspaceManagerService.openProject(projectId, userId);
+		return ResponseEntity.ok(ApiResponse.ok("Complete Opening"));
 	}
 
 	@Operation(summary = "프로젝트 닫기(컨테이너 종료)",

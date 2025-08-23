@@ -21,22 +21,18 @@ import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.exception.NotFoundException;
 import com.github.dockerjava.api.model.PullResponseItem;
-import com.growlog.webide.domain.files.repository.FileMetaRepository;
 import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.images.repository.ImageRepository;
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
-import com.growlog.webide.domain.projects.dto.OpenProjectResponse;
 import com.growlog.webide.domain.projects.dto.ProjectResponse;
 import com.growlog.webide.domain.projects.dto.UpdateProjectRequest;
-import com.growlog.webide.domain.projects.entity.ActiveInstance;
-import com.growlog.webide.domain.projects.entity.InstanceStatus;
+import com.growlog.webide.domain.projects.entity.ActiveSession;
 import com.growlog.webide.domain.projects.entity.MemberRole;
 import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.entity.ProjectMembers;
-import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
+import com.growlog.webide.domain.projects.repository.ActiveSessionRepository;
 import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
-import com.growlog.webide.domain.templates.service.TemplateService;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.factory.DockerClientFactory;
@@ -51,40 +47,47 @@ import lombok.extern.slf4j.Slf4j;
 @Transactional
 public class WorkspaceManagerService {
 
+	private final ActiveSessionRepository activeSessionRepository;
 	private final DockerClientFactory dockerClientFactory;
 	private final ProjectRepository projectRepository;
-	private final ActiveInstanceRepository activeInstanceRepository;
 	private final ImageRepository imageRepository;
 	private final SessionScheduler sessionScheduler;
 	private final UserRepository userRepository;
 	private final ProjectMemberRepository projectMemberRepository;
 	private final ProjectFileMetaService projectFileMetaService;
-	@Value("${efs.base-path}")
-	private String projectsBasePath;
-	@Value("${efs.templates-path}")
-	private String templatesBasePath;
+
+	private final String projectsBasePath;
+	private final String templatesBasePath;
+	private final String serverId;
 
 	public WorkspaceManagerService(DockerClientFactory dockerClientFactory,
 		ProjectRepository projectRepository,
-		ActiveInstanceRepository activeInstanceRepository,
+		ActiveSessionRepository activeSessionRepository,
 		ImageRepository imageRepository,
 		@Lazy SessionScheduler sessionScheduler,
 		UserRepository userRepository,
 		ProjectMemberRepository projectMemberRepository,
-		ProjectFileMetaService projectFileMetaService) {
+		ProjectFileMetaService projectFileMetaService,
+		@Value("${efs.base-path}") String projectsBasePath,
+		@Value("${efs.templates-path}") String templatesBasePath,
+		@Value("${SERVER_ID}") String serverId
+	) {
 		this.dockerClientFactory = dockerClientFactory;
 		this.projectRepository = projectRepository;
-		this.activeInstanceRepository = activeInstanceRepository;
+		this.activeSessionRepository = activeSessionRepository;
 		this.imageRepository = imageRepository;
 		this.sessionScheduler = sessionScheduler;
 		this.userRepository = userRepository;
 		this.projectMemberRepository = projectMemberRepository;
 		this.projectFileMetaService = projectFileMetaService;
+		this.projectsBasePath = projectsBasePath;
+		this.templatesBasePath = templatesBasePath;
+		this.serverId = serverId;
 	}
 
 	/*
 	1. 프로젝트 생성 (Create Project)
-	Docker 볼륨 생성, 프로젝트 메타데이터 DB에 저장
+	EFS 디렉토리 생성, 프로젝트 메타데이터 DB에 저장
 	 */
 	@Transactional
 	public ProjectResponse createProject(CreateProjectRequest request, Long userId) {
@@ -96,7 +99,7 @@ public class WorkspaceManagerService {
 		Image image = imageRepository.findById(request.getImageId())
 			.orElseThrow(() -> new CustomException(ErrorCode.IMAGE_NOT_FOUND));
 
-		// 3. Project 엔티티 생성 및 DB 저장
+		// 2. Project 엔티티 생성 및 DB 저장
 		Project project = Project.builder()
 			.owner(owner)
 			.projectName(request.getProjectName())
@@ -125,7 +128,7 @@ public class WorkspaceManagerService {
 			throw new RuntimeException("Error during project file system setup for project id: " + projectId, e);
 		}
 
-		// 4. ProjectMembers 엔티티 생성 및 DB 저장
+		// 3. ProjectMembers 엔티티 생성 및 DB 저장
 		ProjectMembers member = ProjectMembers.builder()
 			.user(owner)
 			.role(MemberRole.OWNER)
@@ -133,7 +136,7 @@ public class WorkspaceManagerService {
 		createdProject.addProjectMember(member);
 		projectMemberRepository.save(member);
 
-		// 5. file metadata 저장
+		// 4. file metadata 저장
 		projectFileMetaService.saveFileMetadataForProject(project, projectPath);
 
 		return ProjectResponse.from(createdProject, owner);
@@ -141,11 +144,12 @@ public class WorkspaceManagerService {
 
 	/*
 	2. 프로젝트 열기 (Open Project)
-	사용자를 위한 격리된 컨테이너 생성, ActiveInstance 기록
-	사용자가 특정 프로젝트를 열기 위해 API를 호출하면, 시스템은 해당 프로젝트의 공유 볼륨을 마운트한, 오직 그 사용자만을 위한
-	새로운 격리된 Docker 컨테이너를 동적으로 실행하고, 그 세션 정보를 DB에 기록한 후, 접속 정보를 사용자에게 돌려줍니다.
+	EFS 프로젝트 접근 확인 및 실시간 세션 정보 기록
+
+	사용자가 특정 프로젝트를 열기 위해 API를 호출하면, 시스템은 먼저 해당 프로젝트(EFS)에 대한 접근 권한 확인
+	확인 후, 사용자의 실시간 연결 상태를 관리하기 위해 'active_sessions' 테이블에 세션 정보 기록
 	 */
-	public OpenProjectResponse openProject(Long projectId, Long userId) {
+	public void openProject(Long projectId, Long userId) {
 		log.info("User '{}' is opening project '{}'", userId, projectId);
 
 		// 1. 프로젝트 정보 및 사용할 이미지 조회
@@ -157,15 +161,13 @@ public class WorkspaceManagerService {
 		projectMemberRepository.findByUserAndProject(user, project)
 			.orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
 
-		// 4. 활성 세션 정보(ActiveInstance)를 DB에 기록
-		ActiveInstance instance = ActiveInstance.builder()
+		// 4. 활성 세션 정보(ActiveSession)를 DB에 기록
+		ActiveSession session = ActiveSession.builder()
 			.project(project)
 			.user(user)
-			.status(InstanceStatus.ACTIVE)
+			.serverId(serverId)
 			.build();
-		activeInstanceRepository.save(instance);
-
-		return new OpenProjectResponse(projectId, instance.getId());
+		activeSessionRepository.save(session);
 	}
 
 	/**
@@ -215,18 +217,16 @@ public class WorkspaceManagerService {
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
-		ActiveInstance instance = activeInstanceRepository.findByUser_UserIdAndProject_Id(userId, projectId)
+		ActiveSession session = activeSessionRepository.findByUser_UserIdAndProject_Id(userId, projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
 
-		instance.disconnect(); // InstanceStatus.DISCONNECTING
-
-		String containerId = instance.getContainerId();
+		String containerId = session.getContainerId();
 		sessionScheduler.scheduleDeletion(containerId, user.getUserId(), projectId);
 
 		// 이 세션이 해당 프로젝트의 마지막 활성 세션이었는지 확인
-		if (activeInstanceRepository.countByProjectAndStatus(project, InstanceStatus.ACTIVE) == 0) {
-			project.deactivate();
-		}
+		// if (activeSessionRepository.countByProjectAndStatus(project, InstanceStatus.ACTIVE) == 0) {
+		// 	project.deactivate();
+		// }
 	}
 	/*
 	3-2. 컨테이너 삭제
@@ -240,14 +240,14 @@ public class WorkspaceManagerService {
 		DockerClient dockerClient = dockerClientFactory.buildDockerClient();
 
 		// 1. 컨테이너 ID로 DB에서 ActiveInstance 정보 조회
-		ActiveInstance instance = activeInstanceRepository.findByContainerId(containerId)
+		ActiveSession session = activeSessionRepository.findByContainerId(containerId)
 			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
 
 		// 2. 물리적인 Docker 컨테이너를 중지하고 제거
 		removeContainerIfExists(dockerClient, containerId);
 
 		// 3. DB에서 ActiveInstance 레코드 삭제
-		activeInstanceRepository.delete(instance);
+		activeSessionRepository.delete(session);
 
 		try {
 			dockerClient.close();
@@ -285,9 +285,9 @@ public class WorkspaceManagerService {
 			throw new CustomException(ErrorCode.NO_OWNER_PERMISSION);
 		}
 
-		if (activeInstanceRepository.countByProjectAndStatus(project, InstanceStatus.ACTIVE) > 0) {
-			throw new CustomException(ErrorCode.CONTAINER_STILL_RUNNING);
-		}
+		// if (activeSessionRepository.countByProjectAndStatus(project, InstanceStatus.ACTIVE) > 0) {
+		// 	throw new CustomException(ErrorCode.CONTAINER_STILL_RUNNING);
+		// }
 
 		// 2. db에서 프로젝트 레코드 먼저 삭제
 		projectRepository.delete(project);

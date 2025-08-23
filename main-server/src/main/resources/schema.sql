@@ -5,7 +5,7 @@ SET
 FOREIGN_KEY_CHECKS = 0;
 
 -- 기존 테이블들을 모두 삭제합니다.
-DROP TABLE IF EXISTS `active_instances`;
+DROP TABLE IF EXISTS `active_sessions`;
 DROP TABLE IF EXISTS `project_members`;
 DROP TABLE IF EXISTS `projects`;
 DROP TABLE IF EXISTS `images`;
@@ -96,21 +96,19 @@ CREATE TABLE `project_members`
   COLLATE = utf8mb4_unicode_ci;
 
 -- =================================================================
--- 5. 'active_instances' 테이블 생성
+-- 5. 'active_sessions' 테이블 생성
 -- =================================================================
-CREATE TABLE `active_instances`
+CREATE TABLE `active_sessions`
 (
-    `instance_id`     BIGINT       NOT NULL AUTO_INCREMENT COMMENT '인스턴스 ID (PK)',
+    `session_id`     BIGINT       NOT NULL AUTO_INCREMENT COMMENT '세션 ID (PK)',
     `project_id`      BIGINT       NOT NULL COMMENT '프로젝트 ID (FK)',
     `user_id`         BIGINT       NOT NULL COMMENT '사용자 ID (FK)',
-    `container_id`    VARCHAR(255) NOT NULL COMMENT '실행 중인 Docker 컨테이너 ID',
-    `status`          ENUM ('ACTIVE', 'DISCONNECTING') NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE: 접송중, DISCONNECTING: 종료 후 삭제 예약',
-    `web_socket_port` INT          NOT NULL COMMENT '웹소켓 프록시 포트',
+    `server_id`     VARCHAR(255)       NOT NULL COMMENT 'EC2 인스턴스 ID',
+    `container_id`    VARCHAR(255)      COMMENT '일시적으로 실행 중인 Docker 컨테이너 ID',
     `connected_at`    DATETIME(6)                      NOT NULL,
-    PRIMARY KEY (`instance_id`),
-    UNIQUE KEY `uk_active_instances_container_id` (`container_id`),
-    CONSTRAINT `fk_active_instances_to_projects` FOREIGN KEY (`project_id`) REFERENCES `projects` (`project_id`) ON DELETE CASCADE,
-    CONSTRAINT `fk_active_instances_to_users` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)
+    PRIMARY KEY (`session_id`),
+    CONSTRAINT `fk_active_sessions_to_projects` FOREIGN KEY (`project_id`) REFERENCES `projects` (`project_id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_active_sessions_to_users` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci;
