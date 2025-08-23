@@ -12,6 +12,6 @@ public class TerminalCommandRequestDto {
 	private String command;     // 실행할 명령어 (e.g., "ls -al", "git status")
 
 	public void setProjectId(Long projectId) {
-		
+
 	}
 }

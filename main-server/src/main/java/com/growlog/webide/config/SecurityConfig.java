@@ -1,6 +1,6 @@
 package com.growlog.webide.config;
 
-import static org.springframework.security.config.Customizer.withDefaults;
+import static org.springframework.security.config.Customizer.*;
 
 import java.util.List;
 
