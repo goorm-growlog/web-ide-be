@@ -37,7 +37,7 @@ spring:
       mail.smtp.starttls.enable: true
 
   rabbitmq:
-    host: localhost
+    host: rabbitmq
     port: 5672
     username: admin
     password: admin

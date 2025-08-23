@@ -16,6 +16,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      rabbitmq: # RabbitMQ 컨테이너가 먼저 시작하도록 설정
+        condition: service_started
 
   db:
     image: mysql:8.0
@@ -35,6 +37,16 @@ services:
       test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}" ]
       timeout: 20s
       retries: 10
+
+  rabbitmq: # 💡 RabbitMQ 서비스 추가
+    image: rabbitmq:management
+    ports:
+      - "5672:5672" # AMQP 포트
+      - "15672:15672" # 관리자 UI 포트
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin # 💡 admin 계정으로 설정
+      - RABBITMQ_DEFAULT_PASS=admin # 💡 admin 계정으로 설정
+      - RABBITMQ_LOOPBACK_USERS=none # 💡 원격 접속 허용
 
 volumes:
   mysql_data:
