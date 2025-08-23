@@ -7,8 +7,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class CodeExecutionRequestDto {
-	private Long projectId;
+public class CodeExecutionApiRequest {
 	private String filePath;
 	private Long userId;
 	private String language;
