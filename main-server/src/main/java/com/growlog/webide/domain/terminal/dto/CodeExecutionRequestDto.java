@@ -11,4 +11,8 @@ public class CodeExecutionRequestDto {
 	private String filePath;
 	private Long userId;
 	private String language;
+
+	public void setProjectId(Long projectId) {
+		
+	}
 }
