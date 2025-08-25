@@ -13,6 +13,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,7 +23,12 @@ import lombok.NoArgsConstructor;
 @Getter
 @EntityListeners(AuditingEntityListener.class)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "images")
+@Table(name = "images", uniqueConstraints = {
+	@UniqueConstraint(
+		name = "uk_image_name_version",
+		columnNames = {"image_name", "version"}
+	)
+})
 public class Image {
 
 	@Id
