@@ -8,6 +8,5 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class TerminalCommandApiRequest {
-	private Long userId;
 	private String command;
 }

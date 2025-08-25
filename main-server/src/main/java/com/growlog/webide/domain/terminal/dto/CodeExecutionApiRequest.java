@@ -9,6 +9,5 @@ import lombok.Setter;
 @NoArgsConstructor
 public class CodeExecutionApiRequest {
 	private String filePath;
-	private Long userId;
 	private String language;
 }

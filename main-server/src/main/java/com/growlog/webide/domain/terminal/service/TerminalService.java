@@ -28,11 +28,11 @@ public class TerminalService {
 	@Value("${terminal-command.rabbitmq.routing.key}")
 	private String terminalCommandRoutingKey;
 
-	public void sendCodeExecutionRequest(Long projectId, CodeExecutionApiRequest apiRequest) {
+	public void sendCodeExecutionRequest(Long projectId, Long userId, CodeExecutionApiRequest apiRequest) {
 		// API 요청 DTO를 내부 메시징 DTO로 변환하고, projectId를 설정합니다.
 		CodeExecutionRequestDto messageDto = new CodeExecutionRequestDto();
 		messageDto.setProjectId(projectId);
-		messageDto.setUserId(apiRequest.getUserId());
+		messageDto.setUserId(userId); // 컨트롤러에서 전달받은 안전한 userId를 사용합니다.
 		messageDto.setLanguage(apiRequest.getLanguage());
 		messageDto.setFilePath(apiRequest.getFilePath());
 
@@ -41,11 +41,11 @@ public class TerminalService {
 			messageDto.getProjectId(), messageDto.getUserId(), messageDto.getLanguage(), messageDto.getFilePath());
 	}
 
-	public void sendTerminalCommand(Long projectId, TerminalCommandApiRequest apiRequest) {
+	public void sendTerminalCommand(Long projectId, Long userId, TerminalCommandApiRequest apiRequest) {
 		// API 요청 DTO를 내부 메시징 DTO로 변환하고, projectId를 설정합니다.
 		TerminalCommandRequestDto messageDto = new TerminalCommandRequestDto();
 		messageDto.setProjectId(projectId);
-		messageDto.setUserId(apiRequest.getUserId());
+		messageDto.setUserId(userId); // 컨트롤러에서 전달받은 안전한 userId를 사용합니다.
 		messageDto.setCommand(apiRequest.getCommand());
 
 		rabbitTemplate.convertAndSend(terminalCommandExchangeName, terminalCommandRoutingKey, messageDto);
