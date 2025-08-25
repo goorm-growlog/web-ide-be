@@ -3,3 +3,26 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE}
   config:
     import: optional:file:.env[.properties]
+
+server:
+  port: 8081
+
+# 코드 실행 관련 RabbitMQ 설정
+code-execution:
+  rabbitmq:
+    exchange:
+      name: code.execution.exchange
+    queue:
+      name: code.execution.queue
+    routing:
+      key: code.execution.routing-key
+
+# 터미널 명령어 관련 RabbitMQ 설정
+terminal-command:
+  rabbitmq:
+    exchange:
+      name: terminal.command.exchange
+    queue:
+      name: terminal.command.queue
+    routing:
+      key: terminal.command.routing-key
