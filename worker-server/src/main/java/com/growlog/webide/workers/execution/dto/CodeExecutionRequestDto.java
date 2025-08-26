@@ -8,7 +8,11 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 public class CodeExecutionRequestDto {
-	private String filePath;
+	private Long projectId;
 	private Long userId;
 	private String language;
+	private String filePath;
+	private String dockerImage;
+	private String buildCommand;
+	private String runCommand;
 }
