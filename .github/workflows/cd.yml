@@ -71,6 +71,9 @@ jobs:
           echo "REDIS_USERNAME=${{ secrets.REDIS_USERNAME }}" >> .env
           echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" >> .env
 
+          echo "KAKAO_REST_API_KEY=${{ secrets.KAKAO_REST_API_KEY }}" >> .env
+          echo "KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}" >> .env
+
       - name: 🔍 디버깅 .env 줄 번호 확인
         run: cat -n .env
 
@@ -103,7 +106,7 @@ jobs:
           docker build --no-cache -t $DOCKER_USERNAME/$BACKEND_IMAGE:latest \
           -f main-server/Dockerfile main-server                                   # 이미지 빌드
           docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest                      # Docker Hub로 푸시
-          
+
 
       # EC2에 SSH로 접속해서 컨테이너 배포
       - name: 🚀 EC2 배포 (컨테이너 교체)
