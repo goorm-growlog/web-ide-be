@@ -4,8 +4,11 @@ import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -19,7 +22,6 @@ import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
-import com.growlog.webide.global.docker.DockerCommandService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +48,6 @@ public class TreeService {
 		return buildTreeFromDb(projectId);
 	}
 
-
 	@Transactional
 	public void syncFromEfs(Long projectId) {
 		Project project = projectRepository.findById(projectId)
@@ -63,7 +64,7 @@ public class TreeService {
 				}
 			);
 
-		Path projectPath = FileSystems.getDefault().getPath(efsBasePath, String.valueOf(projectId) );
+		Path projectPath = FileSystems.getDefault().getPath(efsBasePath, String.valueOf(projectId));
 
 		if (!Files.exists(projectPath)) {
 			log.warn("프로젝트 경로가 EFS에 존재하지 않습니다. projectId: {}", projectId);
@@ -124,14 +125,17 @@ public class TreeService {
 			}
 		}
 
-
 		return root.getChildren();
 	}
 
 	private String getParentPath(String path) {
-		if (path == null || path.equals("/")) return null;
+		if (path == null || path.equals("/")) {
+			return null;
+		}
 		int lastSlash = path.lastIndexOf('/');
-		if (lastSlash == 0) return "/"; // 최상위 파일/폴더의 부모는 "/"
+		if (lastSlash == 0) {
+			return "/"; // 최상위 파일/폴더의 부모는 "/"
+		}
 		return path.substring(0, lastSlash);
 	}
 }
