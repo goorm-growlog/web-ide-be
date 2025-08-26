@@ -20,7 +20,6 @@ import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
 import com.growlog.webide.global.common.jwt.JwtTokenProvider;
 
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -89,7 +88,7 @@ public class AuthService {
 		refreshTokenRepository.deleteById(userId);
 	}
 
-	public RotatedTokens kakaoLogin(String code, HttpServletResponse response) {
+	public RotatedTokens kakaoLogin(String code) {
 		// 1. 토큰 발급 요청
 		KakaoDto.OAuthTokenDto oAuthToken = kakaoOAuth.requestAccessToken(code);
 

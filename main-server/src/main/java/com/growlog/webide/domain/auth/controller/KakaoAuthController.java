@@ -63,7 +63,7 @@ public class KakaoAuthController {
 	public ResponseEntity<ApiResponse<LoginResponseDto>> kakaoLogin(@RequestParam("code") String code,
 		HttpServletResponse response) throws IOException {
 		// 로그인 요청
-		RotatedTokens tokens = authService.kakaoLogin(code, response);
+		RotatedTokens tokens = authService.kakaoLogin(code);
 
 		ResponseCookie cookie = ResponseCookie.from("refresh", tokens.refreshToken())
 			.httpOnly(true)
