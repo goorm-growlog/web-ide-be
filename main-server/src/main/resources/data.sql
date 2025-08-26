@@ -30,8 +30,11 @@ VALUES ('test_user', 'test@test.com', '$2a$12$wYwlA/Kof2KH2sJrbNaLXe4qpaux.LidOE
 -- Images
 INSERT INTO images (image_id, image_name, version, docker_base_image, build_command, run_command, template_code,
                     created_at, updated_at)
-VALUES (1, 'java', '17', 'openjdk:17-jdk-slim', 'javac -cp src -d bin {filePath}', 'java -cp bin {className}',
-        'public class Main { public static void main(String[] args) { System.out.println("Hello!"); } }',
+VALUES (1, 'java', '17', 'openjdk:17-jdk-slim', 'javac -d bin {filePath}',
+        'java -cp bin {className}', -- 단일 Java 파일용
+        'public class Main { public static void main(String[] args) { System.out.println("Hello, Java!"); } }',
+        NOW(), NOW()),
+       (2, 'terminal', '1.0', 'ubuntu:22.04', null, '/bin/bash', null, -- 공식 이미지 사용
         NOW(), NOW());
 
 -- Projects
@@ -52,4 +55,3 @@ VALUES ((SELECT project_id FROM projects WHERE project_name = '프로젝트 A'),
 
        ((SELECT project_id FROM projects WHERE project_name = '프로젝트 B'),
         (SELECT user_id FROM users WHERE email = 'test1@example.com'), 'READ');
-
