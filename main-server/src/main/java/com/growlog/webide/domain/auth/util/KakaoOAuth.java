@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,10 +32,12 @@ public class KakaoOAuth {
 	private final ObjectMapper objectMapper;
 
 	public String responseUrl() {
-		String kakaoLoginUrl =
-			"https://kauth.kakao.com/oauth/authorize?client_id=" + restAPiKey + "&redirect_uri=" + redirectUri
-			+ "&response_type=code";
-		return kakaoLoginUrl;
+		return UriComponentsBuilder.fromHttpUrl("https://kauth.kakao.com/oauth/authorize")
+			.queryParam("client_id", restAPiKey)
+			.queryParam("redirect_uri", redirectUri) // 자동 인코딩
+			.queryParam("response_type", "code")
+			.build(true)
+			.toUriString();
 	}
 
 	// 토큰 발급 요청
