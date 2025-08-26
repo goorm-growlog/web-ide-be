@@ -45,11 +45,13 @@ public class TerminalService {
 		messageDto.setLanguage(apiRequest.getLanguage());
 		messageDto.setFilePath(apiRequest.getFilePath());
 		messageDto.setDockerImage(image.getDockerBaseImage()); // 2. 조회한 Docker 이미지 이름을 DTO에 추가
+		messageDto.setBuildCommand(image.getBuildCommand());   // 3. 빌드 명령어 추가
+		messageDto.setRunCommand(image.getRunCommand());       // 4. 실행 명령어 추가
 
 		rabbitTemplate.convertAndSend(codeExecutionExchangeName, codeExecutionRoutingKey, messageDto);
-		log.info("Code execution request sent: projectId={}, userId={}, language={}, image={}, filePath={}",
+		log.info("Code execution request sent: projectId={}, userId={}, image={}, build='{}', run='{}'",
 			messageDto.getProjectId(), messageDto.getUserId(), messageDto.getLanguage(), messageDto.getDockerImage(),
-			messageDto.getFilePath());
+			messageDto.getBuildCommand(), messageDto.getRunCommand());
 	}
 
 	public void sendTerminalCommand(Long projectId, Long userId, TerminalCommandApiRequest apiRequest) {
