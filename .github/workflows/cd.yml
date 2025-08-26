@@ -73,6 +73,7 @@ jobs:
 
           echo "KAKAO_REST_API_KEY=${{ secrets.KAKAO_REST_API_KEY }}" >> .env
           echo "KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}" >> .env
+          echo "KAKAO_REDIRECT_URI_LOCAL=${{ secrets.KAKAO_REDIRECT_URI_LOCAL }}" >> .env
 
       - name: 🔍 디버깅 .env 줄 번호 확인
         run: cat -n .env
