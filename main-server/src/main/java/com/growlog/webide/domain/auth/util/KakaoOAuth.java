@@ -1,5 +1,7 @@
 package com.growlog.webide.domain.auth.util;
 
+import java.nio.charset.StandardCharsets;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -55,16 +57,17 @@ public class KakaoOAuth {
 		HttpEntity<MultiValueMap<String, String>> kakaoTokenRequest = new HttpEntity<>(params, headers);
 
 		// KakaoAuthServer에 요청
-		ResponseEntity<String> response = restTemplate.exchange(
+		ResponseEntity<byte[]> response = restTemplate.exchange(
 			"https://kauth.kakao.com/oauth/token",
 			HttpMethod.POST,
 			kakaoTokenRequest,
-			String.class
+			byte[].class
 		);
+		String body = new String(response.getBody(), StandardCharsets.UTF_8);
 		// response -> DTO 클래스로 변환
 		KakaoDto.OAuthTokenDto oAuthToken = null;
 		try {
-			oAuthToken = objectMapper.readValue(response.getBody(), KakaoDto.OAuthTokenDto.class);
+			oAuthToken = objectMapper.readValue(body, KakaoDto.OAuthTokenDto.class);
 			log.info("oAuthToken : " + oAuthToken.getAccessToken());
 		} catch (JsonProcessingException e) {
 			// throw new CustomException(ErrorCode.PARSING_ERROR);
@@ -82,18 +85,20 @@ public class KakaoOAuth {
 
 		HttpEntity<MultiValueMap<String, String>> kakaoProfileRequest = new HttpEntity<>(headers);
 
-		ResponseEntity<String> response = restTemplate.exchange(
+		ResponseEntity<byte[]> response = restTemplate.exchange(
 			"https://kapi.kakao.com/v2/user/me",
 			HttpMethod.GET,
 			kakaoProfileRequest,
-			String.class
+			byte[].class
 		);
-		log.info(response.getBody());
+
+		String body = new String(response.getBody(), StandardCharsets.UTF_8);
+		log.info(body);
 
 		KakaoDto.KakaoProfile kakaoProfile = null;
 
 		try {
-			kakaoProfile = objectMapper.readValue(response.getBody(), KakaoDto.KakaoProfile.class);
+			kakaoProfile = objectMapper.readValue(body, KakaoDto.KakaoProfile.class);
 		} catch (JsonProcessingException e) {
 			// throw new CustomException(ErrorCode.PARSING_ERROR);
 			throw new RuntimeException("requestAccessToken JsonProcessingException", e);
