@@ -43,11 +43,11 @@ public class KakaoAuthController {
 			responseCode = "302",
 			description = "카카오 로그인 페이지로 리다이렉트",
 			headers = {
-				@Header(name = "Location",
+				@Header(
+					name = "Location",
 					description = "카카오 인증 페이지 URL",
 					schema = @Schema(type = "string"))
-			}
-		)
+			})
 	})
 	@GetMapping("/kakao")
 	public void kakaoAuthUrl(HttpServletResponse response) throws IOException {
