@@ -50,6 +50,6 @@ VALUES ((SELECT project_id FROM projects WHERE project_name = '프로젝트 A'),
        ((SELECT project_id FROM projects WHERE project_name = '프로젝트 B'),
         (SELECT user_id FROM users WHERE email = 'test2@example.com'), 'OWNER'),
 
-       ((SELECT project_id FROM projects WHERE project_name = '프로젝트 B'),
-        (SELECT user_id FROM users WHERE email = 'test1@example.com'), 'READ');
+       ((SELECT project_id FROM projects WHERE project_name = '프로젝트 A'),
+        (SELECT user_id FROM users WHERE email = 'test@test.com'), 'READ');
 

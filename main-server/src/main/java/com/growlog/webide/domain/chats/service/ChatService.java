@@ -1,8 +1,13 @@
 package com.growlog.webide.domain.chats.service;
 
+import java.time.Duration;
+
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.growlog.webide.domain.chats.dto.ChatType;
 import com.growlog.webide.domain.chats.dto.ChattingResponseDto;
 import com.growlog.webide.domain.chats.entity.Chats;
@@ -27,6 +32,8 @@ public class ChatService {
 	private final UserRepository userRepository;
 	private final ProjectRepository projectRepository;
 	private final ProjectMemberRepository projectMemberRepository;
+	private final ObjectMapper objectMapper;
+	private final RedisTemplate<String, Object> redisTemplate;
 
 	@Transactional(readOnly = true)
 	public ChattingResponseDto enter(Long projectId, Long userId) {
@@ -50,10 +57,24 @@ public class ChatService {
 		final Users user = getUsers(userId);
 		final Chats chat = new Chats(projectRef, user, content);
 
-		chatRepository.save(chat);
+		// chatRepository.save(chat);
+
+		ChattingResponseDto response = new ChattingResponseDto(
+			ChatType.TALK, projectId, userId, user.getName(), user.getProfileImageUrl(), content
+		);
+
+		String key = "chat:" + projectId;
+		String messageJson = null;
+		try {
+			messageJson = objectMapper.writeValueAsString(response);
+		} catch (JsonProcessingException e) {
+			throw new RuntimeException("Failed to serialize chat message to JSON", e);
+		}
+		redisTemplate.opsForList().rightPush(key, messageJson);
+		redisTemplate.expire(key, Duration.ofDays(1));
 
 		log.info("{} Talking Project {}", user.getName(), projectId);
-		return new ChattingResponseDto(ChatType.TALK, projectId, userId, user.getName(), null, content);
+		return response;
 	}
 
 	@Transactional(readOnly = true)
