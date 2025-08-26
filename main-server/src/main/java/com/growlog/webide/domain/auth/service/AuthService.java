@@ -1,18 +1,28 @@
 package com.growlog.webide.domain.auth.service;
 
+import java.time.LocalDateTime;
+import java.util.UUID;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.growlog.webide.domain.auth.dto.KakaoDto;
 import com.growlog.webide.domain.auth.dto.LoginRequestDto;
 import com.growlog.webide.domain.auth.dto.RotatedTokens;
 import com.growlog.webide.domain.auth.entity.RefreshToken;
+import com.growlog.webide.domain.auth.repository.EmailVerificationRepository;
 import com.growlog.webide.domain.auth.repository.RefreshTokenRepository;
+import com.growlog.webide.domain.users.dto.UserRegistrationRequestDto;
+import com.growlog.webide.domain.users.entity.Provider;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
+import com.growlog.webide.domain.users.service.UserService;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
 import com.growlog.webide.global.common.jwt.JwtTokenProvider;
+import com.growlog.webide.global.util.KakaoOAuth;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -23,6 +33,10 @@ public class AuthService {
 	private final JwtTokenProvider jwtTokenProvider;
 	private final PasswordEncoder passwordEncoder;
 	private final RefreshTokenRepository refreshTokenRepository;
+	private final KakaoOAuth kakaoOAuth;
+	private final HttpServletResponse httpServletResponse;
+	private final UserService userService;
+	private final EmailVerificationRepository emailVerificationRepository;
 	//private final UserLoginHistoryRepository userLoginHistoryRepository;
 
 	// 로그인 + AccessToken + RefreshToken 발급
@@ -76,5 +90,44 @@ public class AuthService {
 
 	public void logout(Long userId) {
 		refreshTokenRepository.deleteById(userId);
+	}
+
+	public RotatedTokens kakaoLogin(String code, HttpServletResponse response) {
+		// 1. 토큰 발급 요청
+		KakaoDto.oAuthTokenDto oAuthToken = kakaoOAuth.requestAccessToken(code);
+
+		// 2. 토큰으로 사용자 정보 요청
+		KakaoDto.KakaoProfile profile = kakaoOAuth.requestProfile(oAuthToken);
+
+		// 3. 기존 회원이면 로그인, 기존 회원이 아니면 회원가입
+		String email = profile.getKakao_account().getEmail();
+		Users user = userRepository.findByEmail(email)
+			.orElseGet(() -> createNewUser(profile));
+
+		String accessToken = jwtTokenProvider.createToken(user.getUserId());
+		String refreshToken = jwtTokenProvider.createRefreshToken(user.getUserId());
+
+		refreshTokenRepository.save(new RefreshToken(user.getUserId(), refreshToken));
+
+		return new RotatedTokens(user.getUserId(), user.getName(), accessToken, refreshToken);
+	}
+
+	// 카카오 계정으로 회원가입
+	public Users createNewUser(KakaoDto.KakaoProfile profile) {
+		UserRegistrationRequestDto request = new UserRegistrationRequestDto();
+		request.setEmail(profile.getKakao_account().getEmail());
+		request.setUsername(profile.getKakao_account().getProfile().getNickname());
+		request.setPassword("kakao" + profile.getId() + "_" + UUID.randomUUID().toString());
+
+		Users user = Users.builder()
+			.name(request.getUsername())
+			.email(request.getEmail())
+			.password(passwordEncoder.encode(request.getPassword())) // 비밀번호 암호화
+			.createdAt(LocalDateTime.now())
+			.provider(Provider.KAKAO)
+			.build();
+
+		// TODO: 프로필 이미지 업로드
+		return userRepository.save(user);
 	}
 }

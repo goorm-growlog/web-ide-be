@@ -14,6 +14,7 @@ public enum ErrorCode {
 	INTERNAL_SERVER_ERROR("INTERNAL_SERVER_ERROR", "An internal server error has occurred."),
 	REFRESH_TOKEN_NOT_FOUND("REFRESH_TOKEN_NOT_FOUND", "Refresh token not found."),
 	REFRESH_TOKEN_REUSED("REFRESH_TOKEN_REUSED", "Refresh token has been reused."),
+	PARSING_ERROR("PARSING_ERROR", "Parsing error."),
 
 	// Sign in, Log in 관련
 	LOGIN_FAILED("LOGIN_FAILED", "Incorrect username or password."),
