@@ -55,9 +55,10 @@ public class KakaoAuthController {
 	}
 
 	@Operation(summary = "카카오 로그인",
-		description = "카카오 로그인 및 필수 제공 동의 후 인가 코드 발급, 토큰 발급, 로그인/가입 처리\n"
-					  + "Swagger가 아닌 아래 카카오 로그인 화면에서 테스트 가능합니다.\s"
-					  + "[브라우저에서 바로 열기](/auth/kakao)")
+		description = """
+			카카오 로그인 및 필수 제공 동의 후 인가 코드 발급, 토큰 발급, 로그인/가입 처리\n
+			Swagger가 아닌 아래 카카오 로그인 화면에서 테스트 가능합니다.\n
+			[브라우저에서 바로 열기](/auth/kakao)""")
 	@GetMapping("/login/kakao")
 	public ResponseEntity<ApiResponse<LoginResponseDto>> kakaoLogin(@RequestParam("code") String code,
 		HttpServletResponse response) throws IOException {
