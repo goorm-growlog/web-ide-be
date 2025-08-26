@@ -22,9 +22,11 @@ import com.growlog.webide.global.common.jwt.JwtTokenProvider;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
 	private final UserRepository userRepository;
@@ -119,11 +121,10 @@ public class AuthService {
 			.email(request.getEmail())
 			.password(passwordEncoder.encode(request.getPassword())) // 비밀번호 암호화
 			.createdAt(LocalDateTime.now())
+			.profileImageUrl(profile.getProperties().getThumbnail_image())
 			.provider(Provider.KAKAO)
 			.build();
 
-		userRepository.save(user);
-		user.setProfileImageUrl(profile.getProperties().getProfile_image());
-		return user;
+		return userRepository.save(user);
 	}
 }
