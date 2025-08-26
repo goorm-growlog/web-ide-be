@@ -7,6 +7,7 @@ services:
     volumes:
       - .:/app
       - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/growlog-workspaces:/tmp/growlog-workspaces
     env_file:
       - .env
 
