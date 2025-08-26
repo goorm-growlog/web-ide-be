@@ -127,7 +127,8 @@ public class AuthService {
 			.provider(Provider.KAKAO)
 			.build();
 
-		// TODO: 프로필 이미지 업로드
-		return userRepository.save(user);
+		userRepository.save(user);
+		user.setProfileImageUrl(profile.getKakao_account().getProfile().getThumbnail_image_url());
+		return user;
 	}
 }
