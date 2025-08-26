@@ -49,22 +49,8 @@ public class TreeWebSocketController {
 
 		log.info("[WS] 트리 요청 userId={}, projectId={}", userId, projectId);
 
-		// 📦 인스턴스 조회
-		ActiveInstance inst = activeInstanceRepository
-			.findByUser_UserIdAndProject_Id(userId, projectId)
-			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
-
-		String containerId = inst.getContainerId();
-
-		// ✅ 최초 1회만 동기화 수행 (DB에 아무 파일도 없다면)
-		boolean isEmpty = fileMetaRepository.findAllByProjectIdAndDeletedFalse(projectId).isEmpty();
-		if (isEmpty) {
-			log.info("[WS] 최초 트리 요청 - 컨테이너에서 파일 구조 동기화 시작");
-			treeService.syncFromContainer(projectId, containerId);
-		}
-
 		// 🌳 트리 구성
-		List<TreeNodeDto> tree = treeService.buildTreeFromDb(projectId);
+		List<TreeNodeDto> tree = treeService.getInitialTree(projectId);
 
 		WebSocketMessage msg = new WebSocketMessage("tree:init", tree);
 		messagingTemplate.convertAndSend(
