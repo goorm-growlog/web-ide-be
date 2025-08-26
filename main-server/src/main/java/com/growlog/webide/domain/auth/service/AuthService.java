@@ -10,17 +10,15 @@ import com.growlog.webide.domain.auth.dto.KakaoDto;
 import com.growlog.webide.domain.auth.dto.LoginRequestDto;
 import com.growlog.webide.domain.auth.dto.RotatedTokens;
 import com.growlog.webide.domain.auth.entity.RefreshToken;
-import com.growlog.webide.domain.auth.repository.EmailVerificationRepository;
 import com.growlog.webide.domain.auth.repository.RefreshTokenRepository;
+import com.growlog.webide.domain.auth.util.KakaoOAuth;
 import com.growlog.webide.domain.users.dto.UserRegistrationRequestDto;
 import com.growlog.webide.domain.users.entity.Provider;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
-import com.growlog.webide.domain.users.service.UserService;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
 import com.growlog.webide.global.common.jwt.JwtTokenProvider;
-import com.growlog.webide.global.util.KakaoOAuth;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -34,9 +32,6 @@ public class AuthService {
 	private final PasswordEncoder passwordEncoder;
 	private final RefreshTokenRepository refreshTokenRepository;
 	private final KakaoOAuth kakaoOAuth;
-	private final HttpServletResponse httpServletResponse;
-	private final UserService userService;
-	private final EmailVerificationRepository emailVerificationRepository;
 	//private final UserLoginHistoryRepository userLoginHistoryRepository;
 
 	// 로그인 + AccessToken + RefreshToken 발급
@@ -128,7 +123,7 @@ public class AuthService {
 			.build();
 
 		userRepository.save(user);
-		user.setProfileImageUrl(profile.getKakao_account().getProfile().getThumbnail_image_url());
+		user.setProfileImageUrl(profile.getProperties().getProfile_image());
 		return user;
 	}
 }

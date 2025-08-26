@@ -1,4 +1,4 @@
-package com.growlog.webide.global.util;
+package com.growlog.webide.domain.auth.util;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;

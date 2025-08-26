@@ -24,6 +24,8 @@ public class KakaoDto {
 		@Getter
 		public static class Properties {
 			private String nickname;
+			private String profile_image;
+			private String thumbnail_image;
 		}
 
 		@Getter
@@ -42,6 +44,8 @@ public class KakaoDto {
 				private String nickname;             // 닉네임 (이름 X)
 				private Boolean is_default_nickname; // 닉네임이 기본 닉네임인지 여부
 				private String thumbnail_image_url;  // 프로필 미리보기 이미지 URL (110px * 110px 또는 100px * 100px)
+				private String profile_image_url;
+				private Boolean is_default_image;
 			}
 		}
 	}

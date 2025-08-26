@@ -12,8 +12,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.growlog.webide.domain.auth.dto.LoginResponseDto;
 import com.growlog.webide.domain.auth.dto.RotatedTokens;
 import com.growlog.webide.domain.auth.service.AuthService;
+import com.growlog.webide.domain.auth.util.KakaoOAuth;
 import com.growlog.webide.global.common.ApiResponse;
-import com.growlog.webide.global.util.KakaoOAuth;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.headers.Header;
