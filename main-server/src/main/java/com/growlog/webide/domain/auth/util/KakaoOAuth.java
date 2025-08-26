@@ -14,16 +14,21 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.growlog.webide.domain.auth.dto.KakaoDto;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class KakaoOAuth {
 
 	@Value("${spring.kakao.oauth.rest-api-key}")
 	private String restAPiKey;
 	@Value("${spring.kakao.oauth.redirect-uri}")
 	private String redirectUri;
+
+	private final RestTemplate restTemplate;
+	private final ObjectMapper objectMapper;
 
 	public String responseUrl() {
 		String kakaoLoginUrl =
@@ -34,7 +39,6 @@ public class KakaoOAuth {
 
 	// 토큰 발급 요청
 	public KakaoDto.OAuthTokenDto requestAccessToken(String code) {
-		RestTemplate restTemplate = new RestTemplate();
 		HttpHeaders headers = new HttpHeaders();
 		headers.add("Content-Type", "application/x-www-form-urlencoded;charset=utf-8");
 
@@ -55,7 +59,6 @@ public class KakaoOAuth {
 			String.class
 		);
 		// response -> DTO 클래스로 변환
-		ObjectMapper objectMapper = new ObjectMapper();
 		KakaoDto.OAuthTokenDto oAuthToken = null;
 		try {
 			oAuthToken = objectMapper.readValue(response.getBody(), KakaoDto.OAuthTokenDto.class);
@@ -69,7 +72,6 @@ public class KakaoOAuth {
 
 	// 사용자 정보 조회 - 요청: 액세스 토큰 방식
 	public KakaoDto.KakaoProfile requestProfile(KakaoDto.OAuthTokenDto token) {
-		RestTemplate restTemplate = new RestTemplate();
 		HttpHeaders headers = new HttpHeaders();
 
 		headers.add("Authorization", "Bearer " + token.getAccessToken());
@@ -85,7 +87,6 @@ public class KakaoOAuth {
 		);
 		log.info(response.getBody());
 
-		ObjectMapper objectMapper = new ObjectMapper();
 		KakaoDto.KakaoProfile kakaoProfile = null;
 
 		try {
