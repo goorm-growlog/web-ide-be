@@ -26,13 +26,14 @@ public class KakaoOAuth {
 	private String redirectUri;
 
 	public String responseUrl() {
-		String kakaoLoginUrl = "https://kauth.kakao.com/oauth/authorize?client_id=" + restAPiKey
-							   + "&redirect_uri=" + redirectUri + "&response_type=code";
+		String kakaoLoginUrl =
+			"https://kauth.kakao.com/oauth/authorize?client_id=" + restAPiKey + "&redirect_uri=" + redirectUri
+			+ "&response_type=code";
 		return kakaoLoginUrl;
 	}
 
 	// 토큰 발급 요청
-	public KakaoDto.oAuthTokenDto requestAccessToken(String code) {
+	public KakaoDto.OAuthTokenDto requestAccessToken(String code) {
 		RestTemplate restTemplate = new RestTemplate();
 		HttpHeaders headers = new HttpHeaders();
 		headers.add("Content-Type", "application/x-www-form-urlencoded;charset=utf-8");
@@ -55,10 +56,10 @@ public class KakaoOAuth {
 		);
 		// response -> DTO 클래스로 변환
 		ObjectMapper objectMapper = new ObjectMapper();
-		KakaoDto.oAuthTokenDto oAuthToken = null;
+		KakaoDto.OAuthTokenDto oAuthToken = null;
 		try {
-			oAuthToken = objectMapper.readValue(response.getBody(), KakaoDto.oAuthTokenDto.class);
-			log.info("oAuthToken : " + oAuthToken.getAccess_token());
+			oAuthToken = objectMapper.readValue(response.getBody(), KakaoDto.OAuthTokenDto.class);
+			log.info("oAuthToken : " + oAuthToken.getAccessToken());
 		} catch (JsonProcessingException e) {
 			// throw new CustomException(ErrorCode.PARSING_ERROR);
 			throw new RuntimeException("requestAccessToken JsonProcessingException", e);
@@ -67,11 +68,11 @@ public class KakaoOAuth {
 	}
 
 	// 사용자 정보 조회 - 요청: 액세스 토큰 방식
-	public KakaoDto.KakaoProfile requestProfile(KakaoDto.oAuthTokenDto token) {
+	public KakaoDto.KakaoProfile requestProfile(KakaoDto.OAuthTokenDto token) {
 		RestTemplate restTemplate = new RestTemplate();
 		HttpHeaders headers = new HttpHeaders();
 
-		headers.add("Authorization", "Bearer " + token.getAccess_token());
+		headers.add("Authorization", "Bearer " + token.getAccessToken());
 		headers.add("Content-Type", "application/json;charset=utf-8");
 
 		HttpEntity<MultiValueMap<String, String>> kakaoProfileRequest = new HttpEntity<>(headers);

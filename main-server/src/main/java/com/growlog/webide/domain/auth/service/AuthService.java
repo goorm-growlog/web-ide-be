@@ -91,13 +91,13 @@ public class AuthService {
 
 	public RotatedTokens kakaoLogin(String code, HttpServletResponse response) {
 		// 1. 토큰 발급 요청
-		KakaoDto.oAuthTokenDto oAuthToken = kakaoOAuth.requestAccessToken(code);
+		KakaoDto.OAuthTokenDto oAuthToken = kakaoOAuth.requestAccessToken(code);
 
 		// 2. 토큰으로 사용자 정보 요청
 		KakaoDto.KakaoProfile profile = kakaoOAuth.requestProfile(oAuthToken);
 
 		// 3. 기존 회원이면 로그인, 기존 회원이 아니면 회원가입
-		String email = profile.getKakao_account().getEmail();
+		String email = profile.getKakaoAccount().getEmail();
 		Users user = userRepository.findByEmail(email)
 			.orElseGet(() -> createNewUser(profile));
 
@@ -112,8 +112,8 @@ public class AuthService {
 	// 카카오 계정으로 회원가입
 	public Users createNewUser(KakaoDto.KakaoProfile profile) {
 		UserRegistrationRequestDto request = new UserRegistrationRequestDto();
-		request.setEmail(profile.getKakao_account().getEmail());
-		request.setUsername(profile.getKakao_account().getProfile().getNickname());
+		request.setEmail(profile.getKakaoAccount().getEmail());
+		request.setUsername(profile.getKakaoAccount().getProfile().getNickname());
 		request.setPassword("kakao" + profile.getId() + "_" + UUID.randomUUID().toString());
 
 		Users user = Users.builder()
@@ -121,7 +121,7 @@ public class AuthService {
 			.email(request.getEmail())
 			.password(passwordEncoder.encode(request.getPassword())) // 비밀번호 암호화
 			.createdAt(LocalDateTime.now())
-			.profileImageUrl(profile.getProperties().getThumbnail_image())
+			.profileImageUrl(profile.getProperties().getThumbnailImage())
 			.provider(Provider.KAKAO)
 			.build();
 
