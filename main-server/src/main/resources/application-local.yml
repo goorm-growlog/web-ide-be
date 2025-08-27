@@ -36,9 +36,19 @@ spring:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
 
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: admin
+    password: admin
+
 email:
   from: ${MAIL_FROM} #커스텀 클래스에서 사용하는 값
 
 upload:
   profile:
     local-dir: uploads/profiles/
+
+efs:
+  base-path: ./efs/projects
+  templates-path: ./efs/templates
