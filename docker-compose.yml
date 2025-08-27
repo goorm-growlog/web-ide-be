@@ -45,8 +45,8 @@ services:
       - "5672:5672" # AMQP 포트
       - "15672:15672" # 관리자 UI 포트
     environment:
-      - RABBITMQ_DEFAULT_USER=admin # 💡 admin 계정으로 설정
-      - RABBITMQ_DEFAULT_PASS=admin # 💡 admin 계정으로 설정
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
       - RABBITMQ_LOOPBACK_USERS=none # 💡 원격 접속 허용
 
 volumes:
