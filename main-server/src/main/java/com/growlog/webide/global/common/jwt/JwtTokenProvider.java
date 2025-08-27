@@ -38,7 +38,7 @@ public class JwtTokenProvider {
 		final RefreshTokenRepository refreshTokenRepository) {
 		this.secretKey = Base64.getEncoder().encodeToString(secretKey.getBytes());
 		this.expiration = expiration;
-		this.refreshSecretKey = refreshSecretKey;
+		this.refreshSecretKey = Base64.getEncoder().encodeToString(refreshSecretKey.getBytes());
 		this.refreshExpiration = refreshExpiration;
 		this.customUserDetailsService = customUserDetailsService;
 		this.refreshTokenRepository = refreshTokenRepository;
