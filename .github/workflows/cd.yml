@@ -103,20 +103,7 @@ jobs:
           docker build --no-cache -t $DOCKER_USERNAME/$BACKEND_IMAGE:latest \
           -f main-server/Dockerfile main-server                                   # 이미지 빌드
           docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest                      # Docker Hub로 푸시
-
-
-      # 모든 템플릿 이미지 빌드 & Push
-      - name: 🧩 템플릿 이미지 빌드 및 Docker Hub Push
-        run: |
-          for dir in infra/templates/*; do
-            name=$(basename "$dir")             # ex: java-17
-            lang="${name%%-*}"                  # java
-            version="${name##*-}"               # 17
-            tag="$DOCKER_USERNAME/${lang}-template:${version}"
-            echo "👉 Building and pushing $tag"
-            docker build -t "$tag" "$dir"
-            docker push "$tag"
-          done
+          
 
       # EC2에 SSH로 접속해서 컨테이너 배포
       - name: 🚀 EC2 배포 (컨테이너 교체)

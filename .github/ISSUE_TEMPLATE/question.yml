@@ -1,9 +1,9 @@
 name: ❓ 질문 (Question)
 description: 프로젝트와 관련된 질문을 남깁니다.
 title: "[QUESTION] "
-labels: ["question"]
-projects: ["IDE Project"]
-assignees: []
+labels: [ "question" ]
+projects: [ "IDE Project" ]
+assignees: [ ]
 
 body:
   - type: markdown

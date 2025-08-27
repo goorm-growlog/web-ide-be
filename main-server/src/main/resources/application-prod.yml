@@ -38,3 +38,7 @@ spring:
         bucket: ${S3_BUCKET_NAME}   # 버킷 이름
       stack:
         auto: false
+
+efs:
+  base-path: /mnt/efs/projects
+  templates-path: /mnt/efs/templates

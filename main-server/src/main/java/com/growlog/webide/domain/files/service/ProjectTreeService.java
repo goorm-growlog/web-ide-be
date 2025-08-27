@@ -32,7 +32,7 @@ public class ProjectTreeService {
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
 
-		String basePath = Paths.get(volumeHostPath, project.getStorageVolumeName(), "_data").toString();
+		String basePath = Paths.get(volumeHostPath, "_data").toString();
 		File baseDir = new File(basePath);
 
 		return null;
