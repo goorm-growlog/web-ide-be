@@ -11,6 +11,7 @@ import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.ExecCreateCmdResponse;
 import com.github.dockerjava.api.exception.NotFoundException;
+import com.github.dockerjava.api.exception.NotModifiedException;
 import com.github.dockerjava.api.model.Bind;
 import com.github.dockerjava.api.model.Frame;
 import com.github.dockerjava.api.model.HostConfig;
@@ -173,7 +174,11 @@ public class ContainerExecutionService {
 
 	private void cleanupContainer(String containerId) {
 		log.info("Stopping and removing container: {}", containerId);
-		dockerClient.stopContainerCmd(containerId).exec();
+		try {
+			dockerClient.stopContainerCmd(containerId).exec();
+		} catch (NotModifiedException e) {
+			log.warn("Container {} was already stopped.", containerId);
+		}
 		dockerClient.removeContainerCmd(containerId).exec();
 	}
 
