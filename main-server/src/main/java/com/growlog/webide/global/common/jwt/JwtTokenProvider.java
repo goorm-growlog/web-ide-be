@@ -72,12 +72,22 @@ public class JwtTokenProvider {
 		return refreshToken;
 	}
 
-	// TODO: validateRefreshToken 분리 (secretKey 아닌 refreshSecretKey)
 	public boolean validateToken(String token) {
 		try {
 			Jwts.parser()
 				.setSigningKey(secretKey)
 				.parseClaimsJws(token);
+			return true;
+		} catch (JwtException | IllegalArgumentException e) {
+			return false;
+		}
+	}
+
+	public boolean validateRefreshToken(String refreshToken) {
+		try {
+			Jwts.parser()
+				.setSigningKey(refreshSecretKey)
+				.parseClaimsJws(refreshToken);
 			return true;
 		} catch (JwtException | IllegalArgumentException e) {
 			return false;

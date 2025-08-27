@@ -52,8 +52,7 @@ public class AuthService {
 
 	// RTR + 재사용 탐지
 	public RotatedTokens refresh(String presentedRt) {
-		// TODO: validateToken -> validateRefreshToken
-		if (!jwtTokenProvider.validateToken(presentedRt)) {
+		if (!jwtTokenProvider.validateRefreshToken(presentedRt)) {
 			throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
 		}
 
