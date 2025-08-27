@@ -71,7 +71,7 @@ public class ChatService {
 			throw new RuntimeException("Failed to serialize chat message to JSON", e);
 		}
 		redisTemplate.opsForList().rightPush(key, messageJson);
-		redisTemplate.expire(key, Duration.ofDays(1));
+		redisTemplate.expire(key, Duration.ofDays(10));
 
 		log.info("{} Talking Project {}", user.getName(), projectId);
 		return response;
