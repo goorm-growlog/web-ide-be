@@ -12,12 +12,7 @@ import org.springframework.stereotype.Controller;
 
 import com.growlog.webide.domain.files.dto.tree.TreeNodeDto;
 import com.growlog.webide.domain.files.dto.tree.WebSocketMessage;
-import com.growlog.webide.domain.files.repository.FileMetaRepository;
 import com.growlog.webide.domain.files.service.TreeService;
-import com.growlog.webide.domain.projects.entity.ActiveInstance;
-import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
-import com.growlog.webide.global.common.exception.CustomException;
-import com.growlog.webide.global.common.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,8 +24,6 @@ public class TreeWebSocketController {
 
 	private final TreeService treeService;
 	private final SimpMessagingTemplate messagingTemplate;
-	private final ActiveInstanceRepository activeInstanceRepository;
-	private final FileMetaRepository fileMetaRepository;
 
 	@MessageMapping("/projects/{projectId}/tree/init")
 	public void sendInitialTree(
