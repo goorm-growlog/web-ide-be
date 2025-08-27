@@ -1,6 +1,6 @@
 package com.growlog.webide.config;
 
-import static org.springframework.security.config.Customizer.*;
+import static org.springframework.security.config.Customizer.withDefaults;
 
 import java.util.List;
 
@@ -77,6 +77,7 @@ public class SecurityConfig {
 					"/auth/email/**", // 인증 요청
 					"/auth/reset-password",
 					"/auth/login",
+					"/auth/refresh",
 					"/users/signup"
 				).permitAll()
 				// 프로젝트 관련 경로는 인증 필요
