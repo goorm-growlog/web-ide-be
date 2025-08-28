@@ -1,5 +1,6 @@
 package com.growlog.webide.domain.files.controller;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.springframework.messaging.Message;
@@ -43,9 +44,10 @@ public class TreeWebSocketController {
 		log.info("[WS] 트리 요청 userId={}, projectId={}", userId, projectId);
 
 		// 🌳 트리 구성
-		List<TreeNodeDto> tree = treeService.getInitialTree(projectId);
+		TreeNodeDto rootNode = treeService.getInitialTree(projectId);
+		List<TreeNodeDto> payload = Collections.singletonList(rootNode);
 
-		WebSocketMessage msg = new WebSocketMessage("tree:init", tree);
+		WebSocketMessage msg = new WebSocketMessage("tree:init", payload);
 		messagingTemplate.convertAndSend(
 			"/topic/projects/" + projectId + "/tree",
 			msg

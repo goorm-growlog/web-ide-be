@@ -39,7 +39,7 @@ public class TreeService {
 	private final ProjectRepository projectRepository;
 
 	@Transactional
-	public List<TreeNodeDto> getInitialTree(Long projectId) {
+	public TreeNodeDto getInitialTree(Long projectId) {
 		boolean isEmpty = fileMetaRepository.findAllByProjectIdAndDeletedFalse(projectId).isEmpty();
 		if (isEmpty) {
 			log.info("[TreeService] DB가 비어있어 EFS와 동기화를 시작합니다.");
@@ -89,11 +89,11 @@ public class TreeService {
 	 * DB 기반으로 트리 빌드
 	 */
 	@Transactional(readOnly = true)
-	public List<TreeNodeDto> buildTreeFromDb(Long projectId) {
+	public TreeNodeDto buildTreeFromDb(Long projectId) {
 		List<FileMeta> files = fileMetaRepository.findAllByProjectIdAndDeletedFalse(projectId);
 
 		if (files.isEmpty()) {
-			return Collections.emptyList();
+			throw new IllegalStateException("데이터 오류: projectId " + projectId + "에 해당하는 파일 정보가 없습니다.");
 		}
 
 		Map<String, TreeNodeDto> nodes = new HashMap<>();
@@ -125,7 +125,7 @@ public class TreeService {
 			}
 		}
 
-		return root.getChildren();
+		return root;
 	}
 
 	private String getParentPath(String path) {

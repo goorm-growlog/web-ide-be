@@ -3,10 +3,13 @@ package com.growlog.webide.domain.files.dto.tree;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import lombok.Getter;
 
 @Getter
 public class TreeNodeDto {
+	@JsonIgnore
 	private Long id;
 	private String path;
 	private String type;
