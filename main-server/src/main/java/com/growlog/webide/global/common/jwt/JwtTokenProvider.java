@@ -85,9 +85,10 @@ public class JwtTokenProvider {
 
 	public boolean validateRefreshToken(String refreshToken) {
 		try {
-			Jwts.parser()
+			Jwts.parserBuilder()
 				.setSigningKey(refreshSecretKey)
-				.parseClaimsJws(refreshToken);
+				.build()
+				.parseClaimsJws(refreshToken.trim());
 			return true;
 		} catch (JwtException | IllegalArgumentException e) {
 			return false;
@@ -99,6 +100,16 @@ public class JwtTokenProvider {
 			Jwts.parser()
 				.setSigningKey(secretKey)
 				.parseClaimsJws(token)
+				.getBody()
+				.getSubject()
+		);
+	}
+
+	public Long getUserIdFromRefreshToken(String refreshToken) {
+		return Long.parseLong(
+			Jwts.parser()
+				.setSigningKey(refreshSecretKey)
+				.parseClaimsJws(refreshToken)
 				.getBody()
 				.getSubject()
 		);
