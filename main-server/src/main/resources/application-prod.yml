@@ -39,6 +39,12 @@ spring:
       stack:
         auto: false
 
+  kakao:
+    oauth:
+      rest-api-key: ${KAKAO_REST_API_KEY}
+      redirect-uri: ${KAKAO_REDIRECT_URI}
+
+
 efs:
   base-path: /mnt/efs/projects
   templates-path: /mnt/efs/templates

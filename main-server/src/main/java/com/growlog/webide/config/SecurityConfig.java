@@ -76,9 +76,11 @@ public class SecurityConfig {
 				.requestMatchers(
 					"/auth/email/**", // 인증 요청
 					"/auth/reset-password",
-					"/auth/login",
 					"/auth/refresh",
-					"/users/signup"
+					"/users/signup",
+					"/auth/login/**",
+					"/users/signup",
+					"/auth/kakao"
 				).permitAll()
 				// 프로젝트 관련 경로는 인증 필요
 				.requestMatchers("/projects/**").authenticated()
