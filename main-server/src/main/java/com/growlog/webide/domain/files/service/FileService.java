@@ -75,6 +75,8 @@ public class FileService {
 
 	@Transactional
 	public void createFileOrDirectory(Long projectId, CreateFileRequest request, Long userId) {
+		log.info("====== CREATE FILE OR DIRECTORY CALLED FOR: {} ======", request.getPath());
+
 		checkRequest(request);
 		permissionService.checkWriteAccess(userId, projectId);
 		checkAlreadyExistsFile(projectId, request.getPath());
