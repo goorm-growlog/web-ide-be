@@ -62,11 +62,11 @@ public class AuthService {
 
 	// RTR + 재사용 탐지
 	public RotatedTokens refresh(String presentedRt) {
-		if (!jwtTokenProvider.validateToken(presentedRt)) {
+		if (!jwtTokenProvider.validateRefreshToken(presentedRt)) {
 			throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
 		}
 
-		Long userId = jwtTokenProvider.getUserId(presentedRt);
+		Long userId = jwtTokenProvider.getUserIdFromRefreshToken(presentedRt);
 
 		RefreshToken savedRt = refreshTokenRepository.findById(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.REFRESH_TOKEN_NOT_FOUND));

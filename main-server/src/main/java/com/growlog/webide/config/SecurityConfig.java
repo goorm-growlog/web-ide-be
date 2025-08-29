@@ -76,6 +76,8 @@ public class SecurityConfig {
 				.requestMatchers(
 					"/auth/email/**", // 인증 요청
 					"/auth/reset-password",
+					"/auth/refresh",
+					"/users/signup",
 					"/auth/login/**",
 					"/users/signup",
 					"/auth/kakao"
