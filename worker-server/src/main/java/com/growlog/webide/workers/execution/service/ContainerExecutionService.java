@@ -163,6 +163,7 @@ public class ContainerExecutionService {
 			.withAttachStdout(true)
 			.withAttachStderr(true)
 			.withCmd(command)
+			.withWorkingDir(containerWorkspacePath) // <-- 이 줄을 추가하여 명령어 실행 위치를 지정합니다.
 			.exec();
 
 		LogContainerCallback callback = new LogContainerCallback(containerId, "[Container {}] {}");
