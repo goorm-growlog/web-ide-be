@@ -1,6 +1,7 @@
 package com.growlog.webide.workers.execution.service;
 
 import java.io.Closeable;
+import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -120,23 +121,40 @@ public class ContainerExecutionService {
 	}
 
 	private HostConfig createHostConfig(Long projectId) {
-		String hostProjectPath = String.format("%s/%d", hostWorkspaceBasePath, projectId);
+		// [수정] String.format 대신 Path.of를 사용하여 OS에 독립적인 경로 생성
+		String hostProjectPath = Path.of(hostWorkspaceBasePath, String.valueOf(projectId)).toString();
 		return new HostConfig().withBinds(new Bind(hostProjectPath, new Volume(containerWorkspacePath)));
 	}
 
 	private String buildFinalCommand(CodeExecutionRequestDto request) {
 		String buildCmd = request.getBuildCommand();
 		String runCmd = request.getRunCommand();
-		String filePath = request.getFilePath();
+		// 윈도우의 역슬래시(\)를 슬래시(/)로 정규화하여 일관성 유지
+		String normalizedFilePath = request.getFilePath().replace('\\', '/');
 
 		if (buildCmd != null && !buildCmd.isBlank()) {
-			buildCmd = buildCmd.replace("{filePath}", filePath);
-			String className = filePath.substring(filePath.lastIndexOf('/') + 1).replace(".java", "");
-			runCmd = runCmd.replace("{className}", className);
+			buildCmd = buildCmd.replace("{filePath}", normalizedFilePath);
+			// [개선] 패키지 구조를 고려하여 FQCN(정규화된 클래스 이름)을 추출
+			String fqcn = getFullyQualifiedClassName(normalizedFilePath);
+			runCmd = runCmd.replace("{className}", fqcn);
 			return buildCmd + " && " + runCmd;
 		} else {
-			return runCmd.replace("{filePath}", filePath);
+			return runCmd.replace("{filePath}", normalizedFilePath);
 		}
+	}
+
+	// 'src/'를 기준으로 파일 경로에서 정규화된 클래스 이름을 추출
+	private String getFullyQualifiedClassName(String normalizedPath) {
+		if (normalizedPath.startsWith("src/")) {
+			return normalizedPath.substring(4) // "src/" 제거
+				.replace(".java", "") // ".java" 확장자 제거
+				.replace('/', '.'); // 디렉터리 구분자를 패키지 구분자로 변경
+		}
+		// 'src/'로 시작하지 않는 예외적인 경우, 파일 이름만 추출
+		if (normalizedPath.contains("/")) {
+			return normalizedPath.substring(normalizedPath.lastIndexOf('/') + 1).replace(".java", "");
+		}
+		return normalizedPath.replace(".java", "");
 	}
 
 	private String executeCommandInContainer(String containerId, String finalCommand) throws InterruptedException {
@@ -150,7 +168,8 @@ public class ContainerExecutionService {
 		LogContainerCallback callback = new LogContainerCallback(containerId, "[Container {}] {}");
 		try (LogContainerCallback a = callback) {
 			dockerClient.execStartCmd(execCreateCmdResponse.getId()).exec(callback);
-			callback.awaitCompletion(30, TimeUnit.SECONDS);
+			// 명령어 실행이 완료될 때까지 대기합니다. 최대 대기 시간을 10초로 줄여 불필요한 지연을 방지합니다.
+			callback.awaitCompletion(10, TimeUnit.SECONDS);
 		} catch (Exception e) {
 			log.error("Error during command execution in container {}", containerId, e);
 		}
@@ -175,7 +194,8 @@ public class ContainerExecutionService {
 	private void cleanupContainer(String containerId) {
 		log.info("Stopping and removing container: {}", containerId);
 		try {
-			dockerClient.stopContainerCmd(containerId).exec();
+			// 컨테이너가 정상 종료될 때까지 기다리는 최대 시간을 5초로 지정합니다.
+			dockerClient.stopContainerCmd(containerId).withTimeout(5).exec();
 		} catch (NotModifiedException e) {
 			log.warn("Container {} was already stopped.", containerId);
 		}
@@ -212,7 +232,7 @@ public class ContainerExecutionService {
 	/**
 	 * 컨테이너의 출력을 로깅하고, 리소스를 안전하게 닫기 위한 ResultCallback 구현체
 	 */
-	private static class LogContainerCallback extends ResultCallback.Adapter<Frame> implements Closeable {
+	static class LogContainerCallback extends ResultCallback.Adapter<Frame> implements Closeable {
 		private final StringBuilder logs = new StringBuilder();
 		private final String containerId;
 		private final String logFormat;
