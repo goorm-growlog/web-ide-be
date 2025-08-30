@@ -33,5 +33,9 @@ template:
   docker-username: ${TEMPLATE_DOCKER_USERNAME}
 
 jwt:
-  secret: ${JWT_SECRET}
-  expiration: ${JWT_EXPIRATION}
+  access:
+    secret: ${JWT_SECRET}
+    expiration: ${JWT_EXPIRATION}
+  refresh:
+    secret: ${REFRESH_SECRET}
+    expiration: ${REFRESH_EXPIRATION}
