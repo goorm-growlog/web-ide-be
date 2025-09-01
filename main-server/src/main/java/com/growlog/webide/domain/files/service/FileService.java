@@ -24,6 +24,7 @@ import org.springframework.util.StringUtils;
 
 import com.growlog.webide.domain.files.dto.CreateFileRequest;
 import com.growlog.webide.domain.files.dto.FileOpenResponseDto;
+import com.growlog.webide.domain.files.dto.FileSearchResponseDto;
 import com.growlog.webide.domain.files.dto.tree.TreeAddEventDto;
 import com.growlog.webide.domain.files.dto.tree.TreeMoveEventDto;
 import com.growlog.webide.domain.files.dto.tree.TreeRemoveEventDto;
@@ -253,12 +254,12 @@ public class FileService {
 		}
 	}
 
-	/*public List<FileSearchResponseDto> searchFilesByName(Long projectId, String query) {
+	public List<FileSearchResponseDto> searchFilesByName(Long projectId, String query) {
 		return fileMetaRepository.findByProjectIdAndNameContainingIgnoreCaseAndDeletedFalse(projectId, query)
 			.stream()
 			.map(FileSearchResponseDto::from)
 			.toList();
-	}*/
+	}
 
 	@Transactional(readOnly = true)
 	public void saveFileToStorage(Long projectId, String relativePath, String content, Long userId) {
