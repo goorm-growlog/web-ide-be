@@ -359,7 +359,7 @@ public class FileService {
 			log.error("Race Condition or Inconsistent State: File already exists on EFS. path: {}", e.getFile(), e);
 			throw new CustomException(ErrorCode.FILE_ALREADY_EXISTS);
 		} catch (IOException e) {
-			log.error("IO 예외 발생.", e);
+			log.error("IO Exception Occurred.", e);
 			log.error("Failed to create file or directory on EFS.", e);
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}

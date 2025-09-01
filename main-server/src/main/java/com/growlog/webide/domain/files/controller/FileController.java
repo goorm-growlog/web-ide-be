@@ -65,7 +65,7 @@ public class FileController {
 		@RequestParam("path") String filePath,
 		@AuthenticationPrincipal UserPrincipal user
 	) {
-		log.info("[DELETE 요청] projectId={}, filePath={}", projectId, filePath);
+		log.info("[DELETE REQUEST] projectId={}, filePath={}", projectId, filePath);
 		fileService.deleteFileOrDirectory(projectId, filePath, user.getUserId());
 		return ApiResponse.ok(new FileResponse("File/Folder deleted"));
 	}
