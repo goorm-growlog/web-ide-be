@@ -1,10 +1,13 @@
-package com.growlog.webide.domain.projects.entity;
+package com.growlog.webide.domain.terminal.entity;
 
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import com.growlog.webide.domain.projects.entity.InstanceStatus;
+import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.users.entity.Users;
 
 import jakarta.persistence.Column;
@@ -54,21 +57,20 @@ public class ActiveInstance {
 	@Column(nullable = false)
 	private InstanceStatus status;
 
-	@Column(nullable = false)
-	private Integer webSocketPort;
-
 	@CreatedDate
 	@Column(updatable = false)
 	private LocalDateTime connectedAt;
 
+	@UpdateTimestamp
+	@Column(nullable = false)
+	private LocalDateTime lastActivityAt;
+
 	@Builder
-	public ActiveInstance(Project project, Users user, String containerId, InstanceStatus status,
-		Integer webSocketPort) {
+	public ActiveInstance(Project project, Users user, String containerId, InstanceStatus status) {
 		this.project = project;
 		this.user = user;
 		this.containerId = containerId;
 		this.status = status;
-		this.webSocketPort = webSocketPort;
 	}
 
 	//== 상태 변경 ==/
@@ -79,5 +81,9 @@ public class ActiveInstance {
 
 	public void disconnect() {
 		this.status = InstanceStatus.PENDING;
+	}
+
+	public void updateActivity() {
+		this.lastActivityAt = LocalDateTime.now();
 	}
 }

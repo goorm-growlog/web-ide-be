@@ -1,12 +1,14 @@
-package com.growlog.webide.domain.projects.repository;
+package com.growlog.webide.domain.terminal.repository;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.growlog.webide.domain.projects.entity.ActiveInstance;
 import com.growlog.webide.domain.projects.entity.InstanceStatus;
 import com.growlog.webide.domain.projects.entity.Project;
+import com.growlog.webide.domain.terminal.entity.ActiveInstance;
 import com.growlog.webide.domain.users.entity.Users;
 
 public interface ActiveInstanceRepository extends JpaRepository<ActiveInstance, Long> {
@@ -30,4 +32,6 @@ public interface ActiveInstanceRepository extends JpaRepository<ActiveInstance, 
 
 	// 프로젝트 아이디로 ActiveInstance 찾기
 	Optional<ActiveInstance> findByProject_Id(Long projectId);
+
+	List<ActiveInstance> findAllByStatusAndLastActivityAtBefore(InstanceStatus status, LocalDateTime threshold);
 }
