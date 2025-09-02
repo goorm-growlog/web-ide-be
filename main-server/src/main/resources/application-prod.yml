@@ -43,6 +43,7 @@ spring:
     oauth:
       rest-api-key: ${KAKAO_REST_API_KEY}
       redirect-uri: ${KAKAO_REDIRECT_URI}
+    redirect-front: https://growlog-web-ide.vercel.app/auth/kakao/success
 
 
 efs:

@@ -1,7 +1,9 @@
 package com.growlog.webide.domain.auth.controller;
 
 import java.io.IOException;
+import java.net.URLEncoder;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,6 +28,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Tag(name = "auth API - 소셜 로그인")
 public class KakaoAuthController {
+	@Value("${spring.kakao.redirect-front}")
+	private String kakaoRedirectUrl;
 	private final KakaoOAuth kakaoOAuth;
 	private final AuthService authService;
 
@@ -71,11 +75,11 @@ public class KakaoAuthController {
 			.build();
 		response.addHeader("Set-Cookie", cookie.toString());
 
-		String redirectUrl = UriComponentsBuilder.fromHttpUrl("http://localhost:3000/auth/kakao/success")
+		String redirectUrl = UriComponentsBuilder.fromHttpUrl(kakaoRedirectUrl)
 			.queryParam("token", tokens.accessToken())
 			.queryParam("userId", tokens.userId())
-			.queryParam("name", tokens.name())
-			.build(true)
+			.queryParam("name", URLEncoder.encode(tokens.name(), "UTF-8"))
+			.build(false)
 			.toUriString();
 		response.sendRedirect(redirectUrl);
 	}
