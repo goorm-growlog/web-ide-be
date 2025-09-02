@@ -1,11 +1,13 @@
 package com.growlog.webide.domain.chats.service;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -102,52 +104,57 @@ public class ChatService {
 	@Transactional
 	public void persistChatsToDb() {
 		log.info("try to persist chats to db");
-		Set<String> keys = redisTemplate.keys("chat:*");
+		// Set<String> keys = redisTemplate.keys("chat:*");
+		ScanOptions scanOptions = ScanOptions.scanOptions().match("chat:*").count(100).build();
+		try (Cursor<byte[]> cursor = redisTemplate.getConnectionFactory().getConnection().scan(scanOptions)) {
 
-		for (String key : keys) {
-			// 1. 10일 이상 비활성 방은 삭제 (마지막 채팅 기준)
-			Long ttl = redisTemplate.getExpire(key, TimeUnit.SECONDS);
-			if (ttl != null && ttl < 0) {
-				redisTemplate.delete(key);
-				log.info("[delete] delete chats from inactive rooms: {}", key);
-				continue;
-			}
-
-			// 2. Redis에서 전체 메시지 조회
-			List<Object> all = redisTemplate.opsForList().range(key, 0, -1);
-			if (all == null || all.isEmpty()) {
-				continue;
-			}
-
-			for (int i = 0; i < all.size(); i++) {
-				Object obj = all.get(i);
-				try {
-					String json = obj.toString();
-					ChattingResponseDto dto = objectMapper.readValue(json, ChattingResponseDto.class);
-
-					// 3. chatId가 없는 메시지 -> DB 저장
-					if (dto.chatId() == null) {
-						// Project, Users reference 조회
-						Project project = projectRepository.getReferenceById(dto.projectId());
-						Users user = userRepository.getReferenceById(dto.userId());
-
-						// Redis -> DTO -> DB 저장용 엔티티 변환 및  DB 저장
-						Chats saved = chatRepository.save(dto.toEntity(project, user));
-
-						// chatId 포함된 DTO로 redis에 다시 저장
-						ChattingResponseDto updated = ChattingResponseDto.from(saved);
-						String updatedJson = objectMapper.writeValueAsString(updated);
-						redisTemplate.opsForList().set(key, i, updatedJson);
-					}
-				} catch (Exception e) {
-					log.warn("Failed to parse chat message in {}: {}", key, e.getMessage());
+			// for (String key : keys) {
+			while (cursor.hasNext()) {
+				String key = new String(cursor.next(), StandardCharsets.UTF_8);
+				// 1. 10일 이상 비활성 방은 삭제 (마지막 채팅 기준)
+				Long ttl = redisTemplate.getExpire(key, TimeUnit.SECONDS);
+				if (ttl != null && ttl < 0) {
+					redisTemplate.delete(key);
+					log.info("[delete] delete chats from inactive rooms: {}", key);
+					continue;
 				}
-			}
 
-			// 4. redis 정리: 최신 20개만 유지
-			Long size = redisTemplate.opsForList().size(key);
-			if (size != null && size > 20) {
-				redisTemplate.opsForList().trim(key, -20, -1);
+				// 2. Redis에서 전체 메시지 조회
+				List<Object> all = redisTemplate.opsForList().range(key, 0, -1);
+				if (all == null || all.isEmpty()) {
+					continue;
+				}
+
+				for (int i = 0; i < all.size(); i++) {
+					Object obj = all.get(i);
+					try {
+						String json = obj.toString();
+						ChattingResponseDto dto = objectMapper.readValue(json, ChattingResponseDto.class);
+
+						// 3. chatId가 없는 메시지 -> DB 저장
+						if (dto.chatId() == null) {
+							// Project, Users reference 조회
+							Project project = projectRepository.getReferenceById(dto.projectId());
+							Users user = userRepository.getReferenceById(dto.userId());
+
+							// Redis -> DTO -> DB 저장용 엔티티 변환 및  DB 저장
+							Chats saved = chatRepository.save(dto.toEntity(project, user));
+
+							// chatId 포함된 DTO로 redis에 다시 저장
+							ChattingResponseDto updated = ChattingResponseDto.from(saved);
+							String updatedJson = objectMapper.writeValueAsString(updated);
+							redisTemplate.opsForList().set(key, i, updatedJson);
+						}
+					} catch (Exception e) {
+						log.warn("Failed to parse chat message in {}: {}", key, e.getMessage());
+					}
+				}
+
+				// 4. redis 정리: 최신 20개만 유지
+				Long size = redisTemplate.opsForList().size(key);
+				if (size != null && size > 20) {
+					redisTemplate.opsForList().trim(key, -20, -1);
+				}
 			}
 		}
 	}
