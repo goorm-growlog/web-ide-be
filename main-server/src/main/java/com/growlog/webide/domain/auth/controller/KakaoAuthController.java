@@ -69,7 +69,7 @@ public class KakaoAuthController {
 			.httpOnly(true)
 			.secure(true)
 			.sameSite("Lax")
-			.path("/auth")
+			.path("/")
 			.build();
 		response.addHeader("Set-Cookie", cookie.toString());
 
