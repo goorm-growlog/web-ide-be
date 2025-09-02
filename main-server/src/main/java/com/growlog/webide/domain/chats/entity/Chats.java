@@ -52,6 +52,13 @@ public class Chats {
 		this.content = content;
 	}
 
+	public Chats(Project project, Users user, String content, Instant sentAt) {
+		this.project = project;
+		this.user = user;
+		this.content = content;
+		this.sentAt = sentAt;
+	}
+
 	public Long getChatId() {
 		return chatId;
 	}
