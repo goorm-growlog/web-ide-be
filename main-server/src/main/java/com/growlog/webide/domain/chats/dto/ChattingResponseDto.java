@@ -30,7 +30,7 @@ public record ChattingResponseDto(
 			chat.getProject().getId(),
 			chat.getUser().getUserId(),
 			chat.getUser().getName(),
-			null,
+			chat.getUser().getProfileImageUrl(),
 			chat.getContent(),
 			chat.getSentAt()
 		);
