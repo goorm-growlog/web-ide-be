@@ -1,25 +1,24 @@
 package com.growlog.webide.domain.terminal.service;
 
-import com.growlog.webide.domain.images.entity.Image;
-import com.growlog.webide.domain.images.repository.ImageRepository;
-import com.growlog.webide.domain.projects.entity.InstanceStatus;
-import com.growlog.webide.domain.projects.entity.Project;
-import com.growlog.webide.domain.projects.repository.ProjectRepository;
-import com.growlog.webide.domain.terminal.dto.ContainerCreationRequest;
-import com.growlog.webide.domain.terminal.entity.ActiveInstance;
-import com.growlog.webide.domain.terminal.repository.ActiveInstanceRepository;
-import com.growlog.webide.domain.users.entity.Users;
-import com.growlog.webide.domain.users.repository.UserRepository;
 import java.util.Optional;
+
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.growlog.webide.domain.images.entity.Image;
+import com.growlog.webide.domain.images.repository.ImageRepository;
+import com.growlog.webide.domain.projects.entity.InstanceStatus;
+import com.growlog.webide.domain.projects.entity.Project;
+import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.domain.terminal.dto.CodeExecutionApiRequest;
 import com.growlog.webide.domain.terminal.dto.CodeExecutionRequestDto;
+import com.growlog.webide.domain.terminal.dto.ContainerCreationRequest;
 import com.growlog.webide.domain.terminal.dto.TerminalCommandApiRequest;
 import com.growlog.webide.domain.terminal.dto.TerminalCommandRequestDto;
+import com.growlog.webide.domain.users.entity.Users;
+import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
 
@@ -102,19 +101,23 @@ public class TerminalService {
 	 */
 	@Transactional
 	public void requestContainerDeletion(Long projectId, Long userId) {
-		ActiveInstance activeInstance = activeInstanceRepository.findByUser_UserIdAndProject_IdAndStatus(userId, projectId, InstanceStatus.ACTIVE)
+		ActiveInstance activeInstance = activeInstanceRepository.findByUser_UserIdAndProject_IdAndStatus(userId,
+				projectId, InstanceStatus.ACTIVE)
 			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
 
-		log.info("User {} requested to delete container {} for project {}", userId, activeInstance.getContainerId(), projectId);
+		log.info("User {} requested to delete container {} for project {}", userId, activeInstance.getContainerId(),
+			projectId);
 
 		activeInstance.disconnect(); // 상태를 PENDING으로 변경
 		activeInstanceRepository.save(activeInstance);
 
-		rabbitTemplate.convertAndSend("container.lifecycle.exchange", "container.delete.key", activeInstance.getContainerId());
+		rabbitTemplate.convertAndSend("container.lifecycle.exchange", "container.delete.key",
+			activeInstance.getContainerId());
 	}
 
 	private ActiveInstance findOrCreateActiveInstance(Long projectId, Long userId) {
-		Optional<ActiveInstance> existingInstance = activeInstanceRepository.findByUser_UserIdAndProject_IdAndStatus(userId, projectId, InstanceStatus.ACTIVE);
+		Optional<ActiveInstance> existingInstance = activeInstanceRepository.findByUser_UserIdAndProject_IdAndStatus(
+			userId, projectId, InstanceStatus.ACTIVE);
 
 		if (existingInstance.isPresent()) {
 			log.info("Found existing active instance for user {} and project {}", userId, projectId);
@@ -127,11 +130,13 @@ public class TerminalService {
 		Users user = userRepository.findById(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-		ContainerCreationRequest creationRequest = new ContainerCreationRequest(projectId, userId, project.getImage().getDockerBaseImage());
+		ContainerCreationRequest creationRequest = new ContainerCreationRequest(projectId, userId,
+			project.getImage().getDockerBaseImage());
 
 		// RPC call to worker server to create a container and get its ID back
 		// Note: RabbitMQConfig needs to be set up for RPC.
-		String containerId = (String) rabbitTemplate.convertSendAndReceive("rpc.exchange", "rpc.container.create", creationRequest);
+		String containerId = (String)rabbitTemplate.convertSendAndReceive("rpc.exchange", "rpc.container.create",
+			creationRequest);
 
 		if (containerId == null || containerId.isBlank()) {
 			log.error("Failed to create container for project {}. Worker did not return a container ID.", projectId);

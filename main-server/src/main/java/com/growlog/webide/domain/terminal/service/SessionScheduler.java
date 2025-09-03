@@ -9,8 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.growlog.webide.domain.projects.entity.InstanceStatus;
-import com.growlog.webide.domain.terminal.entity.ActiveInstance;
-import com.growlog.webide.domain.terminal.repository.ActiveInstanceRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

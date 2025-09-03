@@ -33,8 +33,6 @@ import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.entity.ProjectMembers;
 import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
-import com.growlog.webide.domain.terminal.entity.ActiveInstance;
-import com.growlog.webide.domain.terminal.repository.ActiveInstanceRepository;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.factory.DockerClientFactory;

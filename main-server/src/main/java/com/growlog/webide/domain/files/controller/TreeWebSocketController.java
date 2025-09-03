@@ -14,8 +14,6 @@ import com.growlog.webide.domain.files.dto.tree.TreeNodeDto;
 import com.growlog.webide.domain.files.dto.tree.WebSocketMessage;
 import com.growlog.webide.domain.files.repository.FileMetaRepository;
 import com.growlog.webide.domain.files.service.TreeService;
-import com.growlog.webide.domain.terminal.entity.ActiveInstance;
-import com.growlog.webide.domain.terminal.repository.ActiveInstanceRepository;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
 
