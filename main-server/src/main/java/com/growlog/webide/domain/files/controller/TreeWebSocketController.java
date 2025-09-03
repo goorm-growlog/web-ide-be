@@ -14,6 +14,8 @@ import com.growlog.webide.domain.files.dto.tree.TreeNodeDto;
 import com.growlog.webide.domain.files.dto.tree.WebSocketMessage;
 import com.growlog.webide.domain.files.repository.FileMetaRepository;
 import com.growlog.webide.domain.files.service.TreeService;
+import com.growlog.webide.domain.projects.entity.ActiveSession;
+import com.growlog.webide.domain.projects.repository.ActiveSessionRepository;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
 
@@ -27,7 +29,7 @@ public class TreeWebSocketController {
 
 	private final TreeService treeService;
 	private final SimpMessagingTemplate messagingTemplate;
-	private final ActiveInstanceRepository activeInstanceRepository;
+	private final ActiveSessionRepository activeSessionRepository;
 	private final FileMetaRepository fileMetaRepository;
 
 	@MessageMapping("/projects/{projectId}/tree/init")
@@ -48,7 +50,7 @@ public class TreeWebSocketController {
 		log.info("[WS] 트리 요청 userId={}, projectId={}", userId, projectId);
 
 		// 📦 인스턴스 조회
-		ActiveInstance inst = activeInstanceRepository
+		ActiveSession inst = activeSessionRepository
 			.findByUser_UserIdAndProject_Id(userId, projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
 
