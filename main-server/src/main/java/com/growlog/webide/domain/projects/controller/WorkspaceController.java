@@ -54,18 +54,6 @@ public class WorkspaceController {
 		return ResponseEntity.ok(ApiResponse.ok("Complete Opening"));
 	}
 
-	@Operation(summary = "프로젝트 닫기(컨테이너 종료)",
-		description = "컨테이너 ID에 해당하는 활성 세션을 종료하고 컨테이너를 삭제합니다.")
-	@PostMapping("/{projectId}/close")
-	public ResponseEntity<ApiResponse<String>> closeProjectSession(
-		@PathVariable Long projectId,
-		@AuthenticationPrincipal UserPrincipal userPrincipal
-	) {
-		Long userId = userPrincipal.getUserId();
-		workspaceManagerService.closeProjectSession(projectId, userId);
-		return ResponseEntity.ok(ApiResponse.ok("Complete Closing."));
-	}
-
 	@Operation(summary = "프로젝트 삭제",
 		description = "프로젝트 정보와 Docker 볼륨을 삭제합니다.")
 	@DeleteMapping("/{projectId}")

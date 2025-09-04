@@ -4,23 +4,19 @@ package com.growlog.webide.domain.projects.service;
  *  프로젝트 생성부터 사용자의 세션(컨테이너) 관리, 종료까지 전체적인 생명주기를 조율하고 관리
  * */
 
-import static org.apache.commons.io.file.PathUtils.*;
+import static org.apache.commons.io.file.PathUtils.copyDirectory;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import com.github.dockerjava.api.DockerClient;
-import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.exception.NotFoundException;
-import com.github.dockerjava.api.model.PullResponseItem;
 import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.images.repository.ImageRepository;
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
@@ -51,7 +47,6 @@ public class WorkspaceManagerService {
 	private final DockerClientFactory dockerClientFactory;
 	private final ProjectRepository projectRepository;
 	private final ImageRepository imageRepository;
-	private final SessionScheduler sessionScheduler;
 	private final UserRepository userRepository;
 	private final ProjectMemberRepository projectMemberRepository;
 	private final ProjectFileMetaService projectFileMetaService;
@@ -64,7 +59,6 @@ public class WorkspaceManagerService {
 		ProjectRepository projectRepository,
 		ActiveSessionRepository activeSessionRepository,
 		ImageRepository imageRepository,
-		@Lazy SessionScheduler sessionScheduler,
 		UserRepository userRepository,
 		ProjectMemberRepository projectMemberRepository,
 		ProjectFileMetaService projectFileMetaService,
@@ -76,7 +70,6 @@ public class WorkspaceManagerService {
 		this.projectRepository = projectRepository;
 		this.activeSessionRepository = activeSessionRepository;
 		this.imageRepository = imageRepository;
-		this.sessionScheduler = sessionScheduler;
 		this.userRepository = userRepository;
 		this.projectMemberRepository = projectMemberRepository;
 		this.projectFileMetaService = projectFileMetaService;
@@ -170,64 +163,8 @@ public class WorkspaceManagerService {
 		activeSessionRepository.save(session);
 	}
 
-	/**
-	 * 지정된 Docker 이미지가 로컬에 존재하지 않으면 Docker Hub에서 pull 합니다.
-	 *
-	 * @param imageName 확인할 Docker 이미지 이름 (예: "openjdk:17-jdk-slim")
-	 */
-	private void pullImageIfNotExists(DockerClient dockerClient, String imageName) {
-		try {
-			// 1. 이미지가 로컬에 있는지 먼저 검사합니다.
-			dockerClient.inspectImageCmd(imageName).exec();
-			log.info("Image '{}' already exists locally.", imageName);
-		} catch (NotFoundException e) {
-			// 2. NotFoundException이 발생하면 이미지가 없는 것이므로 pull을 시작합니다.
-			log.info("Image '{}' not found locally. Pulling from Docker Hub...", imageName);
-			try {
-				// pullImageCmd는 비동기로 동작하므로, 완료될 때까지 기다려야 합니다.
-				dockerClient.pullImageCmd(imageName)
-					.exec(new ResultCallback.Adapter<PullResponseItem>() {
-						@Override
-						public void onNext(PullResponseItem item) {
-							// pull 진행 상태를 로그로 남길 수 있습니다.
-							log.debug(item.getStatus());
-						}
-					}).awaitCompletion(5, TimeUnit.MINUTES); // 최대 5분까지 기다립니다.
 
-				log.info("Image '{}' pulled successfully.", imageName);
-			} catch (InterruptedException interruptedException) {
-				Thread.currentThread().interrupt();
-				log.error("Image pull for '{}' was interrupted.", imageName);
-				throw new RuntimeException("Image pull was interrupted", interruptedException);
-			} finally {
-				try {
-					dockerClient.close();
-				} catch (IOException ex) {
-					log.warn("Error closing DockerClient after pulling image", ex);
-				}
-			}
-		}
-	}
 
-	/*
-	 * 3-1. 프로젝트 닫기 (Close Project): 세션 닫기 요청 처리
-	 */
-	public void closeProjectSession(Long projectId, Long userId) {
-		Users user = userRepository.findById(userId)
-			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-		Project project = projectRepository.findById(projectId)
-			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
-		ActiveSession session = activeSessionRepository.findByUser_UserIdAndProject_Id(userId, projectId)
-			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
-
-		String containerId = session.getContainerId();
-		sessionScheduler.scheduleDeletion(containerId, user.getUserId(), projectId);
-
-		// 이 세션이 해당 프로젝트의 마지막 활성 세션이었는지 확인
-		// if (activeSessionRepository.countByProjectAndStatus(project, InstanceStatus.ACTIVE) == 0) {
-		// 	project.deactivate();
-		// }
-	}
 	/*
 	3-2. 컨테이너 삭제
 	사용자의 컨테이너를 중지/제거하고, ActiveInstance 삭제
