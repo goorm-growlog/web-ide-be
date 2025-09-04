@@ -51,6 +51,9 @@ dependencies {
     implementation 'io.github.cdimascio:java-dotenv:5.2.2'
 
     implementation 'org.springframework.boot:spring-boot-starter-amqp'
+
+    implementation 'com.github.docker-java:docker-java:3.3.6'
+    implementation 'com.github.docker-java:docker-java-transport-httpclient5:3.3.6'
 }
 
 tasks.named('test') {
