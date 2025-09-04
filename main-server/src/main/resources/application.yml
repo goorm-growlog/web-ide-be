@@ -55,3 +55,37 @@ terminal-command:
       name: terminal.command.queue
     routing:
       key: terminal.command.routing-key
+
+# 컨테이너 할당 요청 관련 RabbitMQ 설정
+container-acquire:
+  rabbitmq:
+    exchange:
+      name: container.acquire.exchange
+    queue:
+      name: container.acquire.queue
+    routing:
+      key: container.acquire.routing-key
+
+# 컨테이너 정리 요청 관련 RabbitMQ 설정
+container-cleanup:
+  rabbitmq:
+    exchange:
+      name: container.cleanup.exchange
+    queue:
+      name: container.cleanup.queue
+    routing:
+      key: container.cleanup.routing-key
+
+# 컨테이너 관련 작업 응답을 위한 RabbitMQ 설정
+container-response:
+  rabbitmq:
+    exchange:
+      name: container.response.exchange
+    queue:
+      name:
+        acquire-success: container.aq.success.queue
+        acquire-failure: container.aq.failure.queue
+    routing:
+      key:
+        acquire-success: container.acquire.success
+        acquire-failure: container.acquire.failure
