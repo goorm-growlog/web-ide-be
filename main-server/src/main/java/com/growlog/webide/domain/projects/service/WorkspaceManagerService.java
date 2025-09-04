@@ -142,6 +142,7 @@ public class WorkspaceManagerService {
 	사용자가 특정 프로젝트를 열기 위해 API를 호출하면, 시스템은 먼저 해당 프로젝트(EFS)에 대한 접근 권한 확인
 	확인 후, 사용자의 실시간 연결 상태를 관리하기 위해 'active_sessions' 테이블에 세션 정보 기록
 	 */
+	@Transactional
 	public void openProject(Long projectId, Long userId) {
 		log.info("User '{}' is opening project '{}'", userId, projectId);
 
