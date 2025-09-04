@@ -65,4 +65,8 @@ public class ActiveSession {
 		this.serverId = serverId;
 		this.containerId = containerId;
 	}
+
+	public void setContainerId(String containerId) {
+		this.containerId = containerId;
+	}
 }
