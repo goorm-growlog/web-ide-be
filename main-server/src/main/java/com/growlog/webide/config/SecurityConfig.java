@@ -80,7 +80,8 @@ public class SecurityConfig {
 					"/users/signup",
 					"/auth/login/**",
 					"/users/signup",
-					"/auth/kakao"
+					"/auth/kakao/**",
+					"/auth/github/**"
 				).permitAll()
 				// 프로젝트 관련 경로는 인증 필요
 				.requestMatchers("/projects/**").authenticated()

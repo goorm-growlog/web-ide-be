@@ -45,6 +45,14 @@ spring:
       redirect-uri: ${KAKAO_REDIRECT_URI}
     redirect-front: https://growlog-web-ide.vercel.app/auth/kakao/success
 
+  github:
+    oauth:
+      client-id: ${Ov23liUhDDcGC2tUG7oL}
+      client-secret: ${GITHUB_CLIENT_SECRET}
+      redirect-uri: https://growlog-web-ide.duckdns.org/auth/github/callback
+    redirect-front: https://growlog-web-ide.vercel.app/auth/github/success
+
+
 
 efs:
   base-path: /mnt/efs/projects
