@@ -54,6 +54,7 @@ jobs:
           DB_PORT=3308
           JWT_SECRET=mytestsecret
           JWT_EXPIRATION=3600000
+          REFRESH_SECRET=mytestsecret
           REFRESH_EXPIRATION=604800
           SPRING_PROFILES_ACTIVE=local
           MAIL_USERNAME=test@example.com
@@ -65,6 +66,9 @@ jobs:
           REDIS_PORT=15884
           REDIS_USERNAME=default
           REDIS_PASSWORD=secret
+          KAKAO_REST_API_KEY=secret
+          KAKAO_REDIRECT_URI=secret
+          KAKAO_REDIRECT_URI_LOCAL=secret
           EOL
 
       - name: ⏳ Wait for MySQL to be healthy

@@ -45,7 +45,7 @@ public class AuthController {
 			.httpOnly(true)
 			.secure(true)
 			.sameSite("Lax")
-			.path("/auth")
+			.path("/")
 			.build();
 		response.addHeader("Set-Cookie", cookie.toString());
 
@@ -81,7 +81,7 @@ public class AuthController {
 			.httpOnly(true)
 			.secure(true)
 			.sameSite("Lax")
-			.path("/auth")
+			.path("/")
 			.build();
 		response.addHeader("Set-Cookie", cookie.toString());
 
