@@ -83,7 +83,7 @@ public class Project {
 		this.status = ProjectStatus.ACTIVE;
 	}
 
-	public void deactivate() {
+	public void inactivate() {
 		this.status = ProjectStatus.INACTIVE;
 	}
 

@@ -18,8 +18,13 @@
 </div>
 <div>
     <label for="projectId">Project ID:</label>
-    <input id="projectId" type="text" value="1">
+    <input id="projectId" type="text">
     <button disabled id="subscribeBtn">2. Subscribe & Enter</button>
+</div>
+<div>
+    <label for="userId">User ID:</label>
+    <input id="userId" type="text">
+    <button disabled id="deactivateBtn">Trigger Project Deactivation</button>
 </div>
 <hr>
 <div>
@@ -36,11 +41,13 @@
     const connectBtn = document.getElementById('connectBtn');
     const disconnectBtn = document.getElementById('disconnectBtn');
     const subscribeBtn = document.getElementById('subscribeBtn');
+    const userIdInput = document.getElementById('userId');
     const projectIdInput = document.getElementById('projectId');
     const jwtTokenInput = document.getElementById('jwtToken');
     const logDiv = document.getElementById('log');
     const chatMessageInput = document.getElementById('chatMessage');
     const sendBtn = document.getElementById('sendBtn');
+    const deactivateBtn = document.getElementById('deactivateBtn');
 
     let stompClient = null;
 
@@ -55,8 +62,14 @@
     // 웹소켓 연결 함수
     function connect() {
         const token = jwtTokenInput.value;
+        const userId = userIdInput.value;
         if (!token) {
             alert('JWT Token을 입력하세요!');
+            return;
+        }
+
+        if (!userId) {
+            alert("missing userId");
             return;
         }
 
@@ -78,6 +91,17 @@
             connectBtn.disabled = true;
             disconnectBtn.disabled = false;
             subscribeBtn.disabled = false;
+            deactivateBtn.disabled = false;
+
+            const userId = userIdInput.value;
+            const queueUrl = `queue/termination/${userId}`;
+
+            stompClient.subscribe(queueUrl, function (message) {
+                log(`SESSION TERMINATED: ${message.body}`);
+                alert(`The server has closed your session: ${message.body}`);
+                disconnect(); // 메시지 수신 후 연결 해제
+            });
+            log(`Subscribed to ${queueUrl} for server-sent messages.`);
         }, function (error) {
             log('CONNECTION ERROR: ' + error);
             sendBtn.disabled = true;
@@ -94,6 +118,7 @@
         disconnectBtn.disabled = true;
         subscribeBtn.disabled = true;
         sendBtn.disabled = true;
+        deactivateBtn.disabled = true;
     }
 
     // 토픽 구독 및 입장 메시지 전송 함수
@@ -136,11 +161,46 @@
         chatMessageInput.value = ''; // 메시지 입력 창 비우기
     }
 
+    function triggerDeactivation() {
+        const projectId = projectIdInput.value;
+        if (!projectId) {
+            alert('Project ID를 입력하세요!');
+            return;
+        }
+
+        log(`Triggering deactivation for project ID: ${projectId}`);
+
+        log(`JWT Token exists: ${!!jwtTokenInput.value}`);
+        log(`Full URL: /projects/${projectId}/inactivate`);
+
+        // fetch API를 사용해 서버의 비활성화 엔드포인트를 호출합니다.
+        fetch(`http://localhost:8080/projects/${projectId}/inactivate`, {
+            method: 'PATCH',
+            headers: {
+                // JWT 인증이 필요하므로 헤더에 토큰을 포함시킵니다.
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + jwtTokenInput.value
+            }
+        })
+            .then(response => {
+                log(`Response status: ${response.status}`);
+                log(`Response ok: ${response.ok}`);
+                log(`Response headers:`, response.headers);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.text();
+            })
+            .then(data => log(`API call successful: ${data}`))
+            .catch(error => log(`API call error: ${error.message}`));
+    }
+
     // 각 버튼에 클릭 이벤트를 연결합니다.
     connectBtn.addEventListener('click', connect);
     disconnectBtn.addEventListener('click', disconnect);
     subscribeBtn.addEventListener('click', subscribeAndEnter);
     sendBtn.addEventListener('click', sendTalk);
+    deactivateBtn.addEventListener('click', triggerDeactivation);
 </script>
 </body>
 </html>

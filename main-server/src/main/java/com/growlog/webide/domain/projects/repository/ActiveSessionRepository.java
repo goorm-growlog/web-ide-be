@@ -1,5 +1,6 @@
 package com.growlog.webide.domain.projects.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -26,4 +27,6 @@ public interface ActiveSessionRepository extends JpaRepository<ActiveSession, Lo
 
 	// 프로젝트 아이디로 ActiveInstance 찾기
 	Optional<ActiveSession> findByProject_Id(Long projectId);
+
+	List<ActiveSession> findAllByProject_Id(Long projectId);
 }

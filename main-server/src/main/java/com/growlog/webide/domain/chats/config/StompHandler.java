@@ -61,17 +61,21 @@ public class StompHandler implements ChannelInterceptor {
 		}
 
 		if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
-			try {
-				validateSubscription(accessor);
+			final String destination = accessor.getDestination();
 
-				if (checkDuplicatedSubscribtion(accessor)) {
-					log.warn("Already Subscribed.");
+			if (StringUtils.hasText(destination) && destination.startsWith("/topic/projects/")) {
+				try {
+					validateSubscription(accessor);
+
+					if (checkDuplicatedSubscribtion(accessor)) {
+						log.warn("Already Subscribed.");
+						return null;
+					}
+					log.info("Subscribed successfully");
+				} catch (CustomException e) {
+					log.warn("Subscription denied: code={}, message={}", e.getErrorCode().getCode(), e.getMessage());
 					return null;
 				}
-				log.info("Subscribed successfully");
-			} catch (CustomException e) {
-				log.warn("Subscription denied: code={}, message={}", e.getErrorCode().getCode(), e.getMessage());
-				return null;
 			}
 		}
 		return message;
@@ -79,7 +83,7 @@ public class StompHandler implements ChannelInterceptor {
 
 	private void validateSubscription(StompHeaderAccessor accessor) {
 		try {
-			final Long userId = Long.parseLong(accessor.getSessionAttributes().get("userId").toString());
+			final Long userId = (Long) accessor.getSessionAttributes().get("userId");
 			final String destination = accessor.getDestination();
 			final Long projectId = Long.parseLong(destination.split("/")[3]);
 

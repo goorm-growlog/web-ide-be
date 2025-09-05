@@ -50,6 +50,7 @@ public class WorkspaceManagerService {
 	private final UserRepository userRepository;
 	private final ProjectMemberRepository projectMemberRepository;
 	private final ProjectFileMetaService projectFileMetaService;
+	private final WebSocketNotificationService webSocketNotificationService;
 
 	private final String projectsBasePath;
 	private final String templatesBasePath;
@@ -62,10 +63,10 @@ public class WorkspaceManagerService {
 		UserRepository userRepository,
 		ProjectMemberRepository projectMemberRepository,
 		ProjectFileMetaService projectFileMetaService,
+		WebSocketNotificationService webSocketNotificationService,
 		@Value("${efs.base-path}") String projectsBasePath,
 		@Value("${efs.templates-path}") String templatesBasePath,
-		@Value("${SERVER_ID}") String serverId
-	) {
+		@Value("${SERVER_ID}") String serverId) {
 		this.dockerClientFactory = dockerClientFactory;
 		this.projectRepository = projectRepository;
 		this.activeSessionRepository = activeSessionRepository;
@@ -73,6 +74,7 @@ public class WorkspaceManagerService {
 		this.userRepository = userRepository;
 		this.projectMemberRepository = projectMemberRepository;
 		this.projectFileMetaService = projectFileMetaService;
+		this.webSocketNotificationService = webSocketNotificationService;
 		this.projectsBasePath = projectsBasePath;
 		this.templatesBasePath = templatesBasePath;
 		this.serverId = serverId;
@@ -164,7 +166,41 @@ public class WorkspaceManagerService {
 		activeSessionRepository.save(session);
 	}
 
+	/*
+	프로젝트 비활성화 (Inactivate Project)
 
+	프로젝트 소유자(OWNER)의 요청에 따라 프로젝트를 비활성화 상태로 변경
+ 	해당 프로젝트에 접속해 있는 모든 사용자의 세션 강제 종료 및 세션 종료 메시지 실시간 전달
+	 */
+	@Transactional
+	public void inactivateProject(Long projectId, Long userId) {
+		log.info("User '{}' is deactivating project '{}'", userId, projectId);
+
+		final ProjectMembers member = projectMemberRepository.findByProject_IdAndUser_UserId(projectId, userId)
+			.orElseThrow(() -> new CustomException(ErrorCode.NOT_A_MEMBER));
+
+		if (member.getRole() != MemberRole.OWNER) {
+			throw new CustomException(ErrorCode.NO_OWNER_PERMISSION);
+		}
+
+		final List<ActiveSession> activeSessions = activeSessionRepository.findAllByProject_Id(projectId);
+		log.info("projectId: {}, activeSessions length: {}", projectId, activeSessions.toArray().length);
+
+		for (ActiveSession activeSession : activeSessions) {
+			final Long targetUserId = activeSession.getUser().getUserId();
+			final String message = "Connection terminated by the project owner";
+			log.info("inactivateProject: {}", message);
+			webSocketNotificationService.sendSessionTerminationMessage(targetUserId, message);
+		}
+
+		activeSessionRepository.deleteAll(activeSessions);
+
+		final Project project = projectRepository.findById(projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
+
+		project.inactivate();
+		projectRepository.save(project);
+	}
 
 	/*
 	3-2. 컨테이너 삭제

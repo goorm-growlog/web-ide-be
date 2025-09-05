@@ -54,6 +54,15 @@ public class WorkspaceController {
 		return ResponseEntity.ok(ApiResponse.ok("Complete Opening"));
 	}
 
+	@Operation(summary = "프로젝트 비활성화", description = "모든 사용자 세션 연결을 종료하고 프로젝트를 비활성화합니다. (Owner Only)")
+	@PatchMapping("/{projectId}/inactivate")
+	public ResponseEntity<ApiResponse<String>> inactivateProject(@PathVariable Long projectId,
+		@AuthenticationPrincipal UserPrincipal userPrincipal) {
+		final Long userId = userPrincipal.getUserId();
+		workspaceManagerService.inactivateProject(projectId, userId);
+		return ResponseEntity.ok(ApiResponse.ok("Project Deactivated"));
+	}
+
 	@Operation(summary = "프로젝트 삭제",
 		description = "프로젝트 정보와 Docker 볼륨을 삭제합니다.")
 	@DeleteMapping("/{projectId}")
