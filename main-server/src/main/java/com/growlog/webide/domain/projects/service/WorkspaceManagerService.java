@@ -148,7 +148,7 @@ public class WorkspaceManagerService {
 	public void openProject(Long projectId, Long userId) {
 		log.info("User '{}' is opening project '{}'", userId, projectId);
 
-		// 1. 프로젝트 정보 및 사용할 이미지 조회
+		// 프로젝트 정보 및 사용할 이미지 조회
 		Users user = userRepository.findById(userId)
 			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 		Project project = projectRepository.findById(projectId)
@@ -157,7 +157,10 @@ public class WorkspaceManagerService {
 		projectMemberRepository.findByUserAndProject(user, project)
 			.orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
 
-		// 4. 활성 세션 정보(ActiveSession)를 DB에 기록
+		// 프로젝트 상태 변경
+		project.activate();
+
+		// 활성 세션 정보(ActiveSession)를 DB에 기록
 		ActiveSession session = ActiveSession.builder()
 			.project(project)
 			.user(user)
