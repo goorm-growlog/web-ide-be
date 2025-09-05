@@ -46,6 +46,7 @@ spring:
     oauth:
       rest-api-key: ${KAKAO_REST_API_KEY}
       redirect-uri: ${KAKAO_REDIRECT_URI_LOCAL}
+    redirect-front: http://localhost:3000/auth/kakao/success
 
 email:
   from: ${MAIL_FROM} #커스텀 클래스에서 사용하는 값
