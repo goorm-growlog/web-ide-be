@@ -12,7 +12,6 @@ import com.growlog.webide.domain.auth.dto.LoginRequestDto;
 import com.growlog.webide.domain.auth.dto.RotatedTokens;
 import com.growlog.webide.domain.auth.entity.RefreshToken;
 import com.growlog.webide.domain.auth.repository.RefreshTokenRepository;
-import com.growlog.webide.domain.auth.util.GithubOAuth;
 import com.growlog.webide.domain.auth.util.KakaoOAuth;
 import com.growlog.webide.domain.users.dto.UserRegistrationRequestDto;
 import com.growlog.webide.domain.users.entity.Provider;
@@ -35,7 +34,6 @@ public class AuthService {
 	private final PasswordEncoder passwordEncoder;
 	private final RefreshTokenRepository refreshTokenRepository;
 	private final KakaoOAuth kakaoOAuth;
-	private final GithubOAuth githubOAuth;
 
 	// 로그인 + AccessToken + RefreshToken 발급
 	public RotatedTokens login(LoginRequestDto request) {
@@ -129,34 +127,26 @@ public class AuthService {
 		return userRepository.save(user);
 	}
 
-	public RotatedTokens githubLogin(String code) {
-		// 1. 토큰 발급 요청
-		GithubDto.OAuthTokenDto oAuthToken = githubOAuth.requestAccessToken(code);
-		log.info("oAuthToken: {}", oAuthToken);
-
-		// 2. 토큰으로 사용자 정보 요청
-		GithubDto.UserDto profile = githubOAuth.requestProfile(oAuthToken);
-
-		// 3. 기존 회원이면 로그인, 기존 회원이 아니면 회원가입
-		String email = profile.getEmail();
+	// Github 계정으로 로그인
+	public RotatedTokens githubLogin(GithubDto.UserDto request) {
+		String email = request.getEmail();
 		Users user = userRepository.findByEmail(email)
-			.orElseGet(() -> createNewUserFromGithub(profile));
+			.orElseGet(() -> createNewUserFromGithub(request));
 
-		// String accessToken = jwtTokenProvider.createToken(user.getUserId());
-		String accessToken = oAuthToken.getAccessToken();
+		String accessToken = jwtTokenProvider.createToken(user.getUserId());
 		String refreshToken = jwtTokenProvider.createRefreshToken(user.getUserId());
-		log.info("accessToken: {}, refreshToken: {}", accessToken, refreshToken);
 
 		refreshTokenRepository.save(new RefreshToken(user.getUserId(), refreshToken));
 
-		return new RotatedTokens(user.getUserId(), user.getName(), accessToken, refreshToken);
+		RotatedTokens tokens = new RotatedTokens(user.getUserId(), user.getName(), accessToken, refreshToken);
+		return tokens;
 	}
 
 	// Github 계정으로 회원가입
 	public Users createNewUserFromGithub(GithubDto.UserDto profile) {
 		UserRegistrationRequestDto request = new UserRegistrationRequestDto();
 		request.setEmail(profile.getEmail());
-		request.setUsername(profile.getLogin());
+		request.setUsername(profile.getName());
 		request.setPassword("github" + profile.getId() + "_" + UUID.randomUUID().toString());
 
 		Users user = Users.builder()
