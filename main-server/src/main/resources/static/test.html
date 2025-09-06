@@ -127,6 +127,33 @@
         const topicUrl = `/topic/projects/${projectId}/chat`;
         const enterUrl = `/app/projects/${projectId}/chat/enter`;
 
+        const openApiUrl = `http://localhost:8080/projects/${projectId}/open`;
+
+        log(`Calling 'Open Project' API: ${openApiUrl}`);
+        fetch(openApiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + jwtTokenInput.value
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    // API 호출이 실패한 경우 (서버 에러 등)
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+                return response.json(); // 성공 응답을 JSON으로 파싱
+            })
+            .then(data => {
+                // API 호출 성공 후 로직
+                log(`'Open Project' API call successful`);
+            })
+            .catch(error => {
+                // 네트워크 에러 또는 API 호출 실패 시
+                console.error('API call error:', error);
+                log(`ERROR: Could not open project. ${error.message}`);
+            });
+
         log(`Subscribing to: ${topicUrl}`);
 
         // 4. 특정 토픽을 구독합니다.
