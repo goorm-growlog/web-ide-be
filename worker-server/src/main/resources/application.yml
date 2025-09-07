@@ -50,7 +50,8 @@ container-lifecycle:
   rabbitmq:
     exchange:
       name: container.lifecycle.exchange
-    queue:
-      name: container.delete.queue
-    routing:
-      key: container.delete.key
+    request: # From Main
+      queue-name: container.delete.queue
+      routing-key: container.delete.key
+    response: # To Main
+      routing-key: container.deleted.ack.key
