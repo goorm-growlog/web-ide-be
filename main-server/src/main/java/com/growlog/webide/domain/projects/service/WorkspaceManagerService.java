@@ -33,6 +33,7 @@ import com.growlog.webide.domain.projects.entity.ProjectMembers;
 import com.growlog.webide.domain.projects.repository.ActiveSessionRepository;
 import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
+import com.growlog.webide.domain.terminal.service.SessionScheduler;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.factory.DockerClientFactory;
@@ -220,8 +221,7 @@ public class WorkspaceManagerService {
 		ActiveSession session = activeSessionRepository.findByUser_UserIdAndProject_Id(userId, projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
 
-		String containerId = session.getContainerId();
-		sessionScheduler.scheduleDeletion(containerId, user.getUserId(), projectId);
+		// String containerId = session.getContainerId();
 
 		// 이 세션이 해당 프로젝트의 마지막 활성 세션이었는지 확인
 		// if (activeSessionRepository.countByProjectAndStatus(project, InstanceStatus.ACTIVE) == 0) {
@@ -233,46 +233,46 @@ public class WorkspaceManagerService {
 	사용자의 컨테이너를 중지/제거하고, ActiveInstance 삭제
 	 */
 
-	@Transactional
-	public void deleteContainer(String containerId) {
-		log.info("Closing session for container '{}'", containerId);
-
-		DockerClient dockerClient = dockerClientFactory.buildDockerClient();
-
-		// 1. 컨테이너 ID로 DB에서 ActiveInstance 정보 조회
-		ActiveSession session = activeSessionRepository.findByContainerId(containerId)
-			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
-
-		// 2. 물리적인 Docker 컨테이너를 중지하고 제거
-		removeContainerIfExists(dockerClient, containerId);
-
-		// 3. DB에서 ActiveInstance 레코드 삭제
-		activeSessionRepository.delete(session);
-
-		try {
-			dockerClient.close();
-		} catch (IOException e) {
-			log.warn("Error closing DockerClient", e);
-		}
-	}
-
-	// 예외 상황에서 컨테이너 정리
-	public void removeContainerIfExists(DockerClient dockerClient, String containerId) {
-		if (containerId == null || containerId.isBlank()) {
-			return;
-		}
-		try {
-			log.info("Stopping container '{}'", containerId);
-			dockerClient.stopContainerCmd(containerId).exec();
-			log.info("Removing container '{}'", containerId);
-			dockerClient.removeContainerCmd(containerId).exec();
-		} catch (NotFoundException e) {
-			log.warn("Container '{}' not found.", containerId);
-		} catch (Exception e) {
-			log.error("Error while removing container '{}': {}", containerId, e.getMessage());
-			throw new RuntimeException("Failed to remove container: " + containerId, e);
-		}
-	}
+	// @Transactional
+	// public void deleteContainer(String containerId) {
+	// 	log.info("Closing session for container '{}'", containerId);
+	//
+	// 	DockerClient dockerClient = dockerClientFactory.buildDockerClient();
+	//
+	// 	// 1. 컨테이너 ID로 DB에서 ActiveInstance 정보 조회
+	// 	ActiveSession session = activeSessionRepository.findByContainerId(containerId)
+	// 		.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+	//
+	// 	// 2. 물리적인 Docker 컨테이너를 중지하고 제거
+	// 	removeContainerIfExists(dockerClient, containerId);
+	//
+	// 	// 3. DB에서 ActiveInstance 레코드 삭제
+	// 	activeSessionRepository.delete(session);
+	//
+	// 	try {
+	// 		dockerClient.close();
+	// 	} catch (IOException e) {
+	// 		log.warn("Error closing DockerClient", e);
+	// 	}
+	// }
+	//
+	// // 예외 상황에서 컨테이너 정리
+	// public void removeContainerIfExists(DockerClient dockerClient, String containerId) {
+	// 	if (containerId == null || containerId.isBlank()) {
+	// 		return;
+	// 	}
+	// 	try {
+	// 		log.info("Stopping container '{}'", containerId);
+	// 		dockerClient.stopContainerCmd(containerId).exec();
+	// 		log.info("Removing container '{}'", containerId);
+	// 		dockerClient.removeContainerCmd(containerId).exec();
+	// 	} catch (NotFoundException e) {
+	// 		log.warn("Container '{}' not found.", containerId);
+	// 	} catch (Exception e) {
+	// 		log.error("Error while removing container '{}': {}", containerId, e.getMessage());
+	// 		throw new RuntimeException("Failed to remove container: " + containerId, e);
+	// 	}
+	// }
 
 	public void deleteProject(Long projectId, Long userId) {
 		log.info("Deleting project with ID: {}", projectId);
