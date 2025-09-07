@@ -94,7 +94,7 @@
             deactivateBtn.disabled = false;
 
             const userId = userIdInput.value;
-            const queueUrl = `queue/termination/${userId}`;
+            const queueUrl = `/queue/termination/${userId}`;
 
             stompClient.subscribe(queueUrl, function (message) {
                 log(`SESSION TERMINATED: ${message.body}`);
