@@ -43,8 +43,10 @@ public class ContainerTaskConsumer {
 		log.info("Received container cleanup request: {}", request);
 		try {
 			containerManager.cleanupContainerForSession(request.sessionId());
+			taskResponseProducer.sendCleanupSuccess(request.sessionId());
 		} catch (Exception e) {
 			log.error("Failed to process cleanup request", e);
+			throw new RuntimeException("Failed to process cleanup request", e);
 		}
 	}
 }

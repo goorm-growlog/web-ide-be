@@ -1,5 +1,6 @@
 package com.growlog.webide.domain.projects.service;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
@@ -33,20 +34,19 @@ public class ActiveSessionService {
 	 */
 	@Transactional
 	public void cleanupSession(Long userId, Long projectId) {
-		Optional<ActiveSession> sessionOpt = activeSessionRepository.findByUser_UserIdAndProject_Id(
+		List<ActiveSession> activeSessions = activeSessionRepository.findAllByUser_UserIdAndProject_Id(
 			userId, projectId);
 
-		if (sessionOpt.isEmpty()) {
+		if (activeSessions.isEmpty()) {
 			log.warn("No active session found to clean up for userId: {} and projectId: {}", userId, projectId);
 			return;
 		}
 
-		ActiveSession activeSession = sessionOpt.get();
-		log.info("Found active session to clean up: {}", activeSession.getId());
+		for (ActiveSession session : activeSessions) {
+			log.info("Found active session to clean up: {}", session.getId());
+			requestCleanup(session);
+		}
 
-		requestCleanup(activeSession);
-
-		activeSessionRepository.delete(activeSession);
 		log.info("Cleaned up session for userId: {}", userId);
 	}
 
@@ -99,6 +99,9 @@ public class ActiveSessionService {
 			containerTaskProducer.requestContainerCleanup(activeSession.getId(),
 				activeSession.getProject().getId(),
 				activeSession.getContainerId());
+		}
+		if (!StringUtils.hasText(activeSession.getContainerId())) {
+			activeSessionRepository.deleteById(activeSession.getId());
 		}
 	}
 

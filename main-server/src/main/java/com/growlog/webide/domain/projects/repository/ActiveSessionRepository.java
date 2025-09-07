@@ -13,6 +13,8 @@ public interface ActiveSessionRepository extends JpaRepository<ActiveSession, Lo
 
 	Optional<ActiveSession> findByUser_UserIdAndProject_Id(Long userId, Long projectId);
 
+	List<ActiveSession> findAllByUser_UserIdAndProject_Id(Long userId, Long projectId);
+
 	// 특정 사용자 활성 세션 찾기
 	Optional<ActiveSession> findByUserAndProject(Users user, Project project);
 

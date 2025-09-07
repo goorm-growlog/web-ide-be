@@ -16,29 +16,38 @@ public class TaskResponseProducer {
 	private final RabbitTemplate rabbitTemplate;
 
 	private final String exchangeName;
-	private final String successRoutingKey;
-	private final String failureRoutingKey;
+	private final String acquireSuccessRoutingKey;
+	private final String acquireFailureRoutingKey;
+	private final String cleanupSuccessRoutingKey;
 
 	public TaskResponseProducer(RabbitTemplate rabbitTemplate,
 		@Value("${container-response.rabbitmq.exchange.name}") String exchangeName,
-		@Value("${container-response.rabbitmq.routing.key.acquire-success}") String successRoutingKey,
-		@Value("${container-response.rabbitmq.routing.key.acquire-failure}") String failureRoutingKey) {
+		@Value("${container-response.rabbitmq.routing.key.acquire-success}") String acquireSuccessRoutingKey,
+		@Value("${container-response.rabbitmq.routing.key.acquire-failure}") String acquireFailureRoutingKey,
+		@Value("${container-response.rabbitmq.routing.key.cleanup-success}") String cleanupSuccessRoutingKey) {
 		this.rabbitTemplate = rabbitTemplate;
 		this.exchangeName = exchangeName;
-		this.successRoutingKey = successRoutingKey;
-		this.failureRoutingKey = failureRoutingKey;
+		this.acquireSuccessRoutingKey = acquireSuccessRoutingKey;
+		this.acquireFailureRoutingKey = acquireFailureRoutingKey;
+		this.cleanupSuccessRoutingKey = cleanupSuccessRoutingKey;
 	}
 
 	public void sendAcquireSuccess(Long sessionId, Long projectId, String containerId) {
 		ContainerAcquireSuccessResponse response = new ContainerAcquireSuccessResponse(sessionId, projectId,
 			containerId);
 		log.info("Sending acquire success response: {}", response);
-		rabbitTemplate.convertAndSend(exchangeName, successRoutingKey, response);
+		rabbitTemplate.convertAndSend(exchangeName, acquireSuccessRoutingKey, response);
 	}
 
 	public void sendAcquireFailure(Long sessionId, String reason) {
 		ContainerAcquireFailureResponse response = new ContainerAcquireFailureResponse(sessionId, reason);
 		log.info("Sending acquire failure response: {}", response);
-		rabbitTemplate.convertAndSend(exchangeName, failureRoutingKey, response);
+		rabbitTemplate.convertAndSend(exchangeName, acquireFailureRoutingKey, response);
 	}
+
+	public void sendCleanupSuccess(Long sessionId) {
+		log.info("Sending cleanup success response for project: {}", sessionId);
+		rabbitTemplate.convertAndSend(exchangeName, cleanupSuccessRoutingKey, sessionId);
+	}
+
 }
