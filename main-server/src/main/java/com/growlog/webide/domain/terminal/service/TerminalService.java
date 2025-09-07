@@ -3,8 +3,8 @@ package com.growlog.webide.domain.terminal.service;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -146,7 +146,8 @@ public class TerminalService {
 		activeInstanceRepository.save(activeInstance);
 
 		// [수정] 하드코딩된 값을 설정 파일에서 주입받은 값으로 변경
-		rabbitTemplate.convertAndSend(containerLifecycleExchangeName, containerDeleteKey, activeInstance.getContainerId());
+		rabbitTemplate.convertAndSend(containerLifecycleExchangeName, containerDeleteKey,
+			activeInstance.getContainerId());
 	}
 
 	/**

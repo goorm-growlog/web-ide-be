@@ -42,7 +42,8 @@ public class SessionScheduler {
 				try {
 					log.info("Requesting deletion for inactive container: {}", instance.getContainerId());
 					// [수정] 중복 로직을 제거하고, 이미 구현된 TerminalService의 삭제 요청 메서드를 재사용합니다.
-					terminalService.requestContainerDeletion(instance.getProject().getId(), instance.getUser().getUserId());
+					terminalService.requestContainerDeletion(instance.getProject().getId(),
+						instance.getUser().getUserId());
 				} catch (Exception e) {
 					log.error("Error requesting deletion for inactive instance with containerId: {}",
 						instance.getContainerId(), e);
