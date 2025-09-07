@@ -28,6 +28,7 @@ CREATE TABLE `users`
     `email`             VARCHAR(100) NOT NULL UNIQUE COMMENT '이메일',
     `password`          VARCHAR(255) NOT NULL COMMENT '비밀번호',
     `profile_image_url` VARCHAR(255) COMMENT '프로필 이미지',
+    `provider`          VARCHAR(50)  NULL,
     `created_at`        DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '생성 일시',
     `updated_at`        DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6) COMMENT '수정 일시',
     `deleted_at`        DATETIME(6)  NULL COMMENT '삭제 일시',

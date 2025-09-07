@@ -53,6 +53,7 @@ jobs:
 
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
           echo "JWT_EXPIRATION=3600000" >> .env
+          echo "REFRESH_SECRET=${{ secrets.REFRESH_SECRET }}" >> .env
           echo "REFRESH_EXPIRATION=604800" >> .env
 
           echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
@@ -70,6 +71,10 @@ jobs:
           echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> .env
           echo "REDIS_USERNAME=${{ secrets.REDIS_USERNAME }}" >> .env
           echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" >> .env
+
+          echo "KAKAO_REST_API_KEY=${{ secrets.KAKAO_REST_API_KEY }}" >> .env
+          echo "KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}" >> .env
+          echo "KAKAO_REDIRECT_URI_LOCAL=${{ secrets.KAKAO_REDIRECT_URI_LOCAL }}" >> .env
 
       - name: 🔍 디버깅 .env 줄 번호 확인
         run: cat -n .env

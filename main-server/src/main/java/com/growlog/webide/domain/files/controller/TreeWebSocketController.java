@@ -1,5 +1,6 @@
 package com.growlog.webide.domain.files.controller;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.springframework.messaging.Message;
@@ -12,12 +13,7 @@ import org.springframework.stereotype.Controller;
 
 import com.growlog.webide.domain.files.dto.tree.TreeNodeDto;
 import com.growlog.webide.domain.files.dto.tree.WebSocketMessage;
-import com.growlog.webide.domain.files.repository.FileMetaRepository;
 import com.growlog.webide.domain.files.service.TreeService;
-import com.growlog.webide.domain.projects.entity.ActiveSession;
-import com.growlog.webide.domain.projects.repository.ActiveSessionRepository;
-import com.growlog.webide.global.common.exception.CustomException;
-import com.growlog.webide.global.common.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,8 +25,6 @@ public class TreeWebSocketController {
 
 	private final TreeService treeService;
 	private final SimpMessagingTemplate messagingTemplate;
-	private final ActiveSessionRepository activeSessionRepository;
-	private final FileMetaRepository fileMetaRepository;
 
 	@MessageMapping("/projects/{projectId}/tree/init")
 	public void sendInitialTree(
@@ -50,23 +44,24 @@ public class TreeWebSocketController {
 		log.info("[WS] 트리 요청 userId={}, projectId={}", userId, projectId);
 
 		// 📦 인스턴스 조회
-		ActiveSession inst = activeSessionRepository
+		ActiveInstance inst = activeInstanceRepository
 			.findByUser_UserIdAndProject_Id(userId, projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
 
-		//		String containerId = inst.getContainerId();
+		String containerId = inst.getContainerId();
 
 		// ✅ 최초 1회만 동기화 수행 (DB에 아무 파일도 없다면)
 		boolean isEmpty = fileMetaRepository.findAllByProjectIdAndDeletedFalse(projectId).isEmpty();
 		if (isEmpty) {
 			log.info("[WS] 최초 트리 요청 - 컨테이너에서 파일 구조 동기화 시작");
-			//			treeService.syncFromContainer(projectId, containerId);
+			treeService.syncFromContainer(projectId, containerId);
 		}
 
 		// 🌳 트리 구성
-		List<TreeNodeDto> tree = treeService.buildTreeFromDb(projectId);
+		TreeNodeDto rootNode = treeService.getInitialTree(projectId);
+		List<TreeNodeDto> payload = Collections.singletonList(rootNode);
 
-		WebSocketMessage msg = new WebSocketMessage("tree:init", tree);
+		WebSocketMessage msg = new WebSocketMessage("tree:init", payload);
 		messagingTemplate.convertAndSend(
 			"/topic/projects/" + projectId + "/tree",
 			msg
