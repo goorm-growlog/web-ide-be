@@ -87,6 +87,10 @@ public class Project {
 		this.status = ProjectStatus.INACTIVE;
 	}
 
+	public void deleting() {
+		this.status = ProjectStatus.DELETING;
+	}
+
 	//== 정보 수정 ==//
 	public void updateDetails(String projectName, String description) {
 		if (projectName != null && !projectName.isBlank()) {
