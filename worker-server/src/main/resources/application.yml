@@ -35,6 +35,35 @@ terminal-command:
     routing:
       key: terminal.command.routing-key
 
+# 로그 메시지 전송 관련 RabbitMQ 설정
+log:
+  rabbitmq:
+    exchange:
+      name: logs.exchange
+    routing:
+      key: logs.to.client.key
+
+# RPC for container creation
+rpc:
+  rabbitmq:
+    exchange:
+      name: rpc.exchange
+    queue:
+      name: rpc.container.create.queue
+    routing:
+      key: rpc.container.create
+
+# 컨테이너 생명주기(삭제) 관련 RabbitMQ 설정
+container-lifecycle:
+  rabbitmq:
+    exchange:
+      name: container.lifecycle.exchange
+    request: # From Main
+      queue-name: container.delete.queue
+      routing-key: container.delete.key
+    response: # To Main
+      routing-key: container.deleted.ack.key
+
 # 컨테이너 할당 요청 관련 RabbitMQ 설정
 container-acquire:
   rabbitmq:

@@ -25,13 +25,12 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class KakaoOAuth {
 
+	private final RestTemplate restTemplate;
+	private final ObjectMapper objectMapper;
 	@Value("${spring.kakao.oauth.rest-api-key}")
 	private String restAPiKey;
 	@Value("${spring.kakao.oauth.redirect-uri}")
 	private String redirectUri;
-
-	private final RestTemplate restTemplate;
-	private final ObjectMapper objectMapper;
 
 	public String responseUrl() {
 		return UriComponentsBuilder.fromHttpUrl("https://kauth.kakao.com/oauth/authorize")

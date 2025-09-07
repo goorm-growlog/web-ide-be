@@ -11,10 +11,11 @@ spring:
     username: admin
     password: admin
 
-efs:
-  # main-server의 local 프로필과 동일한 경로를 바라보도록 설정합니다.
-  # 이 경로는 Docker가 접근할 수 있는 호스트 머신의 절대 경로여야 합니다.
-  base-path: /tmp/growlog-workspaces/projects
-container:
-  # 컨테이너 내부에서 프로젝트 파일이 보일 경로입니다.
-  workspace-path: /app
+docker:
+  host:
+    # main-server의 local 프로필과 동일한 경로를 바라보도록 설정합니다.
+    # 이 경로는 Docker가 접근할 수 있는 호스트 머신의 절대 경로여야 합니다.
+    workspace-base-path: /tmp/growlog-workspaces/projects
+  container:
+    # 컨테이너 내부에서 프로젝트 파일이 보일 경로입니다.
+    workspace-path: /app

@@ -1,45 +1,225 @@
 package com.growlog.webide.domain.terminal.service;
 
+import java.util.Optional;
+import java.util.UUID;
+
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.growlog.webide.domain.images.entity.Image;
+import com.growlog.webide.domain.images.repository.ImageRepository;
+import com.growlog.webide.domain.projects.entity.InstanceStatus;
+import com.growlog.webide.domain.projects.entity.Project;
+import com.growlog.webide.domain.projects.repository.ProjectRepository;
+import com.growlog.webide.domain.terminal.dto.CodeExecutionApiRequest;
 import com.growlog.webide.domain.terminal.dto.CodeExecutionRequestDto;
+import com.growlog.webide.domain.terminal.dto.ContainerCreationRequest;
+import com.growlog.webide.domain.terminal.dto.TerminalCommandApiRequest;
 import com.growlog.webide.domain.terminal.dto.TerminalCommandRequestDto;
+import com.growlog.webide.domain.terminal.entity.ActiveInstance;
+import com.growlog.webide.domain.terminal.repository.ActiveInstanceRepository;
+import com.growlog.webide.domain.users.entity.Users;
+import com.growlog.webide.domain.users.repository.UserRepository;
+import com.growlog.webide.global.common.exception.CustomException;
+import com.growlog.webide.global.common.exception.ErrorCode;
 
-import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
-@RequiredArgsConstructor
 public class TerminalService {
-	private final RabbitTemplate rabbitTemplate;
 
+	private final RabbitTemplate rabbitTemplate;
+	private final RabbitTemplate rpcRabbitTemplate;
+	private final ImageRepository imageRepository;
+	private final ActiveInstanceRepository activeInstanceRepository;
+	private final ProjectRepository projectRepository;
+	private final UserRepository userRepository;
 	@Value("${code-execution.rabbitmq.exchange.name}")
 	private String codeExecutionExchangeName;
 	@Value("${code-execution.rabbitmq.routing.key}")
 	private String codeExecutionRoutingKey;
-
 	@Value("${terminal-command.rabbitmq.exchange.name}")
 	private String terminalCommandExchangeName;
 	@Value("${terminal-command.rabbitmq.routing.key}")
 	private String terminalCommandRoutingKey;
+	// [추가] RPC 관련 설정 값
+	@Value("${rpc.rabbitmq.exchange.name}")
+	private String rpcExchangeName;
+	@Value("${rpc.rabbitmq.request-routing-key}")
+	private String rpcRequestRoutingKey;
 
-	public void sendCodeExecutionRequest(Long projectId, CodeExecutionRequestDto requestDto) {
-		// DTO에 projectId를 추가하여 메시지 큐에 보냅니다.
-		// DTO에 projectId가 포함되어 있지 않으므로, 아래와 같이 DTO에 직접 값을 설정하거나,
-		// DTO를 조합하는 새로운 클래스를 만들어 보낼 수 있습니다.
-		// 여기서는 예시를 위해 DTO에 setter가 있다고 가정합니다.
-		requestDto.setProjectId(projectId);
+	// [추가] 컨테이너 삭제 요청을 위한 RabbitMQ 설정
+	@Value("${container-lifecycle.rabbitmq.exchange.name}")
+	private String containerLifecycleExchangeName;
+	@Value("${container-lifecycle.rabbitmq.request.routing-key}")
+	private String containerDeleteKey;
 
-		rabbitTemplate.convertAndSend(codeExecutionExchangeName, codeExecutionRoutingKey, requestDto);
-		System.out.println("Code execution request message sent for project " + projectId);
+	public TerminalService(
+		@Qualifier("rabbitTemplate") RabbitTemplate rabbitTemplate,
+		@Qualifier("rpcRabbitTemplate") RabbitTemplate rpcRabbitTemplate,
+		ImageRepository imageRepository,
+		ActiveInstanceRepository activeInstanceRepository,
+		ProjectRepository projectRepository,
+		UserRepository userRepository) {
+		this.rabbitTemplate = rabbitTemplate;
+		this.rpcRabbitTemplate = rpcRabbitTemplate;
+		this.imageRepository = imageRepository;
+		this.activeInstanceRepository = activeInstanceRepository;
+		this.projectRepository = projectRepository;
+		this.userRepository = userRepository;
 	}
 
-	public void sendTerminalCommand(Long projectId, TerminalCommandRequestDto requestDto) {
-		// 터미널 DTO에 projectId를 추가합니다.
-		requestDto.setProjectId(projectId);
+	/**
+	 * [Stateless] 일회성 코드 실행을 요청합니다.
+	 * ActiveInstance와 무관하게, 임시 컨테이너에서 실행됩니다.
+	 */
+	public String requestStatelessCodeExecution(Long projectId, Long userId, CodeExecutionApiRequest apiRequest) {
+		// 1. DB에서 언어에 맞는 실행 환경(이미지) 정보를 조회합니다.
+		Image image = imageRepository.findByImageNameIgnoreCase(apiRequest.getLanguage())
+			.orElseThrow(() -> new CustomException(ErrorCode.IMAGE_NOT_FOUND));
 
-		rabbitTemplate.convertAndSend(terminalCommandExchangeName, terminalCommandRoutingKey, requestDto);
-		System.out.println("Terminal command request message sent for project " + projectId);
+		// [추가] 클라이언트와 Worker가 공유할 고유 실행 ID 생성
+		String executionLogId = UUID.randomUUID().toString();
+
+		// 2. Worker Server에 전달할 메시지를 생성합니다.
+		CodeExecutionRequestDto messageDto = new CodeExecutionRequestDto();
+		messageDto.setProjectId(projectId);
+		messageDto.setUserId(userId);
+		messageDto.setExecutionLogId(executionLogId); // DTO에 ID 추가
+		messageDto.setLanguage(apiRequest.getLanguage());
+		messageDto.setFilePath(apiRequest.getFilePath());
+		messageDto.setDockerImage(image.getDockerBaseImage()); // 조회한 Docker 이미지 이름을 DTO에 추가
+		messageDto.setBuildCommand(image.getBuildCommand());   // 빌드 명령어 추가
+		messageDto.setRunCommand(image.getRunCommand());       // 실행 명령어 추가
+
+		// 3. RabbitMQ로 메시지를 전송합니다.
+		rabbitTemplate.convertAndSend(codeExecutionExchangeName, codeExecutionRoutingKey, messageDto);
+		log.info("Stateless code execution request sent for project {} with executionLogId {}", projectId,
+			executionLogId);
+		return executionLogId;
+	}
+
+	/**
+	 * [Stateful] 상태 유지가 필요한 터미널 세션에 명령어를 전달합니다.
+	 * 필요한 경우, 컨테이너를 생성하고 ActiveInstance에 기록합니다.
+	 * @return 컨테이너 ID
+	 */
+	@Transactional
+	public String requestStatefulTerminalCommand(Long projectId, Long userId, TerminalCommandApiRequest apiRequest) {
+		// 1. Find or create an active container for the user and project.
+		ActiveInstance activeInstance = findOrCreateActiveInstance(projectId, userId);
+		activeInstance.updateActivity(); // ★★★ 활동 시간 갱신 ★★★
+		activeInstanceRepository.save(activeInstance);
+
+		// 2. Worker Server에 전달할 메시지를 생성합니다.
+		TerminalCommandRequestDto messageDto = new TerminalCommandRequestDto();
+		messageDto.setProjectId(projectId);
+		messageDto.setUserId(userId);
+		messageDto.setContainerId(activeInstance.getContainerId()); // ★★★ ActiveInstance의 컨테이너 ID를 사용
+		messageDto.setCommand(apiRequest.getCommand());
+		messageDto.setDockerImage(activeInstance.getProject().getImage().getDockerBaseImage());
+
+		// 3. RabbitMQ로 메시지를 전송합니다.
+		rabbitTemplate.convertAndSend(terminalCommandExchangeName, terminalCommandRoutingKey, messageDto);
+		log.info("Stateful terminal command sent to container {}", activeInstance.getContainerId());
+		return activeInstance.getContainerId();
+	}
+
+	/**
+	 * 사용자의 명시적인 요청에 의해 터미널 컨테이너 삭제를 요청합니다.
+	 */
+	@Transactional
+	public void requestContainerDeletion(Long projectId, Long userId) {
+		ActiveInstance activeInstance = activeInstanceRepository.findByUser_UserIdAndProject_IdAndStatus(userId,
+				projectId, InstanceStatus.ACTIVE)
+			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
+
+		log.info("User {} requested to delete container {} for project {}", userId, activeInstance.getContainerId(),
+			projectId);
+
+		activeInstance.disconnect(); // 상태를 PENDING으로 변경
+		activeInstanceRepository.save(activeInstance);
+
+		// [수정] 하드코딩된 값을 설정 파일에서 주입받은 값으로 변경
+		rabbitTemplate.convertAndSend(containerLifecycleExchangeName, containerDeleteKey,
+			activeInstance.getContainerId());
+	}
+
+	/**
+	 * [추가] Worker-Server로부터 컨테이너 삭제 완료 알림을 수신하는 리스너
+	 * @param containerId 삭제된 컨테이너의 ID
+	 */
+	@Transactional
+	@RabbitListener(queues = "${container-lifecycle.rabbitmq.response.queue-name}")
+	public void handleContainerDeletedAck(String containerId) {
+		log.info("Received deletion acknowledgement for container: {}", containerId);
+		// PENDING 상태인 ActiveInstance를 containerId로 찾아 삭제합니다.
+		activeInstanceRepository.findByContainerIdAndStatus(containerId, InstanceStatus.PENDING)
+			.ifPresent(activeInstanceRepository::delete);
+		log.info("Cleaned up ActiveInstance for container: {}", containerId);
+	}
+
+	private ActiveInstance findOrCreateActiveInstance(Long projectId, Long userId) {
+		Optional<ActiveInstance> existingInstance = activeInstanceRepository.findByUser_UserIdAndProject_IdAndStatus(
+			userId, projectId, InstanceStatus.ACTIVE);
+
+		if (existingInstance.isPresent()) {
+			log.info("Found existing active instance for user {} and project {}", userId, projectId);
+			return existingInstance.get();
+		}
+
+		log.info("No active instance found for user {} and project {}. Creating a new one.", userId, projectId);
+		Project project = projectRepository.findById(projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
+		Users user = userRepository.findById(userId)
+			.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+		ContainerCreationRequest creationRequest = new ContainerCreationRequest(projectId, userId,
+			project.getImage().getDockerBaseImage());
+
+		// RPC call to worker server to create a container and get its ID back
+		// Note: RabbitMQConfig needs to be set up for RPC.
+		// [수정] RPC 전용으로 설정된 rpcRabbitTemplate을 사용합니다.
+		String containerId = (String)rpcRabbitTemplate.convertSendAndReceive(rpcExchangeName, rpcRequestRoutingKey,
+			creationRequest);
+
+		if (containerId == null || containerId.isBlank()) {
+			log.error("Failed to create container for project {}. Worker did not return a container ID.", projectId);
+			throw new CustomException(ErrorCode.CONTAINER_CREATION_FAILED);
+		}
+
+		log.info("Container {} created by worker. Saving new ActiveInstance.", containerId);
+
+		ActiveInstance newInstance = ActiveInstance.builder()
+			.project(project)
+			.user(user)
+			.containerId(containerId)
+			.status(InstanceStatus.ACTIVE)
+			.build();
+
+		return activeInstanceRepository.save(newInstance);
+	}
+
+	public void sendTerminalCommand(Long projectId, Long userId, TerminalCommandApiRequest apiRequest) {
+		// DB에서 터미널 전용 실행 환경(이미지) 정보를 조회합니다. (예: imageName이 "terminal"인 이미지)
+		// data.sql에 'terminal' 이름으로 이미지를 추가해야 합니다.
+		Image terminalImage = imageRepository.findByImageNameIgnoreCase("terminal")
+			.orElseThrow(() -> new CustomException(ErrorCode.IMAGE_NOT_FOUND));
+
+		// API 요청 DTO를 내부 메시징 DTO로 변환하고, projectId를 설정합니다.
+		TerminalCommandRequestDto messageDto = new TerminalCommandRequestDto();
+		messageDto.setProjectId(projectId);
+		messageDto.setUserId(userId); // 컨트롤러에서 전달받은 안전한 userId를 사용합니다.
+		messageDto.setCommand(apiRequest.getCommand());
+		messageDto.setDockerImage(terminalImage.getDockerBaseImage());
+
+		rabbitTemplate.convertAndSend(terminalCommandExchangeName, terminalCommandRoutingKey, messageDto);
+		log.info("Terminal command request sent: projectId={}, userId={}, image={}, command='{}'",
+			messageDto.getProjectId(), messageDto.getUserId(), messageDto.getDockerImage(), messageDto.getCommand());
 	}
 }

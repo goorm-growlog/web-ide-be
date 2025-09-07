@@ -35,6 +35,22 @@ public class RabbitmqConfig {
 	@Value("${terminal-command.rabbitmq.routing.key}")
 	private String terminalCommandRoutingKey;
 
+	// RPC 큐 관련 설정 값
+	@Value("${rpc.rabbitmq.exchange.name}")
+	private String rpcExchangeName;
+	@Value("${rpc.rabbitmq.queue.name}")
+	private String rpcQueueName;
+	@Value("${rpc.rabbitmq.routing.key}")
+	private String rpcRoutingKey;
+
+	// [추가] 컨테이너 삭제 큐 관련 설정 값
+	@Value("${container-lifecycle.rabbitmq.exchange.name}")
+	private String containerLifecycleExchangeName;
+	@Value("${container-lifecycle.rabbitmq.request.queue-name}")
+	private String containerDeleteQueueName;
+	@Value("${container-lifecycle.rabbitmq.request.routing-key}")
+	private String containerDeleteRoutingKey;
+
 	// 컨테이너 할당 큐 관련 설정 값
 	@Value("${container-acquire.rabbitmq.exchange.name}")
 	private String containerAcquireExchangeName;
@@ -117,6 +133,40 @@ public class RabbitmqConfig {
 		return BindingBuilder.bind(terminalCommandQueue())
 			.to(terminalCommandExchange())
 			.with(terminalCommandRoutingKey);
+	}
+
+	// RPC 큐, 교환기, 바인딩
+	@Bean
+	public Queue rpcQueue() {
+		return new Queue(rpcQueueName, true);
+	}
+
+	@Bean
+	public TopicExchange rpcExchange() {
+		return new TopicExchange(rpcExchangeName);
+	}
+
+	@Bean
+	public Binding rpcBinding() {
+		return BindingBuilder.bind(rpcQueue()).to(rpcExchange()).with(rpcRoutingKey);
+	}
+
+	// [추가] 컨테이너 삭제 큐, 교환기, 바인딩
+	@Bean
+	public Queue containerDeleteQueue() {
+		return new Queue(containerDeleteQueueName, true);
+	}
+
+	@Bean
+	public TopicExchange containerLifecycleExchange() {
+		return new TopicExchange(containerLifecycleExchangeName);
+	}
+
+	@Bean
+	public Binding containerDeleteBinding() {
+		return BindingBuilder.bind(containerDeleteQueue())
+			.to(containerLifecycleExchange())
+			.with(containerDeleteRoutingKey);
 	}
 
 	// 컨테이너 할당 큐, 교환기, 바인딩

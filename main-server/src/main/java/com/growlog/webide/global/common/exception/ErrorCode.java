@@ -66,6 +66,10 @@ public enum ErrorCode {
 	MEMBER_NOT_FOUND("MEMBER_NOT_FOUND", "Project member not found."),
 	PATH_NOT_ALLOWED("PATH_NOT_ALLOWED", "Path is not allowed."),
 
+	// 컨테이너 실행 관련
+	CONTAINER_CREATION_FAILED("CONTAINER_CREATION_FAILED",
+		"Failed to prepare the execution environment. Please try again later."),
+
 	// 채팅 관련
 	KEYWORD_NOT_FOUND("KEYWORD_NOT_FOUND", "Search keyword cannot be empty.");
 

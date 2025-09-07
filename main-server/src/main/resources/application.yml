@@ -60,6 +60,35 @@ terminal-command:
     routing:
       key: terminal.command.routing-key
 
+# 로그 메시지 수신 관련 RabbitMQ 설정 (Worker -> Main)
+log-reception:
+  rabbitmq:
+    exchange:
+      name: logs.exchange
+    queue:
+      name: logs.from.worker.queue
+    routing:
+      key: logs.to.client.key
+
+# RPC for container creation
+rpc:
+  rabbitmq:
+    exchange:
+      name: rpc.exchange
+    request-routing-key: rpc.container.create # Worker로 요청을 보낼 때 사용할 라우팅 키
+    reply-queue-name: rpc.container.reply.queue # Worker로부터 응답을 받을 큐 이름
+
+# 컨테이너 생명주기(삭제) 관련 RabbitMQ 설정
+container-lifecycle:
+  rabbitmq:
+    exchange:
+      name: container.lifecycle.exchange
+    request: # To Worker
+      routing-key: container.delete.key
+    response: # From Worker
+      queue-name: container.deleted.ack.queue
+      routing-key: container.deleted.ack.key
+
 # 컨테이너 할당 요청 관련 RabbitMQ 설정
 container-acquire:
   rabbitmq:

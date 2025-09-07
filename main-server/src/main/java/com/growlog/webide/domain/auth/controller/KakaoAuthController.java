@@ -28,10 +28,10 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Tag(name = "auth API - 소셜 로그인")
 public class KakaoAuthController {
-	@Value("${spring.kakao.redirect-front}")
-	private String kakaoRedirectUrl;
 	private final KakaoOAuth kakaoOAuth;
 	private final AuthService authService;
+	@Value("${spring.kakao.redirect-front}")
+	private String kakaoRedirectUrl;
 
 	@Operation(summary = "카카오 로그인 화면으로 redirect",
 		description = """
