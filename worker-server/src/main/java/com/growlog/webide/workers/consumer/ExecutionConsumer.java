@@ -31,7 +31,7 @@ public class ExecutionConsumer {
 	/**
 	 * [Stateful] 영구 컨테이너 생성 요청을 처리합니다. (RPC)
 	 */
-	@RabbitListener(queues = "rpc.container.create.queue")
+	@RabbitListener(queues = "${rpc.rabbitmq.queue.name}")
 	public String handleCreateContainerRequest(ContainerCreationRequest request) {
 		log.info("Received RPC request to create persistent container for project: {}", request.getProjectId());
 		return containerExecutionService.createPersistentContainer(request);
