@@ -63,6 +63,28 @@ public class RabbitmqConfig {
 	@Value("${container-cleanup.rabbitmq.routing.key}")
 	private String containerCleanupRoutingKey;
 
+	// 컨테이너 정리 응답 큐 관련 설정 값
+	@Value("${container-response.rabbitmq.queue.name.cleanup-success}")
+	private String containerCleanupSuccessQueueName;
+	@Value("${container-response.rabbitmq.routing.key.cleanup-success}")
+	private String containerCleanupSuccessRoutingKey;
+
+	// 프로젝트 삭제 큐 관련 설정 값
+	@Value("${project-delete.rabbitmq.exchange.name}")
+	private String projectDeleteExchangeName;
+	@Value("${project-delete.rabbitmq.queue.name}")
+	private String projectDeleteQueueName;
+	@Value("${project-delete.rabbitmq.routing.key}")
+	private String projectDeleteRoutingKey;
+
+	// 프로젝트 삭제 응답 큐 관련 설정 값
+	@Value("${project-response.rabbitmq.exchange.name}")
+	private String projectResponseExchangeName;
+	@Value("${project-response.rabbitmq.queue.name.delete-success}")
+	private String projectDeleteSuccessQueueName;
+	@Value("${project-response.rabbitmq.routing.key.delete-success}")
+	private String projectDeleteSuccessRoutingKey;
+
 	// 코드 실행 큐, 교환기, 바인딩
 	@Bean
 	public Queue codeExecutionQueue() {
@@ -160,6 +182,56 @@ public class RabbitmqConfig {
 		return BindingBuilder.bind(containerCleanupQueue())
 			.to(containerCleanupExchange())
 			.with(containerCleanupRoutingKey);
+	}
+
+	// 컨테이너 정리 응답 큐, 바인딩 (교환기는 할당 응답 교환기와 동일)
+	@Bean
+	public Queue containerCleanupSuccessQueue() {
+		return new Queue(containerCleanupSuccessQueueName, true);
+	}
+
+	@Bean
+	public Binding containerCleanupSuccessBinding() {
+		return BindingBuilder.bind(containerCleanupSuccessQueue())
+			.to(containerResponseExchange())
+			.with(containerCleanupSuccessRoutingKey);
+	}
+
+
+	// 프로젝트 삭제 큐, 교환기, 바인딩
+	@Bean
+	public Queue projectDeleteQueue() {
+		return new Queue(projectDeleteQueueName, true);
+	}
+
+	@Bean
+	public TopicExchange projectDeleteExchange() {
+		return new TopicExchange(projectDeleteExchangeName);
+	}
+
+	@Bean
+	public Binding projectDeleteBinding() {
+		return BindingBuilder.bind(projectDeleteQueue())
+			.to(projectDeleteExchange())
+			.with(projectDeleteRoutingKey);
+	}
+
+	// 프로젝트 삭제 응답 큐, 교환기, 바인딩
+	@Bean
+	public Queue projectDeleteSuccessQueue() {
+		return new Queue(projectDeleteSuccessQueueName, true);
+	}
+
+	@Bean
+	public TopicExchange projectResponseExchange() {
+		return new TopicExchange(projectResponseExchangeName);
+	}
+
+	@Bean
+	public Binding projectDeleteSuccessBinding() {
+		return BindingBuilder.bind(projectDeleteSuccessQueue())
+			.to(projectResponseExchange())
+			.with(projectDeleteSuccessRoutingKey);
 	}
 
 	@Bean

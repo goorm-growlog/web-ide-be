@@ -15,10 +15,9 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import com.github.dockerjava.api.DockerClient;
-import com.github.dockerjava.api.exception.NotFoundException;
 import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.images.repository.ImageRepository;
+import com.growlog.webide.domain.projects.config.ProjectManagementProducer;
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
 import com.growlog.webide.domain.projects.dto.ProjectResponse;
 import com.growlog.webide.domain.projects.dto.UpdateProjectRequest;
@@ -26,6 +25,7 @@ import com.growlog.webide.domain.projects.entity.ActiveSession;
 import com.growlog.webide.domain.projects.entity.MemberRole;
 import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.entity.ProjectMembers;
+import com.growlog.webide.domain.projects.entity.ProjectStatus;
 import com.growlog.webide.domain.projects.repository.ActiveSessionRepository;
 import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
@@ -51,6 +51,7 @@ public class WorkspaceManagerService {
 	private final ProjectMemberRepository projectMemberRepository;
 	private final ProjectFileMetaService projectFileMetaService;
 	private final WebSocketNotificationService webSocketNotificationService;
+	private final ProjectManagementProducer projectManagementProducer;
 
 	private final String projectsBasePath;
 	private final String templatesBasePath;
@@ -64,6 +65,7 @@ public class WorkspaceManagerService {
 		ProjectMemberRepository projectMemberRepository,
 		ProjectFileMetaService projectFileMetaService,
 		WebSocketNotificationService webSocketNotificationService,
+		ProjectManagementProducer projectManagementProducer,
 		@Value("${efs.base-path}") String projectsBasePath,
 		@Value("${efs.templates-path}") String templatesBasePath,
 		@Value("${SERVER_ID}") String serverId) {
@@ -75,6 +77,7 @@ public class WorkspaceManagerService {
 		this.projectMemberRepository = projectMemberRepository;
 		this.projectFileMetaService = projectFileMetaService;
 		this.webSocketNotificationService = webSocketNotificationService;
+		this.projectManagementProducer = projectManagementProducer;
 		this.projectsBasePath = projectsBasePath;
 		this.templatesBasePath = templatesBasePath;
 		this.serverId = serverId;
@@ -157,6 +160,9 @@ public class WorkspaceManagerService {
 		projectMemberRepository.findByUserAndProject(user, project)
 			.orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
 
+		projectRepository.findByIdAndStatusNot(projectId, ProjectStatus.DELETING)
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_IS_DELETED));
+
 		// 프로젝트 상태 변경
 		project.activate();
 
@@ -186,17 +192,7 @@ public class WorkspaceManagerService {
 			throw new CustomException(ErrorCode.NO_OWNER_PERMISSION);
 		}
 
-		final List<ActiveSession> activeSessions = activeSessionRepository.findAllByProject_Id(projectId);
-		log.info("projectId: {}, activeSessions length: {}", projectId, activeSessions.toArray().length);
-
-		for (ActiveSession activeSession : activeSessions) {
-			final Long targetUserId = activeSession.getUser().getUserId();
-			final String message = "Connection terminated by the project owner";
-			log.info("inactivateProject: {}", message);
-			webSocketNotificationService.sendSessionTerminationMessage(targetUserId, message);
-		}
-
-		activeSessionRepository.deleteAll(activeSessions);
+		terminateSessions(projectId);
 
 		final Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
@@ -205,52 +201,7 @@ public class WorkspaceManagerService {
 		projectRepository.save(project);
 	}
 
-	/*
-	3-2. 컨테이너 삭제
-	사용자의 컨테이너를 중지/제거하고, ActiveInstance 삭제
-	 */
-
 	@Transactional
-	public void deleteContainer(String containerId) {
-		log.info("Closing session for container '{}'", containerId);
-
-		DockerClient dockerClient = dockerClientFactory.buildDockerClient();
-
-		// 1. 컨테이너 ID로 DB에서 ActiveInstance 정보 조회
-		ActiveSession session = activeSessionRepository.findByContainerId(containerId)
-			.orElseThrow(() -> new CustomException(ErrorCode.ACTIVE_CONTAINER_NOT_FOUND));
-
-		// 2. 물리적인 Docker 컨테이너를 중지하고 제거
-		removeContainerIfExists(dockerClient, containerId);
-
-		// 3. DB에서 ActiveInstance 레코드 삭제
-		activeSessionRepository.delete(session);
-
-		try {
-			dockerClient.close();
-		} catch (IOException e) {
-			log.warn("Error closing DockerClient", e);
-		}
-	}
-
-	// 예외 상황에서 컨테이너 정리
-	public void removeContainerIfExists(DockerClient dockerClient, String containerId) {
-		if (containerId == null || containerId.isBlank()) {
-			return;
-		}
-		try {
-			log.info("Stopping container '{}'", containerId);
-			dockerClient.stopContainerCmd(containerId).exec();
-			log.info("Removing container '{}'", containerId);
-			dockerClient.removeContainerCmd(containerId).exec();
-		} catch (NotFoundException e) {
-			log.warn("Container '{}' not found.", containerId);
-		} catch (Exception e) {
-			log.error("Error while removing container '{}': {}", containerId, e.getMessage());
-			throw new RuntimeException("Failed to remove container: " + containerId, e);
-		}
-	}
-
 	public void deleteProject(Long projectId, Long userId) {
 		log.info("Deleting project with ID: {}", projectId);
 
@@ -262,12 +213,12 @@ public class WorkspaceManagerService {
 			throw new CustomException(ErrorCode.NO_OWNER_PERMISSION);
 		}
 
-		// if (activeSessionRepository.countByProjectAndStatus(project, InstanceStatus.ACTIVE) > 0) {
-		// 	throw new CustomException(ErrorCode.CONTAINER_STILL_RUNNING);
-		// }
+		final String message = "Project deleted. Session will terminated";
+		webSocketNotificationService.sendProjectDeletedMessage(userId, message);
 
-		// 2. db에서 프로젝트 레코드 먼저 삭제
-		projectRepository.delete(project);
+		project.deleting();
+
+		projectManagementProducer.requestDeleteProject(projectId);
 	}
 
 	@Transactional
@@ -317,6 +268,18 @@ public class WorkspaceManagerService {
 		return members.stream()
 			.map(member -> ProjectResponse.from(member.getProject(), user))
 			.collect(Collectors.toList());
+	}
+
+	public void terminateSessions(Long projectId) {
+		final List<ActiveSession> activeSessions = activeSessionRepository.findAllByProject_Id(projectId);
+		log.info("projectId: {}, activeSessions length: {}", projectId, activeSessions.toArray().length);
+
+		for (ActiveSession activeSession : activeSessions) {
+			final Long targetUserId = activeSession.getUser().getUserId();
+			final String message = "Connection terminated by the project owner";
+			log.info("inactivateProject: {}", message);
+			webSocketNotificationService.sendSessionTerminationMessage(targetUserId, message);
+		}
 	}
 
 }

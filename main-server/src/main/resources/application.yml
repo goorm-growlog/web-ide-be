@@ -89,7 +89,41 @@ container-response:
       name:
         acquire-success: container.aq.success.queue
         acquire-failure: container.aq.failure.queue
+        cleanup-success: container.cleanup.success.queue
     routing:
       key:
         acquire-success: container.acquire.success
         acquire-failure: container.acquire.failure
+        cleanup-success: container.cleanup.success
+
+# 프로젝트 삭제 요청 관련 RabbitMQ 설정
+project-delete:
+  rabbitmq:
+    exchange:
+      name: project.delete.exchange
+    queue:
+      name: project.delete.queue
+    routing:
+      key: project.delete.routing-key
+
+# 프로젝트 관련 작업 응답을 위한 RabbitMQ 설정
+project-response:
+  rabbitmq:
+    exchange:
+      name: project.response.exchange
+    queue:
+      name:
+        delete-success: project.delete.success.queue
+    routing:
+      key:
+        delete-success: project.delete.success.routing-key
+
+# 프로젝트 DB 정리 요청 관련 RabbitMQ 설정
+project-db-cleanup:
+  rabbitmq:
+    exchange:
+      name: db.cleanup.exchange
+    queue:
+      name: db.cleanup.queue
+    routing:
+      key: db.cleanup.routing-key
