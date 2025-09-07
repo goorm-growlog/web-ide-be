@@ -81,11 +81,21 @@ public class StompHandler implements ChannelInterceptor {
 		try {
 			final Long userId = Long.parseLong(accessor.getSessionAttributes().get("userId").toString());
 			final String destination = accessor.getDestination();
-			final Long projectId = Long.parseLong(destination.split("/")[3]);
 
-			if (projectMemberRepository.findByProject_IdAndUser_UserId(projectId, userId).isEmpty()) {
-				log.warn("Required permissions are missing.");
-				throw new CustomException(ErrorCode.NOT_A_MEMBER);
+			if (destination != null && destination.startsWith("/topic/projects/")) {
+				// 채팅 관련 구독일 경우, projectId를 검증합니다.
+				final Long projectId = Long.parseLong(destination.split("/")[3]);
+				if (projectMemberRepository.findByProject_IdAndUser_UserId(projectId, userId).isEmpty()) {
+					log.warn("Required permissions are missing for chat subscription.");
+					throw new CustomException(ErrorCode.NOT_A_MEMBER);
+				}
+			} else if (destination != null && destination.startsWith("/user/queue/logs")) {
+				// 로그 관련 구독일 경우, 개인 채널이므로 별도의 projectId 검증 없이 통과시킵니다.
+				log.info("User {} subscribed to their private log queue.", userId);
+			} else {
+				// 알 수 없는 구독 경로일 경우, 거부합니다.
+				log.warn("Attempted to subscribe to an unknown or disallowed destination: {}", destination);
+				throw new CustomException(ErrorCode.BAD_REQUEST);
 			}
 		} catch (Exception e) {
 			log.warn("Failed to process subscription request.: {}", e.getMessage());
