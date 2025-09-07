@@ -42,9 +42,9 @@ public class RabbitmqConfig {
 	// [추가] 컨테이너 삭제 큐 관련 설정 값
 	@Value("${container-lifecycle.rabbitmq.exchange.name}")
 	private String containerLifecycleExchangeName;
-	@Value("${container-lifecycle.rabbitmq.queue.name}")
+	@Value("${container-lifecycle.rabbitmq.request.queue-name}")
 	private String containerDeleteQueueName;
-	@Value("${container-lifecycle.rabbitmq.routing.key}")
+	@Value("${container-lifecycle.rabbitmq.request.routing-key}")
 	private String containerDeleteRoutingKey;
 
 	// 코드 실행 큐, 교환기, 바인딩

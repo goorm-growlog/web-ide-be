@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -54,8 +55,8 @@ public class TerminalService {
 
 	// [추가] 컨테이너 삭제 요청을 위한 RabbitMQ 설정
 	@Value("${container-lifecycle.rabbitmq.exchange.name}")
-	private String containerLifecycleExchange;
-	@Value("${container-lifecycle.rabbitmq.routing.key}")
+	private String containerLifecycleExchangeName;
+	@Value("${container-lifecycle.rabbitmq.request.routing-key}")
 	private String containerDeleteKey;
 
 	public TerminalService(
@@ -145,7 +146,21 @@ public class TerminalService {
 		activeInstanceRepository.save(activeInstance);
 
 		// [수정] 하드코딩된 값을 설정 파일에서 주입받은 값으로 변경
-		rabbitTemplate.convertAndSend(containerLifecycleExchange, containerDeleteKey, activeInstance.getContainerId());
+		rabbitTemplate.convertAndSend(containerLifecycleExchangeName, containerDeleteKey, activeInstance.getContainerId());
+	}
+
+	/**
+	 * [추가] Worker-Server로부터 컨테이너 삭제 완료 알림을 수신하는 리스너
+	 * @param containerId 삭제된 컨테이너의 ID
+	 */
+	@Transactional
+	@RabbitListener(queues = "${container-lifecycle.rabbitmq.response.queue-name}")
+	public void handleContainerDeletedAck(String containerId) {
+		log.info("Received deletion acknowledgement for container: {}", containerId);
+		// PENDING 상태인 ActiveInstance를 containerId로 찾아 삭제합니다.
+		activeInstanceRepository.findByContainerIdAndStatus(containerId, InstanceStatus.PENDING)
+			.ifPresent(activeInstanceRepository::delete);
+		log.info("Cleaned up ActiveInstance for container: {}", containerId);
 	}
 
 	private ActiveInstance findOrCreateActiveInstance(Long projectId, Long userId) {

@@ -50,6 +50,14 @@ public class RabbitmqConfig {
 	@Value("${rpc.rabbitmq.reply-queue-name}")
 	private String rpcReplyQueueName;
 
+	// 컨테이너 생명주기(삭제) 관련 설정 값
+	@Value("${container-lifecycle.rabbitmq.exchange.name}")
+	private String containerLifecycleExchangeName;
+	@Value("${container-lifecycle.rabbitmq.response.queue-name}")
+	private String containerDeletedAckQueueName;
+	@Value("${container-lifecycle.rabbitmq.response.routing-key}")
+	private String containerDeletedAckRoutingKey;
+
 	// 코드 실행 큐, 교환기, 바인딩
 	@Bean
 	public Queue codeExecutionQueue() {
@@ -98,6 +106,25 @@ public class RabbitmqConfig {
 	@Bean
 	public Binding logReceptionBinding() {
 		return BindingBuilder.bind(logReceptionQueue()).to(logReceptionExchange()).with(logReceptionRoutingKey);
+	}
+
+	// 컨테이너 생명주기(삭제) 관련 교환기
+	@Bean
+	public TopicExchange containerLifecycleExchange() {
+		return new TopicExchange(containerLifecycleExchangeName);
+	}
+
+	// 컨테이너 삭제 완료 응답을 수신할 큐
+	@Bean
+	public Queue containerDeletedAckQueue() {
+		return new Queue(containerDeletedAckQueueName, true);
+	}
+
+	@Bean
+	public Binding containerDeletedAckBinding() {
+		return BindingBuilder.bind(containerDeletedAckQueue())
+			.to(containerLifecycleExchange())
+			.with(containerDeletedAckRoutingKey);
 	}
 
 	// =================================================================

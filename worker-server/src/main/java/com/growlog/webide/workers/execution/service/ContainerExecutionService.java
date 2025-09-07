@@ -50,6 +50,12 @@ public class ContainerExecutionService {
 	@Value("${log.rabbitmq.routing.key}")
 	private String logRoutingKey;
 
+	// [추가] 컨테이너 삭제 완료 알림을 위한 RabbitMQ 설정
+	@Value("${container-lifecycle.rabbitmq.exchange.name}")
+	private String containerLifecycleExchangeName;
+	@Value("${container-lifecycle.rabbitmq.response.routing-key}")
+	private String containerDeletedAckRoutingKey;
+
 	/**
 	 * [Stateless] 일회성 코드 실행 요청을 처리합니다.
 	 * 임시 컨테이너를 생성하고, 내부에 명령어를 실행한 뒤, 컨테이너를 정리합니다.
@@ -129,14 +135,18 @@ public class ContainerExecutionService {
 	 * [추가] 컨테이너 삭제 요청을 수신하고 처리하는 리스너
 	 * @param containerId 삭제할 컨테이너의 ID
 	 */
-	@RabbitListener(queues = "${container-lifecycle.rabbitmq.queue.name}")
+	@RabbitListener(queues = "${container-lifecycle.rabbitmq.request.queue-name}")
 	public void handleContainerDeletion(String containerId) {
 		log.info("Received request to delete container: {}", containerId);
 		try {
 			cleanupContainer(containerId);
 			log.info("Successfully deleted container: {}", containerId);
+
+			// Main-Server로 삭제 완료 알림(ACK) 메시지 전송
+			rabbitTemplate.convertAndSend(containerLifecycleExchangeName, containerDeletedAckRoutingKey, containerId);
+			log.info("Sent deletion acknowledgement for container: {}", containerId);
 		} catch (Exception e) {
-			log.error("Failed to delete container {}", containerId, e);
+			log.error("Failed to delete container {} and send acknowledgement.", containerId, e);
 		}
 	}
 
