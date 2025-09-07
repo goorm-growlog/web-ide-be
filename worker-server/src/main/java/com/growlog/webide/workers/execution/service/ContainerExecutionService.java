@@ -1,27 +1,34 @@
 package com.growlog.webide.workers.execution.service;
 
+import java.io.Closeable;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
+
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.ExecCreateCmdResponse;
 import com.github.dockerjava.api.exception.NotFoundException;
 import com.github.dockerjava.api.exception.NotModifiedException;
-import com.github.dockerjava.api.model.*;
-import com.growlog.webide.workers.execution.dto.ContainerCreationRequest;
+import com.github.dockerjava.api.model.Bind;
+import com.github.dockerjava.api.model.Frame;
+import com.github.dockerjava.api.model.HostConfig;
+import com.github.dockerjava.api.model.PullResponseItem;
+import com.github.dockerjava.api.model.StreamType;
+import com.github.dockerjava.api.model.Volume;
 import com.growlog.webide.workers.execution.dto.CodeExecutionRequestDto;
+import com.growlog.webide.workers.execution.dto.ContainerCreationRequest;
 import com.growlog.webide.workers.execution.dto.LogMessage;
 import com.growlog.webide.workers.execution.dto.TerminalCommandRequestDto;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
-import java.io.Closeable;
-import java.nio.file.Path;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -167,7 +174,7 @@ public class ContainerExecutionService {
 	}
 
 	private void executeCommandInContainer(String containerId, String finalCommand, boolean isTemporary,
-										   String logTargetId, Long userId) throws InterruptedException {
+		String logTargetId, Long userId) throws InterruptedException {
 		String[] command = {"/bin/sh", "-c", finalCommand};
 		ExecCreateCmdResponse execCreateCmdResponse = dockerClient.execCreateCmd(containerId)
 			.withAttachStdout(true)
@@ -238,7 +245,7 @@ public class ContainerExecutionService {
 		private final String routingKey;
 
 		public LogContainerCallback(String containerId, RabbitTemplate rabbitTemplate, String logTargetId, Long userId,
-									String exchangeName, String routingKey) {
+			String exchangeName, String routingKey) {
 			this.containerId = containerId;
 			this.rabbitTemplate = rabbitTemplate;
 			this.logTargetId = logTargetId;

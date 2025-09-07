@@ -101,11 +101,11 @@ CREATE TABLE `project_members`
 -- =================================================================
 CREATE TABLE `active_sessions`
 (
-    `session_id`     BIGINT       NOT NULL AUTO_INCREMENT COMMENT '세션 ID (PK)',
-    `project_id`      BIGINT       NOT NULL COMMENT '프로젝트 ID (FK)',
-    `user_id`         BIGINT       NOT NULL COMMENT '사용자 ID (FK)',
-    `server_id`     VARCHAR(255)       NOT NULL COMMENT 'EC2 인스턴스 ID',
-    `connected_at`    DATETIME(6)                      NOT NULL,
+    `session_id`   BIGINT       NOT NULL AUTO_INCREMENT COMMENT '세션 ID (PK)',
+    `project_id`   BIGINT       NOT NULL COMMENT '프로젝트 ID (FK)',
+    `user_id`      BIGINT       NOT NULL COMMENT '사용자 ID (FK)',
+    `server_id`    VARCHAR(255) NOT NULL COMMENT 'EC2 인스턴스 ID',
+    `connected_at` DATETIME(6)                      NOT NULL,
     PRIMARY KEY (`session_id`),
     CONSTRAINT `fk_active_sessions_to_projects` FOREIGN KEY (`project_id`) REFERENCES `projects` (`project_id`) ON DELETE CASCADE,
     CONSTRAINT `fk_active_sessions_to_users` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`)
@@ -118,12 +118,12 @@ CREATE TABLE `active_sessions`
 -- =================================================================
 CREATE TABLE `active_instances`
 (
-    `instance_id`     BIGINT       NOT NULL AUTO_INCREMENT COMMENT '인스턴스 ID (PK)',
-    `project_id`      BIGINT       NOT NULL COMMENT '프로젝트 ID (FK)',
-    `user_id`         BIGINT       NOT NULL COMMENT '사용자 ID (FK)',
-    `container_id`    VARCHAR(255) NOT NULL COMMENT '실행 중인 Docker 컨테이너 ID',
-    `status`          ENUM ('ACTIVE', 'PENDING') NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE: 활성, PENDING: 삭제 대기',
-    `connected_at`    DATETIME(6)                      NOT NULL,
+    `instance_id`      BIGINT       NOT NULL AUTO_INCREMENT COMMENT '인스턴스 ID (PK)',
+    `project_id`       BIGINT       NOT NULL COMMENT '프로젝트 ID (FK)',
+    `user_id`          BIGINT       NOT NULL COMMENT '사용자 ID (FK)',
+    `container_id`     VARCHAR(255) NOT NULL COMMENT '실행 중인 Docker 컨테이너 ID',
+    `status`           ENUM ('ACTIVE', 'PENDING') NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE: 활성, PENDING: 삭제 대기',
+    `connected_at`     DATETIME(6)                      NOT NULL,
     `last_activity_at` DATETIME(6) NOT NULL COMMENT '마지막 활동 시간',
     PRIMARY KEY (`instance_id`),
     UNIQUE KEY `uk_active_instances_container_id` (`container_id`),

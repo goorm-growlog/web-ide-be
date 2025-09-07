@@ -2,9 +2,9 @@ package com.growlog.webide.domain.terminal.service;
 
 import java.util.Optional;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +26,6 @@ import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -39,6 +38,19 @@ public class TerminalService {
 	private final ActiveInstanceRepository activeInstanceRepository;
 	private final ProjectRepository projectRepository;
 	private final UserRepository userRepository;
+	@Value("${code-execution.rabbitmq.exchange.name}")
+	private String codeExecutionExchangeName;
+	@Value("${code-execution.rabbitmq.routing.key}")
+	private String codeExecutionRoutingKey;
+	@Value("${terminal-command.rabbitmq.exchange.name}")
+	private String terminalCommandExchangeName;
+	@Value("${terminal-command.rabbitmq.routing.key}")
+	private String terminalCommandRoutingKey;
+	// [추가] RPC 관련 설정 값
+	@Value("${rpc.rabbitmq.exchange.name}")
+	private String rpcExchangeName;
+	@Value("${rpc.rabbitmq.request-routing-key}")
+	private String rpcRequestRoutingKey;
 
 	public TerminalService(
 		@Qualifier("rabbitTemplate") RabbitTemplate rabbitTemplate,
@@ -54,22 +66,6 @@ public class TerminalService {
 		this.projectRepository = projectRepository;
 		this.userRepository = userRepository;
 	}
-
-	@Value("${code-execution.rabbitmq.exchange.name}")
-	private String codeExecutionExchangeName;
-	@Value("${code-execution.rabbitmq.routing.key}")
-	private String codeExecutionRoutingKey;
-
-	@Value("${terminal-command.rabbitmq.exchange.name}")
-	private String terminalCommandExchangeName;
-	@Value("${terminal-command.rabbitmq.routing.key}")
-	private String terminalCommandRoutingKey;
-
-	// [추가] RPC 관련 설정 값
-	@Value("${rpc.rabbitmq.exchange.name}")
-	private String rpcExchangeName;
-	@Value("${rpc.rabbitmq.request-routing-key}")
-	private String rpcRequestRoutingKey;
 
 	/**
 	 * [Stateless] 일회성 코드 실행을 요청합니다.
@@ -96,7 +92,8 @@ public class TerminalService {
 
 		// 3. RabbitMQ로 메시지를 전송합니다.
 		rabbitTemplate.convertAndSend(codeExecutionExchangeName, codeExecutionRoutingKey, messageDto);
-		log.info("Stateless code execution request sent for project {} with executionLogId {}", projectId, executionLogId);
+		log.info("Stateless code execution request sent for project {} with executionLogId {}", projectId,
+			executionLogId);
 		return executionLogId;
 	}
 
@@ -166,7 +163,8 @@ public class TerminalService {
 		// RPC call to worker server to create a container and get its ID back
 		// Note: RabbitMQConfig needs to be set up for RPC.
 		// [수정] RPC 전용으로 설정된 rpcRabbitTemplate을 사용합니다.
-		String containerId = (String)rpcRabbitTemplate.convertSendAndReceive(rpcExchangeName, rpcRequestRoutingKey, creationRequest);
+		String containerId = (String)rpcRabbitTemplate.convertSendAndReceive(rpcExchangeName, rpcRequestRoutingKey,
+			creationRequest);
 
 		if (containerId == null || containerId.isBlank()) {
 			log.error("Failed to create container for project {}. Worker did not return a container ID.", projectId);

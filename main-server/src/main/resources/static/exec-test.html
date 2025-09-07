@@ -79,7 +79,8 @@
             border-radius: 4px;
         }
 
-        .log-item { /* display: block 제거 */ }
+        .log-item { /* display: block 제거 */
+        }
 
         .log-item.status {
             color: #4ec9b0;
@@ -112,11 +113,11 @@
 
     <div class="input-group">
         <label for="jwtToken">JWT Access Token:</label>
-        <input type="text" id="jwtToken" placeholder="로그인 후 Access Token 입력">
+        <input id="jwtToken" placeholder="로그인 후 Access Token 입력" type="text">
     </div>
     <div>
-        <button onclick="connect()" class="primary" id="connectBtn">Connect & Subscribe</button>
-        <button onclick="disconnect()" class="secondary" id="disconnectBtn" disabled>Disconnect</button>
+        <button class="primary" id="connectBtn" onclick="connect()">Connect & Subscribe</button>
+        <button class="secondary" disabled id="disconnectBtn" onclick="disconnect()">Disconnect</button>
     </div>
     <hr>
     <h3>Received Logs</h3>
