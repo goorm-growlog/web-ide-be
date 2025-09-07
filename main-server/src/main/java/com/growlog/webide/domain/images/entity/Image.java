@@ -24,10 +24,7 @@ import lombok.NoArgsConstructor;
 @EntityListeners(AuditingEntityListener.class)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "images", uniqueConstraints = {
-	@UniqueConstraint(
-		name = "uk_image_name_version",
-		columnNames = {"image_name", "version"}
-	)
+	@UniqueConstraint(name = "uk_image_name_version", columnNames = {"image_name", "version"})
 })
 public class Image {
 

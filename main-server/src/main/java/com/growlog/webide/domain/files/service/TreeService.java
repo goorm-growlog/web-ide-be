@@ -5,7 +5,6 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,10 +32,10 @@ public class TreeService {
 	/*private static final String CONTAINER_BASE = "/app";
 	private final DockerCommandService dockerCommandService;*/
 
-	@Value("${efs.base-path}")
-	private String efsBasePath;
 	private final FileMetaRepository fileMetaRepository;
 	private final ProjectRepository projectRepository;
+	@Value("${efs.base-path}")
+	private String efsBasePath;
 
 	@Transactional
 	public TreeNodeDto getInitialTree(Long projectId) {
