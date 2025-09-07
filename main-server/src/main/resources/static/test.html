@@ -22,8 +22,6 @@
     <button disabled id="subscribeBtn">2. Subscribe & Enter</button>
 </div>
 <div>
-    <label for="userId">User ID:</label>
-    <input id="userId" type="text">
     <button disabled id="deactivateBtn">Trigger Project Deactivation</button>
 </div>
 <hr>
@@ -41,7 +39,6 @@
     const connectBtn = document.getElementById('connectBtn');
     const disconnectBtn = document.getElementById('disconnectBtn');
     const subscribeBtn = document.getElementById('subscribeBtn');
-    const userIdInput = document.getElementById('userId');
     const projectIdInput = document.getElementById('projectId');
     const jwtTokenInput = document.getElementById('jwtToken');
     const logDiv = document.getElementById('log');
@@ -62,14 +59,8 @@
     // 웹소켓 연결 함수
     function connect() {
         const token = jwtTokenInput.value;
-        const userId = userIdInput.value;
         if (!token) {
             alert('JWT Token을 입력하세요!');
-            return;
-        }
-
-        if (!userId) {
-            alert("missing userId");
             return;
         }
 
@@ -93,13 +84,20 @@
             subscribeBtn.disabled = false;
             deactivateBtn.disabled = false;
 
-            const userId = userIdInput.value;
-            const queueUrl = `/queue/termination/${userId}`;
+            const queueUrl = `/user/topic/termination`;
 
             stompClient.subscribe(queueUrl, function (message) {
-                log(`SESSION TERMINATED: ${message.body}`);
-                alert(`The server has closed your session: ${message.body}`);
-                disconnect(); // 메시지 수신 후 연결 해제
+                log("RAW MESSAGE RECEIVED: ", message.body);
+                const body = JSON.parse(message.body);
+                if (body.type === 'SESSION_TERMINATE') {
+                    log(`SESSION TERMINATED: ${message.body}`);
+                    alert(`The server has closed your session: ${message.body}`);
+                    disconnect(); // 메시지 수신 후 연결 해제
+                }
+                if (body.type === 'PROJECT_DELETED') {
+                    log(`PROJECT DELETION NOTICE: ${message.body}`)
+                    alert(`Server Message: ${message.body}`)
+                }
             });
             log(`Subscribed to ${queueUrl} for server-sent messages.`);
         }, function (error) {
