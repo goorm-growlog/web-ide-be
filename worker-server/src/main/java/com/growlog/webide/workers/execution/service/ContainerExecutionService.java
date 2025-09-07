@@ -1,28 +1,27 @@
 package com.growlog.webide.workers.execution.service;
 
-import java.io.Closeable;
-import java.nio.file.Path;
-import java.util.concurrent.TimeUnit;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.command.CreateContainerResponse;
 import com.github.dockerjava.api.command.ExecCreateCmdResponse;
 import com.github.dockerjava.api.exception.NotFoundException;
 import com.github.dockerjava.api.exception.NotModifiedException;
-import com.github.dockerjava.api.model.Bind;
-import com.github.dockerjava.api.model.Frame;
-import com.github.dockerjava.api.model.HostConfig;
-import com.github.dockerjava.api.model.PullResponseItem;
-import com.github.dockerjava.api.model.Volume;
+import com.github.dockerjava.api.model.*;
+import com.growlog.webide.workers.execution.dto.ContainerCreationRequest;
 import com.growlog.webide.workers.execution.dto.CodeExecutionRequestDto;
+import com.growlog.webide.workers.execution.dto.LogMessage;
 import com.growlog.webide.workers.execution.dto.TerminalCommandRequestDto;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.io.Closeable;
+import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -30,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 public class ContainerExecutionService {
 
 	private final DockerClient dockerClient;
+	private final RabbitTemplate rabbitTemplate;
 
 	@Value("${docker.host.workspace-base-path}")
 	private String hostWorkspaceBasePath;
@@ -37,12 +37,20 @@ public class ContainerExecutionService {
 	@Value("${docker.container.workspace-path}")
 	private String containerWorkspacePath;
 
+	// [개선] 로그 전송을 위한 RabbitMQ 설정을 외부에서 주입받습니다.
+	@Value("${log.rabbitmq.exchange.name}")
+	private String logExchangeName;
+	@Value("${log.rabbitmq.routing.key}")
+	private String logRoutingKey;
+
 	/**
-	 * 코드 실행 요청을 처리합니다.
-	 * 컨테이너를 생성하고, 내부에 명령어를 실행한 뒤, 결과를 반환하고 컨테이너를 정리합니다.
+	 * [Stateless] 일회성 코드 실행 요청을 처리합니다.
+	 * 임시 컨테이너를 생성하고, 내부에 명령어를 실행한 뒤, 컨테이너를 정리합니다.
 	 */
+	@RabbitListener(queues = "${code-execution.rabbitmq.queue.name}")
 	public void executeCode(CodeExecutionRequestDto request) {
 		String containerId = null;
+		String executionLogId = request.getExecutionLogId();
 		try {
 			// 0. 컨테이너 실행에 필요한 이미지가 로컬에 없으면 pull 합니다.
 			pullImageIfNotExists(request.getDockerImage());
@@ -55,10 +63,10 @@ public class ContainerExecutionService {
 			String finalCommand = buildFinalCommand(request);
 			log.info("Executing command in container {}: {}", containerId, finalCommand);
 
-			// 3. 컨테이너 내부에서 명령어 실행 및 결과 로깅
-			String output = executeCommandInContainer(containerId, finalCommand);
-			log.info("Execution finished for container {}. Full output:\n{}", containerId, output);
-			// To-Do: 이 결과를 WebSocket 등을 통해 사용자에게 다시 보내야 합니다.
+			// 3. 임시 컨테이너 내부에서 명령어 실행 및 결과 로깅
+			log.info("Using execution log ID from main-server: {}", executionLogId);
+			executeCommandInContainer(containerId, finalCommand, true, executionLogId,
+				request.getUserId()); // isTemporary = true
 
 		} catch (Exception e) {
 			log.error("An error occurred during code execution for projectId {}", request.getProjectId(), e);
@@ -71,30 +79,42 @@ public class ContainerExecutionService {
 	}
 
 	/**
-	 * [테스트용] 터미널 컨테이너 생성이 잘 되는지 확인합니다.
-	 * 간단한 명령어를 실행하고 결과를 로그로 남긴 뒤 컨테이너를 정리합니다.
+	 * [Stateful] 영구적인 터미널 컨테이너 생성을 요청받아 처리합니다. (RPC)
 	 */
-	public void testTerminalContainer(TerminalCommandRequestDto request) {
-		String containerId = null;
+	@RabbitListener(queues = "${rpc.rabbitmq.queue.name}")
+	public String createPersistentContainer(ContainerCreationRequest request) {
+		pullImageIfNotExists(request.getDockerImage());
+		HostConfig hostConfig = createHostConfig(request.getProjectId());
+		CreateContainerResponse container = dockerClient.createContainerCmd(request.getDockerImage())
+			.withHostConfig(hostConfig)
+			.withWorkingDir(containerWorkspacePath)
+			.withTty(true) // Keep container running
+			.withStdInOnce(false)
+			.withStdinOpen(true)
+			.withCmd("tail", "-f", "/dev/null")
+			.exec();
+		dockerClient.startContainerCmd(container.getId()).exec();
+		log.info("Persistent container created: {}", container.getId());
+		return container.getId();
+	}
+
+	/**
+	 * [Stateful] 이미 존재하는 영구 컨테이너에 터미널 명령어를 실행합니다.
+	 */
+	@RabbitListener(queues = "${terminal-command.rabbitmq.queue.name}")
+	public void executeCommandInPersistentContainer(TerminalCommandRequestDto request) {
+		String containerId = request.getContainerId();
+		if (containerId == null || containerId.isBlank()) {
+			log.error("executeCommandInPersistentContainer called without a containerId.");
+			return;
+		}
 		try {
-			// 0. 컨테이너 실행에 필요한 이미지가 로컬에 없으면 pull 합니다.
-			pullImageIfNotExists(request.getDockerImage());
-
-			// 1. 테스트용 컨테이너 생성 및 시작
-			containerId = createAndStartTestContainer(request);
-			log.info("Terminal test container created and started: {}", containerId);
-
-			// 2. 컨테이너 로그를 가져와 출력
-			String output = getLogsFromContainer(containerId);
-			log.info("Terminal test finished for container {}. Full output:\n{}", containerId, output);
-
+			String finalCommand = request.getCommand(); // Assuming the command is ready to be executed
+			log.info("Executing terminal command in persistent container {}: {}", containerId, finalCommand);
+			executeCommandInContainer(containerId, finalCommand, false, containerId,
+				request.getUserId()); // isTemporary = false
 		} catch (Exception e) {
-			log.error("An error occurred during terminal container test for projectId {}", request.getProjectId(), e);
-		} finally {
-			// 3. 테스트가 끝나면 컨테이너를 정리합니다.
-			if (containerId != null) {
-				cleanupContainer(containerId);
-			}
+			log.error("An error occurred during terminal command execution for container {}", containerId, e);
 		}
 	}
 
@@ -104,17 +124,6 @@ public class ContainerExecutionService {
 			.withHostConfig(hostConfig)
 			.withWorkingDir(containerWorkspacePath)
 			.withCmd("tail", "-f", "/dev/null")
-			.exec();
-		dockerClient.startContainerCmd(container.getId()).exec();
-		return container.getId();
-	}
-
-	private String createAndStartTestContainer(TerminalCommandRequestDto request) {
-		HostConfig hostConfig = createHostConfig(request.getProjectId());
-		CreateContainerResponse container = dockerClient.createContainerCmd(request.getDockerImage())
-			.withHostConfig(hostConfig)
-			.withWorkingDir(containerWorkspacePath)
-			.withCmd("ls", "-al")
 			.exec();
 		dockerClient.startContainerCmd(container.getId()).exec();
 		return container.getId();
@@ -157,7 +166,8 @@ public class ContainerExecutionService {
 		return normalizedPath.replace(".java", "");
 	}
 
-	private String executeCommandInContainer(String containerId, String finalCommand) throws InterruptedException {
+	private void executeCommandInContainer(String containerId, String finalCommand, boolean isTemporary,
+										   String logTargetId, Long userId) throws InterruptedException {
 		String[] command = {"/bin/sh", "-c", finalCommand};
 		ExecCreateCmdResponse execCreateCmdResponse = dockerClient.execCreateCmd(containerId)
 			.withAttachStdout(true)
@@ -166,7 +176,8 @@ public class ContainerExecutionService {
 			.withWorkingDir(containerWorkspacePath) // <-- 이 줄을 추가하여 명령어 실행 위치를 지정합니다.
 			.exec();
 
-		LogContainerCallback callback = new LogContainerCallback(containerId, "[Container {}] {}");
+		LogContainerCallback callback = new LogContainerCallback(containerId, rabbitTemplate, logTargetId, userId,
+			logExchangeName, logRoutingKey);
 		try (LogContainerCallback a = callback) {
 			dockerClient.execStartCmd(execCreateCmdResponse.getId()).exec(callback);
 			// 명령어 실행이 완료될 때까지 대기합니다. 최대 대기 시간을 10초로 줄여 불필요한 지연을 방지합니다.
@@ -174,22 +185,6 @@ public class ContainerExecutionService {
 		} catch (Exception e) {
 			log.error("Error during command execution in container {}", containerId, e);
 		}
-		return callback.getLogs();
-	}
-
-	private String getLogsFromContainer(String containerId) throws InterruptedException {
-		LogContainerCallback callback = new LogContainerCallback(containerId, "[Terminal Test {}] {}");
-		try (LogContainerCallback a = callback) {
-			dockerClient.logContainerCmd(containerId)
-				.withStdOut(true)
-				.withStdErr(true)
-				.withFollowStream(true)
-				.exec(callback);
-			callback.awaitCompletion(10, TimeUnit.SECONDS);
-		} catch (Exception e) {
-			log.error("Error during log retrieval from container {}", containerId, e);
-		}
-		return callback.getLogs();
 	}
 
 	private void cleanupContainer(String containerId) {
@@ -205,6 +200,7 @@ public class ContainerExecutionService {
 
 	/**
 	 * 지정된 Docker 이미지가 로컬에 존재하지 않으면 Docker Hub(또는 원격 레지스트리)에서 pull 합니다.
+	 *
 	 * @param imageName 확인할 Docker 이미지 이름 (예: "ubuntu:22.04")
 	 */
 	private void pullImageIfNotExists(String imageName) {
@@ -234,32 +230,39 @@ public class ContainerExecutionService {
 	 * 컨테이너의 출력을 로깅하고, 리소스를 안전하게 닫기 위한 ResultCallback 구현체
 	 */
 	static class LogContainerCallback extends ResultCallback.Adapter<Frame> implements Closeable {
-		private final StringBuilder logs = new StringBuilder();
 		private final String containerId;
-		private final String logFormat;
+		private final RabbitTemplate rabbitTemplate;
+		private final String logTargetId; // 로그를 보낼 ID (터미널은 containerId, 일회성 실행은 임시 ID)
+		private final Long userId; // 로그를 수신할 사용자의 ID
+		private final String exchangeName;
+		private final String routingKey;
 
-		public LogContainerCallback(String containerId, String logFormat) {
+		public LogContainerCallback(String containerId, RabbitTemplate rabbitTemplate, String logTargetId, Long userId,
+									String exchangeName, String routingKey) {
 			this.containerId = containerId;
-			this.logFormat = logFormat;
+			this.rabbitTemplate = rabbitTemplate;
+			this.logTargetId = logTargetId;
+			this.userId = userId;
+			this.exchangeName = exchangeName;
+			this.routingKey = routingKey;
 		}
 
 		@Override
 		public void onNext(Frame frame) {
-			String logLine = new String(frame.getPayload()).trim();
-			if (!logLine.isEmpty()) {
-				log.info(logFormat, containerId, logLine);
-				logs.append(logLine).append("\n");
-			}
+			String streamType = frame.getStreamType() == StreamType.STDERR ? "stderr" : "stdout";
+			// [수정] 컨테이너 출력(byte[])을 문자열로 변환할 때 UTF-8 인코딩을 명시적으로 지정합니다.
+			String content = new String(frame.getPayload(), StandardCharsets.UTF_8);
+			LogMessage logMessage = new LogMessage(logTargetId, userId, streamType, content);
+
+			log.trace("Sending log for [{}]: {}", logTargetId, content.trim());
+			// [개선] 하드코딩된 값을 제거하고 주입받은 설정 값을 사용합니다.
+			rabbitTemplate.convertAndSend(exchangeName, routingKey, logMessage);
 		}
 
 		@Override
 		public void onError(Throwable throwable) {
 			log.error("Error in LogContainerCallback for container {}", containerId, throwable);
 			super.onError(throwable);
-		}
-
-		public String getLogs() {
-			return logs.toString();
 		}
 
 		@Override

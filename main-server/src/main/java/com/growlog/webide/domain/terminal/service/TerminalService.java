@@ -1,6 +1,8 @@
 package com.growlog.webide.domain.terminal.service;
 
 import java.util.Optional;
+import java.util.UUID;
+import org.springframework.beans.factory.annotation.Qualifier;
 
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +19,8 @@ import com.growlog.webide.domain.terminal.dto.CodeExecutionRequestDto;
 import com.growlog.webide.domain.terminal.dto.ContainerCreationRequest;
 import com.growlog.webide.domain.terminal.dto.TerminalCommandApiRequest;
 import com.growlog.webide.domain.terminal.dto.TerminalCommandRequestDto;
+import com.growlog.webide.domain.terminal.entity.ActiveInstance;
+import com.growlog.webide.domain.terminal.repository.ActiveInstanceRepository;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.global.common.exception.CustomException;
@@ -27,14 +31,29 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class TerminalService {
 
 	private final RabbitTemplate rabbitTemplate;
+	private final RabbitTemplate rpcRabbitTemplate;
 	private final ImageRepository imageRepository;
 	private final ActiveInstanceRepository activeInstanceRepository;
 	private final ProjectRepository projectRepository;
 	private final UserRepository userRepository;
+
+	public TerminalService(
+		@Qualifier("rabbitTemplate") RabbitTemplate rabbitTemplate,
+		@Qualifier("rpcRabbitTemplate") RabbitTemplate rpcRabbitTemplate,
+		ImageRepository imageRepository,
+		ActiveInstanceRepository activeInstanceRepository,
+		ProjectRepository projectRepository,
+		UserRepository userRepository) {
+		this.rabbitTemplate = rabbitTemplate;
+		this.rpcRabbitTemplate = rpcRabbitTemplate;
+		this.imageRepository = imageRepository;
+		this.activeInstanceRepository = activeInstanceRepository;
+		this.projectRepository = projectRepository;
+		this.userRepository = userRepository;
+	}
 
 	@Value("${code-execution.rabbitmq.exchange.name}")
 	private String codeExecutionExchangeName;
@@ -46,28 +65,39 @@ public class TerminalService {
 	@Value("${terminal-command.rabbitmq.routing.key}")
 	private String terminalCommandRoutingKey;
 
+	// [추가] RPC 관련 설정 값
+	@Value("${rpc.rabbitmq.exchange.name}")
+	private String rpcExchangeName;
+	@Value("${rpc.rabbitmq.request-routing-key}")
+	private String rpcRequestRoutingKey;
+
 	/**
 	 * [Stateless] 일회성 코드 실행을 요청합니다.
 	 * ActiveInstance와 무관하게, 임시 컨테이너에서 실행됩니다.
 	 */
-	public void requestStatelessCodeExecution(Long projectId, Long userId, CodeExecutionApiRequest apiRequest) {
+	public String requestStatelessCodeExecution(Long projectId, Long userId, CodeExecutionApiRequest apiRequest) {
 		// 1. DB에서 언어에 맞는 실행 환경(이미지) 정보를 조회합니다.
 		Image image = imageRepository.findByImageNameIgnoreCase(apiRequest.getLanguage())
 			.orElseThrow(() -> new CustomException(ErrorCode.IMAGE_NOT_FOUND));
 
+		// [추가] 클라이언트와 Worker가 공유할 고유 실행 ID 생성
+		String executionLogId = UUID.randomUUID().toString();
+
 		// 2. Worker Server에 전달할 메시지를 생성합니다.
 		CodeExecutionRequestDto messageDto = new CodeExecutionRequestDto();
 		messageDto.setProjectId(projectId);
-		messageDto.setUserId(userId); // 컨트롤러에서 전달받은 안전한 userId를 사용합니다.
+		messageDto.setUserId(userId);
+		messageDto.setExecutionLogId(executionLogId); // DTO에 ID 추가
 		messageDto.setLanguage(apiRequest.getLanguage());
 		messageDto.setFilePath(apiRequest.getFilePath());
-		messageDto.setDockerImage(image.getDockerBaseImage()); // 2. 조회한 Docker 이미지 이름을 DTO에 추가
-		messageDto.setBuildCommand(image.getBuildCommand());   // 3. 빌드 명령어 추가
-		messageDto.setRunCommand(image.getRunCommand());       // 4. 실행 명령어 추가
+		messageDto.setDockerImage(image.getDockerBaseImage()); // 조회한 Docker 이미지 이름을 DTO에 추가
+		messageDto.setBuildCommand(image.getBuildCommand());   // 빌드 명령어 추가
+		messageDto.setRunCommand(image.getRunCommand());       // 실행 명령어 추가
 
 		// 3. RabbitMQ로 메시지를 전송합니다.
 		rabbitTemplate.convertAndSend(codeExecutionExchangeName, codeExecutionRoutingKey, messageDto);
-		log.info("Stateless code execution request sent for project {}", projectId);
+		log.info("Stateless code execution request sent for project {} with executionLogId {}", projectId, executionLogId);
+		return executionLogId;
 	}
 
 	/**
@@ -135,8 +165,8 @@ public class TerminalService {
 
 		// RPC call to worker server to create a container and get its ID back
 		// Note: RabbitMQConfig needs to be set up for RPC.
-		String containerId = (String)rabbitTemplate.convertSendAndReceive("rpc.exchange", "rpc.container.create",
-			creationRequest);
+		// [수정] RPC 전용으로 설정된 rpcRabbitTemplate을 사용합니다.
+		String containerId = (String)rpcRabbitTemplate.convertSendAndReceive(rpcExchangeName, rpcRequestRoutingKey, creationRequest);
 
 		if (containerId == null || containerId.isBlank()) {
 			log.error("Failed to create container for project {}. Worker did not return a container ID.", projectId);
@@ -153,5 +183,23 @@ public class TerminalService {
 			.build();
 
 		return activeInstanceRepository.save(newInstance);
+	}
+
+	public void sendTerminalCommand(Long projectId, Long userId, TerminalCommandApiRequest apiRequest) {
+		// DB에서 터미널 전용 실행 환경(이미지) 정보를 조회합니다. (예: imageName이 "terminal"인 이미지)
+		// data.sql에 'terminal' 이름으로 이미지를 추가해야 합니다.
+		Image terminalImage = imageRepository.findByImageNameIgnoreCase("terminal")
+			.orElseThrow(() -> new CustomException(ErrorCode.IMAGE_NOT_FOUND));
+
+		// API 요청 DTO를 내부 메시징 DTO로 변환하고, projectId를 설정합니다.
+		TerminalCommandRequestDto messageDto = new TerminalCommandRequestDto();
+		messageDto.setProjectId(projectId);
+		messageDto.setUserId(userId); // 컨트롤러에서 전달받은 안전한 userId를 사용합니다.
+		messageDto.setCommand(apiRequest.getCommand());
+		messageDto.setDockerImage(terminalImage.getDockerBaseImage());
+
+		rabbitTemplate.convertAndSend(terminalCommandExchangeName, terminalCommandRoutingKey, messageDto);
+		log.info("Terminal command request sent: projectId={}, userId={}, image={}, command='{}'",
+			messageDto.getProjectId(), messageDto.getUserId(), messageDto.getDockerImage(), messageDto.getCommand());
 	}
 }
