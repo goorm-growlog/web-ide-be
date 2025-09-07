@@ -44,3 +44,13 @@ rpc:
       name: rpc.container.create.queue
     routing:
       key: rpc.container.create
+
+# 컨테이너 생명주기(삭제) 관련 RabbitMQ 설정
+container-lifecycle:
+  rabbitmq:
+    exchange:
+      name: container.lifecycle.exchange
+    queue:
+      name: container.delete.queue
+    routing:
+      key: container.delete.key

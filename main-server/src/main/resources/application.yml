@@ -73,3 +73,11 @@ rpc:
       name: rpc.exchange
     request-routing-key: rpc.container.create # Worker로 요청을 보낼 때 사용할 라우팅 키
     reply-queue-name: rpc.container.reply.queue # Worker로부터 응답을 받을 큐 이름
+
+# 컨테이너 생명주기(삭제) 관련 RabbitMQ 설정
+container-lifecycle:
+  rabbitmq:
+    exchange:
+      name: container.lifecycle.exchange
+    routing:
+      key: container.delete.key
