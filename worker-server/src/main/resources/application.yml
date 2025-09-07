@@ -26,3 +26,21 @@ terminal-command:
       name: terminal.command.queue
     routing:
       key: terminal.command.routing-key
+
+# 로그 메시지 전송 관련 RabbitMQ 설정
+log:
+  rabbitmq:
+    exchange:
+      name: logs.exchange
+    routing:
+      key: logs.to.client.key
+
+# RPC for container creation
+rpc:
+  rabbitmq:
+    exchange:
+      name: rpc.exchange
+    queue:
+      name: rpc.container.create.queue
+    routing:
+      key: rpc.container.create
