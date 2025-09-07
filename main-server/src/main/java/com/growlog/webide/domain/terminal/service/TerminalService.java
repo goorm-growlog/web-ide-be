@@ -52,6 +52,12 @@ public class TerminalService {
 	@Value("${rpc.rabbitmq.request-routing-key}")
 	private String rpcRequestRoutingKey;
 
+	// [추가] 컨테이너 삭제 요청을 위한 RabbitMQ 설정
+	@Value("${container-lifecycle.rabbitmq.exchange.name}")
+	private String containerLifecycleExchange;
+	@Value("${container-lifecycle.rabbitmq.routing.key}")
+	private String containerDeleteKey;
+
 	public TerminalService(
 		@Qualifier("rabbitTemplate") RabbitTemplate rabbitTemplate,
 		@Qualifier("rpcRabbitTemplate") RabbitTemplate rpcRabbitTemplate,
@@ -138,8 +144,8 @@ public class TerminalService {
 		activeInstance.disconnect(); // 상태를 PENDING으로 변경
 		activeInstanceRepository.save(activeInstance);
 
-		rabbitTemplate.convertAndSend("container.lifecycle.exchange", "container.delete.key",
-			activeInstance.getContainerId());
+		// [수정] 하드코딩된 값을 설정 파일에서 주입받은 값으로 변경
+		rabbitTemplate.convertAndSend(containerLifecycleExchange, containerDeleteKey, activeInstance.getContainerId());
 	}
 
 	private ActiveInstance findOrCreateActiveInstance(Long projectId, Long userId) {

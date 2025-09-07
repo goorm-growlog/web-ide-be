@@ -125,6 +125,21 @@ public class ContainerExecutionService {
 		}
 	}
 
+	/**
+	 * [추가] 컨테이너 삭제 요청을 수신하고 처리하는 리스너
+	 * @param containerId 삭제할 컨테이너의 ID
+	 */
+	@RabbitListener(queues = "${container-lifecycle.rabbitmq.queue.name}")
+	public void handleContainerDeletion(String containerId) {
+		log.info("Received request to delete container: {}", containerId);
+		try {
+			cleanupContainer(containerId);
+			log.info("Successfully deleted container: {}", containerId);
+		} catch (Exception e) {
+			log.error("Failed to delete container {}", containerId, e);
+		}
+	}
+
 	private String createAndStartExecutionContainer(CodeExecutionRequestDto request) {
 		HostConfig hostConfig = createHostConfig(request.getProjectId());
 		CreateContainerResponse container = dockerClient.createContainerCmd(request.getDockerImage())

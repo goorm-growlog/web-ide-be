@@ -39,6 +39,14 @@ public class RabbitmqConfig {
 	@Value("${rpc.rabbitmq.routing.key}")
 	private String rpcRoutingKey;
 
+	// [추가] 컨테이너 삭제 큐 관련 설정 값
+	@Value("${container-lifecycle.rabbitmq.exchange.name}")
+	private String containerLifecycleExchangeName;
+	@Value("${container-lifecycle.rabbitmq.queue.name}")
+	private String containerDeleteQueueName;
+	@Value("${container-lifecycle.rabbitmq.routing.key}")
+	private String containerDeleteRoutingKey;
+
 	// 코드 실행 큐, 교환기, 바인딩
 	@Bean
 	public Queue codeExecutionQueue() {
@@ -87,6 +95,24 @@ public class RabbitmqConfig {
 	@Bean
 	public Binding rpcBinding() {
 		return BindingBuilder.bind(rpcQueue()).to(rpcExchange()).with(rpcRoutingKey);
+	}
+
+	// [추가] 컨테이너 삭제 큐, 교환기, 바인딩
+	@Bean
+	public Queue containerDeleteQueue() {
+		return new Queue(containerDeleteQueueName, true);
+	}
+
+	@Bean
+	public TopicExchange containerLifecycleExchange() {
+		return new TopicExchange(containerLifecycleExchangeName);
+	}
+
+	@Bean
+	public Binding containerDeleteBinding() {
+		return BindingBuilder.bind(containerDeleteQueue())
+			.to(containerLifecycleExchange())
+			.with(containerDeleteRoutingKey);
 	}
 
 	@Bean
