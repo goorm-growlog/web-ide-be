@@ -1,14 +1,13 @@
 package com.growlog.webide.workers.consumer;
 
-import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.stereotype.Service;
-
 import com.growlog.webide.workers.execution.dto.CodeExecutionRequestDto;
+import com.growlog.webide.workers.execution.dto.ContainerCreationRequest;
 import com.growlog.webide.workers.execution.dto.TerminalCommandRequestDto;
 import com.growlog.webide.workers.execution.service.ContainerExecutionService;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
@@ -17,19 +16,31 @@ public class ExecutionConsumer {
 
 	private final ContainerExecutionService containerExecutionService;
 
+	/**
+	 * [Stateless] 일회성 코드 실행 요청을 처리합니다.
+	 */
 	@RabbitListener(queues = "${code-execution.rabbitmq.queue.name}")
 	public void handleCodeExecution(CodeExecutionRequestDto request) {
 		log.info("Received code execution request: projectId={}, image={}", request.getProjectId(),
 			request.getDockerImage());
-		// To-Do: 요청에 포함된 userId와 projectId를 기반으로 권한 검증 로직 추가
 		containerExecutionService.executeCode(request);
 	}
 
+	/**
+	 * [Stateful] 영구 컨테이너 생성 요청을 처리합니다. (RPC)
+	 */
+	@RabbitListener(queues = "rpc.container.create.queue")
+	public String handleCreateContainerRequest(ContainerCreationRequest request) {
+		log.info("Received RPC request to create persistent container for project: {}", request.getProjectId());
+		return containerExecutionService.createPersistentContainer(request);
+	}
+
+	/**
+	 * [Stateful] 영구 컨테이너에 터미널 명령어를 전달하는 요청을 처리합니다.
+	 */
 	@RabbitListener(queues = "${terminal-command.rabbitmq.queue.name}")
 	public void handleTerminalCommand(TerminalCommandRequestDto request) {
-		log.info("Received terminal creation request: projectId={}, image={}", request.getProjectId(),
-			request.getDockerImage());
-		// WebSocket 구현 전까지, 터미널 컨테이너 생성 및 기본 명령어 실행을 테스트합니다.
-		containerExecutionService.testTerminalContainer(request);
+		log.info("Received terminal command for container {}: {}", request.getContainerId(), request.getCommand());
+		containerExecutionService.executeCommandInPersistentContainer(request);
 	}
 }
