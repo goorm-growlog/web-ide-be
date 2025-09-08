@@ -48,15 +48,25 @@ public class ActiveSession {
 	@Column(name = "server_id", nullable = false)
 	private String serverId;
 
+	@Column(nullable = false)
+	private String containerId;
+
 	@CreatedDate
 	@Column(updatable = false)
 	private LocalDateTime connectedAt;
 
 	@Builder
 	public ActiveSession(Project project,
-		Users user, String serverId) {
+		Users user,
+		String serverId,
+		String containerId) {
 		this.project = project;
 		this.user = user;
 		this.serverId = serverId;
+		this.containerId = containerId;
+	}
+
+	public void setContainerId(String containerId) {
+		this.containerId = containerId;
 	}
 }

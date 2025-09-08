@@ -24,7 +24,7 @@ public class WebSocketEventListener {
 	private final SimpMessagingTemplate template;
 	private final ChatService chatService;
 
-	private static Optional<SessionInfo> extractSessionInfo(StompHeaderAccessor accessor) {
+	public static Optional<SessionInfo> extractSessionInfo(StompHeaderAccessor accessor) {
 		if (accessor == null || accessor.getSessionAttributes() == null) {
 			log.warn("Accessor or session attributes are null. Could be a connection closed before handshake.");
 			return Optional.empty();
@@ -72,7 +72,7 @@ public class WebSocketEventListener {
 		});
 	}
 
-	private record SessionInfo(Long userId, Long projectId) {
+	public record SessionInfo(Long userId, Long projectId) {
 	}
 
 }
