@@ -79,7 +79,7 @@ container-lifecycle:
       queue-name: container.deleted.ack.queue
       routing-key: container.deleted.ack.key
 
-# [신규] PTY 기반 Stateful 터미널 세션 관련 설정
+# PTY 기반 Stateful 터미널 세션 관련 설정
 pty-session:
   rabbitmq:
     start: # 세션 시작 요청
@@ -88,6 +88,9 @@ pty-session:
     command: # 명령어 전달
       exchange: pty.command.exchange
       routing-key: pty.command.key
+    stop: # 세션 종료 알림
+      exchange: pty.stop.exchange
+      routing-key: pty.stop.key
 
 # 컨테이너 할당 요청 관련 RabbitMQ 설정
 container-acquire:

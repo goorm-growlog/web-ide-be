@@ -182,6 +182,17 @@ public class ContainerExecutionService {
 		}
 	}
 
+	/**
+	 * [신규] PTY 세션 종료 요청을 처리합니다.
+	 * Main-Server에서 WebSocket 연결이 끊어졌을 때 호출됩니다.
+	 */
+	@RabbitListener(queues = "${pty-session.rabbitmq.stop.queue}")
+	public void stopPtySession(Map<String, String> message) {
+		String sessionId = message.get("sessionId");
+		log.info("Received request to stop PTY session {}", sessionId);
+		cleanupPtySession(sessionId);
+	}
+
 	private void cleanupPtySession(String sessionId) {
 		OutputStream ptyInput = ptySessions.remove(sessionId);
 		if (ptyInput != null) {

@@ -57,6 +57,14 @@ public class RabbitmqConfig {
 	@Value("${pty-session.rabbitmq.command.routing-key}")
 	private String ptyCommandRoutingKey;
 
+	// PTY 세션 종료 관련 설정 값
+	@Value("${pty-session.rabbitmq.stop.exchange}")
+	private String ptyStopExchangeName;
+	@Value("${pty-session.rabbitmq.stop.queue}")
+	private String ptyStopQueueName;
+	@Value("${pty-session.rabbitmq.stop.routing-key}")
+	private String ptyStopRoutingKey;
+
 	// 컨테이너 할당 큐 관련 설정 값
 	@Value("${container-acquire.rabbitmq.exchange.name}")
 	private String containerAcquireExchangeName;
@@ -187,6 +195,22 @@ public class RabbitmqConfig {
 	@Bean
 	public Binding ptyCommandBinding() {
 		return BindingBuilder.bind(ptyCommandQueue()).to(ptyCommandExchange()).with(ptyCommandRoutingKey);
+	}
+
+	// PTY 세션 종료 큐, 교환기, 바인딩
+	@Bean
+	public Queue ptyStopQueue() {
+		return new Queue(ptyStopQueueName, true);
+	}
+
+	@Bean
+	public TopicExchange ptyStopExchange() {
+		return new TopicExchange(ptyStopExchangeName);
+	}
+
+	@Bean
+	public Binding ptyStopBinding() {
+		return BindingBuilder.bind(ptyStopQueue()).to(ptyStopExchange()).with(ptyStopRoutingKey);
 	}
 
 	// 컨테이너 할당 큐, 교환기, 바인딩
