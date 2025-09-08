@@ -52,30 +52,25 @@ public class StompHandler implements ChannelInterceptor {
 
 	@Override
 	public Message<?> preSend(Message<?> message, MessageChannel channel) {
-		final StompHeaderAccessor accessor = MessageHeaderAccessor
-			.getAccessor(message, StompHeaderAccessor.class);
+		final StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
 		if (StompCommand.CONNECT.equals(accessor.getCommand())) {
 			handleValidToken(accessor);
 			log.info("Connected successfully");
 		}
 
+		// [수정] 모든 구독 요청에 대해 유효성 검사를 먼저 수행하도록 구조 변경
 		if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
-			final String destination = accessor.getDestination();
-
-			if (StringUtils.hasText(destination) && destination.startsWith("/topic/projects/")) {
-				try {
-					validateSubscription(accessor);
-
-					if (checkDuplicatedSubscribtion(accessor)) {
-						log.warn("Already Subscribed.");
-						return null;
-					}
-					log.info("Subscribed successfully");
-				} catch (CustomException e) {
-					log.warn("Subscription denied: code={}, message={}", e.getErrorCode().getCode(), e.getMessage());
-					return null;
+			try {
+				validateSubscription(accessor); // 모든 구독 경로를 이 메서드에서 처리
+				if (checkDuplicatedSubscribtion(accessor)) {
+					log.warn("Already Subscribed to {}.", accessor.getDestination());
+					return null; // 중복 구독 방지
 				}
+				log.info("Subscribed successfully to {}.", accessor.getDestination());
+			} catch (CustomException e) {
+				log.warn("Subscription denied: code={}, message={}", e.getErrorCode().getCode(), e.getMessage());
+				return null; // 유효하지 않은 구독은 거부
 			}
 		}
 		return message;
