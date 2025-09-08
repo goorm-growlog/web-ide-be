@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Unified Test Page (PTY Terminal & External Log Viewer)</title>
+    <meta charset="UTF-8">
+    <!-- xterm.js 라이브러리 로드 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.js"></script>
+    <!-- WebSocket 라이브러리 로드 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 2em;
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background-color: white;
+            padding: 2em;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-group {
+            margin-bottom: 1em;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.25em;
+            font-weight: bold;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+            font-weight: bold;
+        }
+
+        button:disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+
+        button.primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        button.secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        #terminal-container {
+            border: 1px solid #ccc;
+            padding: 2px;
+            border-radius: 4px;
+            margin-top: 1em;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Unified Terminal & Log Viewer</h2>
+    <p>이 페이지에서 PTY 터미널을 직접 사용하고, Swagger 등 외부에서 실행한 작업의 로그도 함께 확인할 수 있습니다.</p>
+
+    <div class="input-group">
+        <label for="jwtToken">JWT Access Token:</label>
+        <input type="text" id="jwtToken" placeholder="로그인 후 Access Token 입력">
+    </div>
+    <div class="input-group">
+        <label for="projectId">Project ID:</label>
+        <input type="text" id="projectId" value="1">
+    </div>
+    <div>
+        <button onclick="connectAndStart()" class="primary" id="connectBtn">Connect & Start Terminal</button>
+        <button onclick="disconnect()" class="secondary" id="disconnectBtn" disabled>Disconnect</button>
+    </div>
+    <div id="terminal-container"></div>
+</div>
+
+<script>
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const terminalContainer = document.getElementById('terminal-container');
+
+    let stompClient = null;
+    let term = null;
+    let terminalContainerId = null; // 이 페이지에서 시작한 터미널 세션의 컨테이너 ID
+
+    function connectAndStart() {
+        const jwtToken = document.getElementById('jwtToken').value;
+        const projectId = document.getElementById('projectId').value;
+
+        if (!jwtToken || !projectId) {
+            alert("JWT Token과 Project ID를 모두 입력해주세요.");
+            return;
+        }
+
+        // 1. xterm.js 터미널 생성 (최초 한 번만)
+        if (!term) {
+            term = new Terminal({cursorBlink: true, rows: 25});
+            term.open(terminalContainer);
+            // 사용자가 터미널에 입력하는 모든 키를 서버로 전송
+            term.onData(data => {
+                if (stompClient && stompClient.connected && terminalContainerId) {
+                    stompClient.send("/app/terminal/command", {}, data);
+                }
+            });
+        }
+        term.reset(); // 이전 내용 지우기
+        term.write("🔌 Connecting to WebSocket...\r\n");
+
+        // 2. WebSocket 연결
+        const socket = new SockJS('http://localhost:8080/ws');
+        stompClient = Stomp.over(socket);
+        stompClient.debug = null;
+
+        const headers = {'Authorization': 'Bearer ' + jwtToken};
+        stompClient.connect(headers, onConnected, onError);
+    }
+
+    function onConnected() {
+        term.write("✅ STOMP Connected!\r\n");
+        connectBtn.disabled = true;
+        disconnectBtn.disabled = false;
+
+        // 3. PTY 세션 시작 요청 (가장 중요)
+        const projectId = document.getElementById('projectId').value;
+        stompClient.send("/app/terminal/start", {}, JSON.stringify({projectId: parseInt(projectId)}));
+        term.write("🚀 Requesting PTY session...\r\n");
+
+        // 4. 모든 로그를 수신할 개인 채널을 미리 구독
+        stompClient.subscribe('/user/queue/logs', onMessageReceived);
+    }
+
+    function onMessageReceived(message) {
+        const logMessage = JSON.parse(message.body);
+
+        // 처음 로그를 받을 때, 이 터미널이 어떤 컨테이너에 연결되었는지 ID를 저장
+        if (!terminalContainerId) {
+            terminalContainerId = logMessage.targetId;
+            term.write(`\x1b[32m✅ Terminal connected to container: ${terminalContainerId.substring(0, 12)}\x1b[0m\r\n`);
+        }
+
+        // 이 터미널 세션에 해당하는 로그는 그대로 출력
+        if (logMessage.targetId === terminalContainerId) {
+            term.write(logMessage.content);
+        } else {
+            // 코드 실행 등 다른 로그는 접두사를 붙여서 출력 (터미널과 구분)
+            const prefix = `\r\n\x1b[36m[External Log | Target: ${logMessage.targetId.substring(0, 8)}]\x1b[0m `;
+            const formattedContent = logMessage.content.replace(/\n/g, '\r\n');
+            term.write(prefix + formattedContent);
+        }
+    }
+
+    function onError(error) {
+        if (term) {
+            term.write("❌ STOMP Connection Error: " + error + "\r\n");
+        }
+        disconnect();
+    }
+
+    function disconnect() {
+        if (stompClient !== null) {
+            stompClient.disconnect(() => {
+                if (term) {
+                    term.write("\r\n🔌 STOMP Disconnected.\r\n");
+                }
+            });
+        }
+        connectBtn.disabled = false;
+        disconnectBtn.disabled = true;
+        stompClient = null;
+        terminalContainerId = null;
+    }
+</script>
+</body>
+</html>
