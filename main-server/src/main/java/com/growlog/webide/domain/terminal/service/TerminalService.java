@@ -1,5 +1,6 @@
 package com.growlog.webide.domain.terminal.service;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -43,10 +44,6 @@ public class TerminalService {
 	private String codeExecutionExchangeName;
 	@Value("${code-execution.rabbitmq.routing.key}")
 	private String codeExecutionRoutingKey;
-	@Value("${terminal-command.rabbitmq.exchange.name}")
-	private String terminalCommandExchangeName;
-	@Value("${terminal-command.rabbitmq.routing.key}")
-	private String terminalCommandRoutingKey;
 	// [추가] RPC 관련 설정 값
 	@Value("${rpc.rabbitmq.exchange.name}")
 	private String rpcExchangeName;
@@ -58,6 +55,16 @@ public class TerminalService {
 	private String containerLifecycleExchangeName;
 	@Value("${container-lifecycle.rabbitmq.request.routing-key}")
 	private String containerDeleteKey;
+
+	// [신규] PTY 세션 관련 설정 값
+	@Value("${pty-session.rabbitmq.start.exchange}")
+	private String ptyStartExchangeName;
+	@Value("${pty-session.rabbitmq.start.routing-key}")
+	private String ptyStartRoutingKey;
+	@Value("${pty-session.rabbitmq.command.exchange}")
+	private String ptyCommandExchangeName;
+	@Value("${pty-session.rabbitmq.command.routing-key}")
+	private String ptyCommandRoutingKey;
 
 	public TerminalService(
 		@Qualifier("rabbitTemplate") RabbitTemplate rabbitTemplate,
@@ -105,29 +112,36 @@ public class TerminalService {
 	}
 
 	/**
-	 * [Stateful] 상태 유지가 필요한 터미널 세션에 명령어를 전달합니다.
-	 * 필요한 경우, 컨테이너를 생성하고 ActiveInstance에 기록합니다.
-	 * @return 컨테이너 ID
+	 * PTY 기반의 Stateful 터미널 세션 시작을 요청합니다.
 	 */
 	@Transactional
-	public String requestStatefulTerminalCommand(Long projectId, Long userId, TerminalCommandApiRequest apiRequest) {
-		// 1. Find or create an active container for the user and project.
+	public void startStatefulTerminalSession(String sessionId, Long projectId, Long userId) {
+		// 1. 기존 로직을 재사용하여 사용자의 영구 컨테이너를 찾거나 생성합니다.
 		ActiveInstance activeInstance = findOrCreateActiveInstance(projectId, userId);
 		activeInstance.updateActivity(); // ★★★ 활동 시간 갱신 ★★★
 		activeInstanceRepository.save(activeInstance);
 
-		// 2. Worker Server에 전달할 메시지를 생성합니다.
-		TerminalCommandRequestDto messageDto = new TerminalCommandRequestDto();
-		messageDto.setProjectId(projectId);
-		messageDto.setUserId(userId);
-		messageDto.setContainerId(activeInstance.getContainerId()); // ★★★ ActiveInstance의 컨테이너 ID를 사용
-		messageDto.setCommand(apiRequest.getCommand());
-		messageDto.setDockerImage(activeInstance.getProject().getImage().getDockerBaseImage());
+		// 2. Worker 서버에 PTY 세션 시작을 요청합니다.
+		//    WebSocket 세션 ID와 컨테이너 ID를 함께 보냅니다.
+		Map<String, String> message = Map.of(
+			"sessionId", sessionId,
+			"containerId", activeInstance.getContainerId(),
+			"userId", userId.toString() // Worker가 로그 전송 시 사용하도록 userId도 전달
+		);
+		rabbitTemplate.convertAndSend(ptyStartExchangeName, ptyStartRoutingKey, message);
+		log.info("PTY session start request sent for session {} and container {}", sessionId,
+			activeInstance.getContainerId());
+	}
 
-		// 3. RabbitMQ로 메시지를 전송합니다.
-		rabbitTemplate.convertAndSend(terminalCommandExchangeName, terminalCommandRoutingKey, messageDto);
-		log.info("Stateful terminal command sent to container {}", activeInstance.getContainerId());
-		return activeInstance.getContainerId();
+	/**
+	 * [신규] 클라이언트로부터 받은 명령어를 Worker 서버로 전달합니다.
+	 */
+	public void forwardCommandToWorker(String sessionId, String command) {
+		Map<String, String> message = Map.of(
+			"sessionId", sessionId,
+			"command", command
+		);
+		rabbitTemplate.convertAndSend(ptyCommandExchangeName, ptyCommandRoutingKey, message);
 	}
 
 	/**
