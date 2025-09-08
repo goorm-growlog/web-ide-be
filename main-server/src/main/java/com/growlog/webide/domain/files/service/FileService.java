@@ -255,7 +255,13 @@ public class FileService {
 	}
 
 	public List<FileSearchResponseDto> searchFilesByName(Long projectId, String query) {
-		return fileMetaRepository.findByProjectIdAndNameContainingIgnoreCaseAndDeletedFalse(projectId, query)
+		List<FileMeta> searchResults = fileMetaRepository.findByProjectIdAndNameContainingIgnoreCaseAndDeletedFalse(projectId, query);
+
+		if (searchResults.isEmpty()) {
+			throw new CustomException(ErrorCode.FILE_NOT_FOUND);
+		}
+
+		return searchResults
 			.stream()
 			.map(FileSearchResponseDto::from)
 			.toList();
