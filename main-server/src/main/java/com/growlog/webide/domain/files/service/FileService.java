@@ -259,8 +259,12 @@ public class FileService {
 			projectId, query);
 
 		if (searchResults.isEmpty()) {
+			log.warn("File search failed: No results found for query '{}' in projectId {}.", query, projectId);
 			throw new CustomException(ErrorCode.FILE_NOT_FOUND);
 		}
+
+		log.info("File search successful: Found {} results for query '{}' in projectId {}.", searchResults.size(),
+			query, projectId);
 
 		return searchResults
 			.stream()
