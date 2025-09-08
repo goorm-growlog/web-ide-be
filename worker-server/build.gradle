@@ -57,6 +57,8 @@ dependencies {
 
     // Apache HTTP 클라이언트 구현체 (패키지 이름에 주목)
     implementation 'com.github.docker-java:docker-java-transport-httpclient5:3.3.6'
+
+    implementation("com.github.krasa:pty4j:0.12.40")
 }
 
 tasks.named('test') {

@@ -332,7 +332,7 @@ public class RabbitmqConfig {
 	@Bean
 	public Binding projectDeleteSuccessBinding() {
 		return BindingBuilder.bind(projectDeleteSuccessQueue())
-			.to(projectDeleteExchange())
+			.to(projectResponseExchange()) // [수정] 올바른 응답 교환기(Exchange)에 연결합니다.
 			.with(projectDeleteSuccessRoutingKey);
 	}
 
