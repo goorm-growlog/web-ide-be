@@ -15,7 +15,7 @@ public class ProjectManager {
 	private final String efsBasePath;
 	private final ProjectManagementProducer projectManagementProducer;
 
-	public ProjectManager(@Value("${efs.base-path}") String efsBasePath,
+	public ProjectManager(@Value("${docker.host.workspace-base-path}") String efsBasePath,
 		ProjectManagementProducer projectManagementProducer) {
 		this.efsBasePath = efsBasePath;
 		this.projectManagementProducer = projectManagementProducer;

@@ -33,8 +33,8 @@ public class ContainerManager {
 	private final Cache<Long, String> activeProjectContainers;
 
 	public ContainerManager(DockerClient dockerClient,
-		@Value("${efs.base-path}") String projectBasePath,
-		@Value("${container.workspace-path}") String containerWorkspacePath) {
+		@Value("${docker.host.workspace-base-path}") String projectBasePath,
+		@Value("${docker.container.workspace-path}") String containerWorkspacePath) {
 		this.dockerClient = dockerClient;
 		this.projectBasePath = projectBasePath;
 		this.containerWorkspacePath = containerWorkspacePath;
