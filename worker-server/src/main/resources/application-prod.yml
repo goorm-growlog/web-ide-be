@@ -15,9 +15,17 @@ spring:
         format_sql: true
     database-platform: org.hibernate.dialect.MySQL8Dialect
 
+  rabbitmq:
+    host: ${RABBITMQ_HOST} # Amazon MQ 엔드포인트 주소 (amqps:// 제외)
+    port: 5671             # AMQPS 기본 포트
+    username: ${RABBITMQ_USER} # Amazon MQ 사용자 이름
+    password: ${RABBITMQ_PASS} # Amazon MQ 비밀번호
+    ssl:
+      enabled: true         # 보안 연결 사용
+
 docker:
   host:
     # 운영 환경에서는 EC2에 마운트된 EFS 경로를 사용합니다.
-    workspace-base-path: /mnt/efs/workspaces
+    workspace-base-path: /mnt/efs/projects
   container:
     workspace-path: /app
