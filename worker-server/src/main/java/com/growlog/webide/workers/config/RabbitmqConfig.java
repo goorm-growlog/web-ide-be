@@ -23,14 +23,6 @@ public class RabbitmqConfig {
 	@Value("${code-execution.rabbitmq.routing.key}")
 	private String codeExecutionRoutingKey;
 
-	// 터미널 명령어 큐 관련 설정 값
-	@Value("${terminal-command.rabbitmq.exchange.name}")
-	private String terminalCommandExchangeName;
-	@Value("${terminal-command.rabbitmq.queue.name}")
-	private String terminalCommandQueueName;
-	@Value("${terminal-command.rabbitmq.routing.key}")
-	private String terminalCommandRoutingKey;
-
 	// RPC 큐 관련 설정 값
 	@Value("${rpc.rabbitmq.exchange.name}")
 	private String rpcExchangeName;
@@ -47,6 +39,20 @@ public class RabbitmqConfig {
 	@Value("${container-lifecycle.rabbitmq.request.routing-key}")
 	private String containerDeleteRoutingKey;
 
+	// [신규] PTY 세션 관련 설정 값
+	@Value("${pty-session.rabbitmq.start.exchange}")
+	private String ptyStartExchangeName;
+	@Value("${pty-session.rabbitmq.start.queue}")
+	private String ptyStartQueueName;
+	@Value("${pty-session.rabbitmq.start.routing-key}")
+	private String ptyStartRoutingKey;
+	@Value("${pty-session.rabbitmq.command.exchange}")
+	private String ptyCommandExchangeName;
+	@Value("${pty-session.rabbitmq.command.queue}")
+	private String ptyCommandQueueName;
+	@Value("${pty-session.rabbitmq.command.routing-key}")
+	private String ptyCommandRoutingKey;
+
 	// 코드 실행 큐, 교환기, 바인딩
 	@Bean
 	public Queue codeExecutionQueue() {
@@ -61,24 +67,6 @@ public class RabbitmqConfig {
 	@Bean
 	public Binding codeExecutionBinding() {
 		return BindingBuilder.bind(codeExecutionQueue()).to(codeExecutionExchange()).with(codeExecutionRoutingKey);
-	}
-
-	// 터미널 명령어 큐, 교환기, 바인딩
-	@Bean
-	public Queue terminalCommandQueue() {
-		return new Queue(terminalCommandQueueName, true);
-	}
-
-	@Bean
-	public TopicExchange terminalCommandExchange() {
-		return new TopicExchange(terminalCommandExchangeName);
-	}
-
-	@Bean
-	public Binding terminalCommandBinding() {
-		return BindingBuilder.bind(terminalCommandQueue())
-			.to(terminalCommandExchange())
-			.with(terminalCommandRoutingKey);
 	}
 
 	// RPC 큐, 교환기, 바인딩
@@ -113,6 +101,38 @@ public class RabbitmqConfig {
 		return BindingBuilder.bind(containerDeleteQueue())
 			.to(containerLifecycleExchange())
 			.with(containerDeleteRoutingKey);
+	}
+
+	// [신규] PTY 세션 시작 큐, 교환기, 바인딩
+	@Bean
+	public Queue ptyStartQueue() {
+		return new Queue(ptyStartQueueName, true);
+	}
+
+	@Bean
+	public TopicExchange ptyStartExchange() {
+		return new TopicExchange(ptyStartExchangeName);
+	}
+
+	@Bean
+	public Binding ptyStartBinding() {
+		return BindingBuilder.bind(ptyStartQueue()).to(ptyStartExchange()).with(ptyStartRoutingKey);
+	}
+
+	// [신규] PTY 명령어 큐, 교환기, 바인딩
+	@Bean
+	public Queue ptyCommandQueue() {
+		return new Queue(ptyCommandQueueName, true);
+	}
+
+	@Bean
+	public TopicExchange ptyCommandExchange() {
+		return new TopicExchange(ptyCommandExchangeName);
+	}
+
+	@Bean
+	public Binding ptyCommandBinding() {
+		return BindingBuilder.bind(ptyCommandQueue()).to(ptyCommandExchange()).with(ptyCommandRoutingKey);
 	}
 
 	@Bean

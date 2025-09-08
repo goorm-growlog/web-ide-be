@@ -15,16 +15,6 @@ code-execution:
     queue:
       name: code.execution.queue
     routing:
-      key: code.execution.routing-key
-
-# 터미널 명령어 관련 RabbitMQ 설정
-terminal-command:
-  rabbitmq:
-    exchange:
-      name: terminal.command.exchange
-    queue:
-      name: terminal.command.queue
-    routing:
       key: terminal.command.routing-key
 
 # 로그 메시지 전송 관련 RabbitMQ 설정
@@ -55,3 +45,15 @@ container-lifecycle:
       routing-key: container.delete.key
     response: # To Main
       routing-key: container.deleted.ack.key
+
+# [신규] PTY 기반 Stateful 터미널 세션 관련 설정
+pty-session:
+  rabbitmq:
+    start: # 세션 시작 요청 수신
+      exchange: pty.start.exchange
+      queue: pty.start.queue
+      routing-key: pty.start.key
+    command: # 명령어 수신
+      exchange: pty.command.exchange
+      queue: pty.command.queue
+      routing-key: pty.command.key
