@@ -172,7 +172,8 @@ public class TerminalService {
 		// 2. 세션 ID에 매핑된 ActiveInstance를 찾아 컨테이너 삭제를 요청합니다.
 		Long instanceId = sessionToInstanceId.remove(sessionId);
 		if (instanceId == null) {
-			log.warn("No ActiveInstance mapping found for disconnected session {}. No container to clean up.", sessionId);
+			log.warn("No ActiveInstance mapping found for disconnected session {}. No container to clean up.",
+				sessionId);
 			return;
 		}
 
@@ -180,7 +181,8 @@ public class TerminalService {
 		activeInstanceRepository.findById(instanceId).ifPresent(instance -> {
 			// 컨테이너가 ACTIVE 상태일 때만 삭제를 요청하여 중복 처리를 방지합니다.
 			if (instance.getStatus() == InstanceStatus.ACTIVE) {
-				log.info("Requesting container deletion for instance ID {} (containerId: {}) due to session disconnect.",
+				log.info(
+					"Requesting container deletion for instance ID {} (containerId: {}) due to session disconnect.",
 					instance.getId(), instance.getContainerId());
 				requestContainerDeletion(instance.getProject().getId(), instance.getUser().getUserId());
 			}
