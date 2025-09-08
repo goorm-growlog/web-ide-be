@@ -1,8 +1,13 @@
 package com.growlog.webide.workers.execution.service;
 
 import java.io.Closeable;
+import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -25,7 +30,6 @@ import com.github.dockerjava.api.model.Volume;
 import com.growlog.webide.workers.execution.dto.CodeExecutionRequestDto;
 import com.growlog.webide.workers.execution.dto.ContainerCreationRequest;
 import com.growlog.webide.workers.execution.dto.LogMessage;
-import com.growlog.webide.workers.execution.dto.TerminalCommandRequestDto;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +41,7 @@ public class ContainerExecutionService {
 
 	private final DockerClient dockerClient;
 	private final RabbitTemplate rabbitTemplate;
+	private final Map<String, OutputStream> ptySessions = new ConcurrentHashMap<>();
 
 	@Value("${docker.host.workspace-base-path}")
 	private String hostWorkspaceBasePath;
@@ -112,22 +117,90 @@ public class ContainerExecutionService {
 	}
 
 	/**
-	 * [Stateful] 이미 존재하는 영구 컨테이너에 터미널 명령어를 실행합니다.
+	 * [신규] PTY 세션 시작 요청을 처리합니다.
+	 * 컨테이너 내부에 bash 쉘을 실행하고, 입출력 스트림을 연결합니다.
 	 */
-	@RabbitListener(queues = "${terminal-command.rabbitmq.queue.name}")
-	public void executeCommandInPersistentContainer(TerminalCommandRequestDto request) {
-		String containerId = request.getContainerId();
-		if (containerId == null || containerId.isBlank()) {
-			log.error("executeCommandInPersistentContainer called without a containerId.");
-			return;
-		}
+	@RabbitListener(queues = "${pty-session.rabbitmq.start.queue}")
+	public void startPtySession(Map<String, String> message) {
+		String sessionId = message.get("sessionId");
+		String containerId = message.get("containerId");
+		Long userId = Long.parseLong(message.get("userId"));
+		log.info("Starting PTY session for WebSocket session {} on container {}", sessionId, containerId);
+
+		// 1. 컨테이너 내부에 bash 쉘을 실행하는 exec 명령어 생성
+		ExecCreateCmdResponse execCreateCmdResponse = dockerClient.execCreateCmd(containerId)
+			.withAttachStdout(true)
+			.withAttachStderr(true)
+			.withAttachStdin(true) // 표준 입력을 붙입니다.
+			.withTty(true)
+			.withCmd("/bin/bash", "-i") // 대화형(-i) 쉘 실행
+			.exec();
+
+		// 2. 쉘의 출력을 지속적으로 읽어서 Main-Server로 보내는 콜백 준비
+		PtyLogCallback callback = new PtyLogCallback(rabbitTemplate, containerId, userId, logExchangeName,
+			logRoutingKey);
+
 		try {
-			String finalCommand = request.getCommand(); // Assuming the command is ready to be executed
-			log.info("Executing terminal command in persistent container {}: {}", containerId, finalCommand);
-			executeCommandInContainer(containerId, finalCommand, false, containerId,
-				request.getUserId()); // isTemporary = false
+			// 3. 입력 스트림을 준비하고 세션 맵에 저장
+			//    이 스트림에 데이터를 쓰면 컨테이너 내부 쉘에 명령어가 입력됩니다.
+			PipedInputStream stdin = new PipedInputStream();
+			OutputStream ptyInput = new PipedOutputStream(stdin);
+			ptySessions.put(sessionId, ptyInput);
+
+			// 4. exec 명령어 실행
+			dockerClient.execStartCmd(execCreateCmdResponse.getId())
+				.withTty(true)
+				.withStdIn(stdin)
+				.exec(callback);
+
+			log.info("PTY session for {} is now active.", sessionId);
 		} catch (Exception e) {
-			log.error("An error occurred during terminal command execution for container {}", containerId, e);
+			log.error("Failed to create PipedStream for PTY session {}", sessionId, e);
+		}
+	}
+
+	/**
+	 * [신규] PTY 세션에 터미널 입력을 전달합니다.
+	 */
+	@RabbitListener(queues = "${pty-session.rabbitmq.command.queue}")
+	public void receiveCommand(Map<String, String> message) {
+		String sessionId = message.get("sessionId");
+		String input = message.get("input");
+
+		OutputStream ptyInput = ptySessions.get(sessionId);
+		if (ptyInput != null) {
+			try {
+				ptyInput.write(input.getBytes(StandardCharsets.UTF_8));
+				ptyInput.flush();
+			} catch (Exception e) {
+				// 클라이언트 연결이 끊어지면 PipedInputStream이 닫혀서 IOException 발생
+				log.warn("Failed to write to PTY for session {}. It might be closed. Removing session.", sessionId);
+				cleanupPtySession(sessionId);
+			}
+		} else {
+			log.warn("Received command for a non-existent or closed session: {}", sessionId);
+		}
+	}
+
+	/**
+	 * [신규] PTY 세션 종료 요청을 처리합니다.
+	 * Main-Server에서 WebSocket 연결이 끊어졌을 때 호출됩니다.
+	 */
+	@RabbitListener(queues = "${pty-session.rabbitmq.stop.queue}")
+	public void stopPtySession(Map<String, String> message) {
+		String sessionId = message.get("sessionId");
+		log.info("Received request to stop PTY session {}", sessionId);
+		cleanupPtySession(sessionId);
+	}
+
+	private void cleanupPtySession(String sessionId) {
+		OutputStream ptyInput = ptySessions.remove(sessionId);
+		if (ptyInput != null) {
+			try {
+				ptyInput.close();
+			} catch (Exception e) {
+				log.error("Error closing PTY input stream for session {}", sessionId, e);
+			}
 		}
 	}
 
@@ -261,6 +334,37 @@ public class ContainerExecutionService {
 	/**
 	 * 컨테이너의 출력을 로깅하고, 리소스를 안전하게 닫기 위한 ResultCallback 구현체
 	 */
+	static class PtyLogCallback extends ResultCallback.Adapter<Frame> {
+		private final RabbitTemplate rabbitTemplate;
+		private final String containerId;
+		private final Long userId;
+		private final String exchangeName;
+		private final String routingKey;
+
+		public PtyLogCallback(RabbitTemplate rabbitTemplate, String containerId, Long userId, String exchangeName,
+			String routingKey) {
+			this.rabbitTemplate = rabbitTemplate;
+			this.containerId = containerId;
+			this.userId = userId;
+			this.exchangeName = exchangeName;
+			this.routingKey = routingKey;
+		}
+
+		@Override
+		public void onNext(Frame frame) {
+			String output = new String(frame.getPayload(), StandardCharsets.UTF_8);
+			// targetId를 containerId로 사용하여 클라이언트가 구분할 수 있게 합니다.
+			LogMessage logMessage = new LogMessage(containerId, userId, "stdout", output);
+			rabbitTemplate.convertAndSend(exchangeName, routingKey, logMessage);
+		}
+
+		@Override
+		public void onError(Throwable throwable) {
+			log.error("Error in PtyLogCallback for container {}", containerId, throwable);
+			super.onError(throwable);
+		}
+	}
+
 	static class LogContainerCallback extends ResultCallback.Adapter<Frame> implements Closeable {
 		private final String containerId;
 		private final RabbitTemplate rabbitTemplate;

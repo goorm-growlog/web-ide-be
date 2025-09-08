@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.growlog.webide.domain.terminal.dto.CodeExecutionApiRequest;
-import com.growlog.webide.domain.terminal.dto.TerminalCommandApiRequest;
 import com.growlog.webide.domain.terminal.service.TerminalService;
 import com.growlog.webide.global.common.ApiResponse;
 import com.growlog.webide.global.security.UserPrincipal;
@@ -30,23 +29,11 @@ public class TerminalController {
 		@RequestBody CodeExecutionApiRequest requestDto,
 		@AuthenticationPrincipal UserPrincipal userPrincipal
 	) {
-		// 일회성 코드 실행을 요청합니다. ActiveInstance와 무관하게 동작합니다.
+		// 일회성 코드 실행 요청. ActiveInstance와 무관하게 동작합니다.
 		String executionLogId = terminalService.requestStatelessCodeExecution(projectId, userPrincipal.getUserId(),
 			requestDto);
 		// [수정] 클라이언트가 로그를 필터링할 수 있도록 고유 실행 ID를 반환합니다.
 		return ResponseEntity.ok(ApiResponse.ok(executionLogId));
-	}
-
-	@PostMapping("/{projectId}/run/terminal")
-	public ResponseEntity<ApiResponse<String>> runTerminalCommand(
-		@PathVariable Long projectId,
-		@RequestBody TerminalCommandApiRequest requestDto,
-		@AuthenticationPrincipal UserPrincipal userPrincipal
-	) {
-		// 터미널 세션을 위한 명령어 실행을 요청합니다. ActiveInstance를 생성/조회하여 상태를 유지합니다.
-		String containerId = terminalService.requestStatefulTerminalCommand(projectId, userPrincipal.getUserId(),
-			requestDto);
-		return ResponseEntity.ok(ApiResponse.ok(containerId));
 	}
 
 	@DeleteMapping("/{projectId}/terminal")

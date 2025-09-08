@@ -5,7 +5,6 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import com.growlog.webide.domain.terminal.dto.LogMessage;
-import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;

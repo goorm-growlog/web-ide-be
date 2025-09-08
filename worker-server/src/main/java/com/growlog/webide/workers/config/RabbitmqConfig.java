@@ -27,14 +27,6 @@ public class RabbitmqConfig {
 	@Value("${code-execution.rabbitmq.routing.key}")
 	private String codeExecutionRoutingKey;
 
-	// 터미널 명령어 큐 관련 설정 값
-	@Value("${terminal-command.rabbitmq.exchange.name}")
-	private String terminalCommandExchangeName;
-	@Value("${terminal-command.rabbitmq.queue.name}")
-	private String terminalCommandQueueName;
-	@Value("${terminal-command.rabbitmq.routing.key}")
-	private String terminalCommandRoutingKey;
-
 	// RPC 큐 관련 설정 값
 	@Value("${rpc.rabbitmq.exchange.name}")
 	private String rpcExchangeName;
@@ -50,6 +42,28 @@ public class RabbitmqConfig {
 	private String containerDeleteQueueName;
 	@Value("${container-lifecycle.rabbitmq.request.routing-key}")
 	private String containerDeleteRoutingKey;
+
+	// [신규] PTY 세션 관련 설정 값
+	@Value("${pty-session.rabbitmq.start.exchange}")
+	private String ptyStartExchangeName;
+	@Value("${pty-session.rabbitmq.start.queue}")
+	private String ptyStartQueueName;
+	@Value("${pty-session.rabbitmq.start.routing-key}")
+	private String ptyStartRoutingKey;
+	@Value("${pty-session.rabbitmq.command.exchange}")
+	private String ptyCommandExchangeName;
+	@Value("${pty-session.rabbitmq.command.queue}")
+	private String ptyCommandQueueName;
+	@Value("${pty-session.rabbitmq.command.routing-key}")
+	private String ptyCommandRoutingKey;
+
+	// PTY 세션 종료 관련 설정 값
+	@Value("${pty-session.rabbitmq.stop.exchange}")
+	private String ptyStopExchangeName;
+	@Value("${pty-session.rabbitmq.stop.queue}")
+	private String ptyStopQueueName;
+	@Value("${pty-session.rabbitmq.stop.routing-key}")
+	private String ptyStopRoutingKey;
 
 	// 컨테이너 할당 큐 관련 설정 값
 	@Value("${container-acquire.rabbitmq.exchange.name}")
@@ -117,24 +131,6 @@ public class RabbitmqConfig {
 		return BindingBuilder.bind(codeExecutionQueue()).to(codeExecutionExchange()).with(codeExecutionRoutingKey);
 	}
 
-	// 터미널 명령어 큐, 교환기, 바인딩
-	@Bean
-	public Queue terminalCommandQueue() {
-		return new Queue(terminalCommandQueueName, true);
-	}
-
-	@Bean
-	public TopicExchange terminalCommandExchange() {
-		return new TopicExchange(terminalCommandExchangeName);
-	}
-
-	@Bean
-	public Binding terminalCommandBinding() {
-		return BindingBuilder.bind(terminalCommandQueue())
-			.to(terminalCommandExchange())
-			.with(terminalCommandRoutingKey);
-	}
-
 	// RPC 큐, 교환기, 바인딩
 	@Bean
 	public Queue rpcQueue() {
@@ -169,6 +165,54 @@ public class RabbitmqConfig {
 			.with(containerDeleteRoutingKey);
 	}
 
+	// [신규] PTY 세션 시작 큐, 교환기, 바인딩
+	@Bean
+	public Queue ptyStartQueue() {
+		return new Queue(ptyStartQueueName, true);
+	}
+
+	@Bean
+	public TopicExchange ptyStartExchange() {
+		return new TopicExchange(ptyStartExchangeName);
+	}
+
+	@Bean
+	public Binding ptyStartBinding() {
+		return BindingBuilder.bind(ptyStartQueue()).to(ptyStartExchange()).with(ptyStartRoutingKey);
+	}
+
+	// [신규] PTY 명령어 큐, 교환기, 바인딩
+	@Bean
+	public Queue ptyCommandQueue() {
+		return new Queue(ptyCommandQueueName, true);
+	}
+
+	@Bean
+	public TopicExchange ptyCommandExchange() {
+		return new TopicExchange(ptyCommandExchangeName);
+	}
+
+	@Bean
+	public Binding ptyCommandBinding() {
+		return BindingBuilder.bind(ptyCommandQueue()).to(ptyCommandExchange()).with(ptyCommandRoutingKey);
+	}
+
+	// PTY 세션 종료 큐, 교환기, 바인딩
+	@Bean
+	public Queue ptyStopQueue() {
+		return new Queue(ptyStopQueueName, true);
+	}
+
+	@Bean
+	public TopicExchange ptyStopExchange() {
+		return new TopicExchange(ptyStopExchangeName);
+	}
+
+	@Bean
+	public Binding ptyStopBinding() {
+		return BindingBuilder.bind(ptyStopQueue()).to(ptyStopExchange()).with(ptyStopRoutingKey);
+	}
+
 	// 컨테이너 할당 큐, 교환기, 바인딩
 	@Bean
 	public Queue containerAcquireQueue() {
@@ -193,7 +237,8 @@ public class RabbitmqConfig {
 		return new Queue(containerAcquireSuccessQueueName, true);
 	}
 
-	@Bean Queue containerAcquireFailureQueue() {
+	@Bean
+	Queue containerAcquireFailureQueue() {
 		return new Queue(containerAcquireFailureQueueName, true);
 	}
 
@@ -246,7 +291,6 @@ public class RabbitmqConfig {
 			.to(containerResponseExchange())
 			.with(containerCleanupSuccessRoutingKey);
 	}
-
 
 	// 프로젝트 삭제 큐, 교환기, 바인딩
 	@Bean

@@ -4,7 +4,7 @@ package com.growlog.webide.domain.projects.service;
  *  프로젝트 생성부터 사용자의 세션(컨테이너) 관리, 종료까지 전체적인 생명주기를 조율하고 관리
  * */
 
-import static org.apache.commons.io.file.PathUtils.copyDirectory;
+import static org.apache.commons.io.file.PathUtils.*;
 
 import java.io.IOException;
 import java.nio.file.Files;

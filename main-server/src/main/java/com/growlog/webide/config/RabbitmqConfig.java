@@ -30,14 +30,6 @@ public class RabbitmqConfig {
 	@Value("${code-execution.rabbitmq.routing.key}")
 	private String codeExecutionRoutingKey;
 
-	// 터미널 명령어 큐 관련 설정 값
-	@Value("${terminal-command.rabbitmq.exchange.name}")
-	private String terminalCommandExchangeName;
-	@Value("${terminal-command.rabbitmq.queue.name}")
-	private String terminalCommandQueueName;
-	@Value("${terminal-command.rabbitmq.routing.key}")
-	private String terminalCommandRoutingKey;
-
 	// 로그 수신 큐 관련 설정 값
 	@Value("${log-reception.rabbitmq.exchange.name}")
 	private String logReceptionExchangeName;
@@ -61,6 +53,12 @@ public class RabbitmqConfig {
 	private String containerDeletedAckQueueName;
 	@Value("${container-lifecycle.rabbitmq.response.routing-key}")
 	private String containerDeletedAckRoutingKey;
+
+	// [신규] PTY 세션 관련 설정 값
+	@Value("${pty-session.rabbitmq.start.exchange}")
+	private String ptyStartExchangeName;
+	@Value("${pty-session.rabbitmq.command.exchange}")
+	private String ptyCommandExchangeName;
 
 	// 컨테이너 할당 큐 관련 설정 값
 	@Value("${container-acquire.rabbitmq.exchange.name}")
@@ -136,24 +134,6 @@ public class RabbitmqConfig {
 		return BindingBuilder.bind(codeExecutionQueue()).to(codeExecutionExchange()).with(codeExecutionRoutingKey);
 	}
 
-	// 터미널 명령어 큐, 교환기, 바인딩
-	@Bean
-	public Queue terminalCommandQueue() {
-		return new Queue(terminalCommandQueueName, true);
-	}
-
-	@Bean
-	public TopicExchange terminalCommandExchange() {
-		return new TopicExchange(terminalCommandExchangeName);
-	}
-
-	@Bean
-	public Binding terminalCommandBinding() {
-		return BindingBuilder.bind(terminalCommandQueue())
-			.to(terminalCommandExchange())
-			.with(terminalCommandRoutingKey);
-	}
-
 	// 로그 수신 큐, 교환기, 바인딩
 	@Bean
 	public Queue logReceptionQueue() {
@@ -187,6 +167,17 @@ public class RabbitmqConfig {
 		return BindingBuilder.bind(containerDeletedAckQueue())
 			.to(containerLifecycleExchange())
 			.with(containerDeletedAckRoutingKey);
+	}
+
+	// [신규] PTY 세션 관련 교환기 (Main-server는 보내기만 하므로 Exchange만 선언)
+	@Bean
+	public TopicExchange ptyStartExchange() {
+		return new TopicExchange(ptyStartExchangeName);
+	}
+
+	@Bean
+	public TopicExchange ptyCommandExchange() {
+		return new TopicExchange(ptyCommandExchangeName);
 	}
 
 	// =================================================================
@@ -255,7 +246,8 @@ public class RabbitmqConfig {
 		return new Queue(containerAcquireSuccessQueueName, true);
 	}
 
-	@Bean Queue containerAcquireFailureQueue() {
+	@Bean
+	Queue containerAcquireFailureQueue() {
 		return new Queue(containerAcquireFailureQueueName, true);
 	}
 
@@ -341,7 +333,7 @@ public class RabbitmqConfig {
 	@Bean
 	public Binding projectDeleteSuccessBinding() {
 		return BindingBuilder.bind(projectDeleteSuccessQueue())
-			.to(projectDeleteExchange())
+			.to(projectResponseExchange()) // [수정] 올바른 응답 교환기(Exchange)에 연결합니다.
 			.with(projectDeleteSuccessRoutingKey);
 	}
 
