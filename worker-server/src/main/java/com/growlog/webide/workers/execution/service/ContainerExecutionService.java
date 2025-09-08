@@ -30,7 +30,6 @@ import com.github.dockerjava.api.model.Volume;
 import com.growlog.webide.workers.execution.dto.CodeExecutionRequestDto;
 import com.growlog.webide.workers.execution.dto.ContainerCreationRequest;
 import com.growlog.webide.workers.execution.dto.LogMessage;
-import com.growlog.webide.workers.execution.dto.TerminalCommandRequestDto;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -138,7 +137,8 @@ public class ContainerExecutionService {
 			.exec();
 
 		// 2. 쉘의 출력을 지속적으로 읽어서 Main-Server로 보내는 콜백 준비
-		PtyLogCallback callback = new PtyLogCallback(rabbitTemplate, containerId, userId, logExchangeName, logRoutingKey);
+		PtyLogCallback callback = new PtyLogCallback(rabbitTemplate, containerId, userId, logExchangeName,
+			logRoutingKey);
 
 		try {
 			// 3. 입력 스트림을 준비하고 세션 맵에 저장
@@ -330,7 +330,8 @@ public class ContainerExecutionService {
 		private final String exchangeName;
 		private final String routingKey;
 
-		public PtyLogCallback(RabbitTemplate rabbitTemplate, String containerId, Long userId, String exchangeName, String routingKey) {
+		public PtyLogCallback(RabbitTemplate rabbitTemplate, String containerId, Long userId, String exchangeName,
+			String routingKey) {
 			this.rabbitTemplate = rabbitTemplate;
 			this.containerId = containerId;
 			this.userId = userId;

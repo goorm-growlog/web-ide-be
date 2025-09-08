@@ -213,7 +213,8 @@ public class RabbitmqConfig {
 		return new Queue(containerAcquireSuccessQueueName, true);
 	}
 
-	@Bean Queue containerAcquireFailureQueue() {
+	@Bean
+	Queue containerAcquireFailureQueue() {
 		return new Queue(containerAcquireFailureQueueName, true);
 	}
 
@@ -266,7 +267,6 @@ public class RabbitmqConfig {
 			.to(containerResponseExchange())
 			.with(containerCleanupSuccessRoutingKey);
 	}
-
 
 	// 프로젝트 삭제 큐, 교환기, 바인딩
 	@Bean

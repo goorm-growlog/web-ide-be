@@ -83,7 +83,7 @@ public class StompHandler implements ChannelInterceptor {
 
 	private void validateSubscription(StompHeaderAccessor accessor) {
 		try {
-			final Long userId = (Long) accessor.getSessionAttributes().get("userId");
+			final Long userId = (Long)accessor.getSessionAttributes().get("userId");
 			final String destination = accessor.getDestination();
 
 			if (destination != null && destination.startsWith("/topic/projects/")) {

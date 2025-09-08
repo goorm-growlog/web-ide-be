@@ -246,7 +246,8 @@ public class RabbitmqConfig {
 		return new Queue(containerAcquireSuccessQueueName, true);
 	}
 
-	@Bean Queue containerAcquireFailureQueue() {
+	@Bean
+	Queue containerAcquireFailureQueue() {
 		return new Queue(containerAcquireFailureQueueName, true);
 	}
 

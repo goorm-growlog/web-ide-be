@@ -4,7 +4,7 @@
     <title>Unified Test Page (PTY Terminal & External Log Viewer)</title>
     <meta charset="UTF-8">
     <!-- xterm.js 라이브러리 로드 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css"/>
+    <link href="https://cdn.jsdelivr.net/npm/xterm/css/xterm.css" rel="stylesheet"/>
     <script src="https://cdn.jsdelivr.net/npm/xterm/lib/xterm.js"></script>
     <!-- WebSocket 라이브러리 로드 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
@@ -82,15 +82,15 @@
 
     <div class="input-group">
         <label for="jwtToken">JWT Access Token:</label>
-        <input type="text" id="jwtToken" placeholder="로그인 후 Access Token 입력">
+        <input id="jwtToken" placeholder="로그인 후 Access Token 입력" type="text">
     </div>
     <div class="input-group">
         <label for="projectId">Project ID:</label>
-        <input type="text" id="projectId" value="1">
+        <input id="projectId" type="text" value="1">
     </div>
     <div>
-        <button onclick="connectAndStart()" class="primary" id="connectBtn">Connect & Start Terminal</button>
-        <button onclick="disconnect()" class="secondary" id="disconnectBtn" disabled>Disconnect</button>
+        <button class="primary" id="connectBtn" onclick="connectAndStart()">Connect & Start Terminal</button>
+        <button class="secondary" disabled id="disconnectBtn" onclick="disconnect()">Disconnect</button>
     </div>
     <div id="terminal-container"></div>
 </div>
