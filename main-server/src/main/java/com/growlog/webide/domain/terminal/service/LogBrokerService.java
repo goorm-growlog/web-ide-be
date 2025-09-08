@@ -32,21 +32,8 @@ public class LogBrokerService {
 			return;
 		}
 
-		// SimpMessagingTemplate.convertAndSendToUser는 내부적으로 STOMP 세션에 저장된 Principal의 name을 사용합니다.
-		// StompHandler와 JwtTokenProvider를 보면 UserPrincipal이 생성되고, 그 Principal의 이름(username)은
-		// 사용자의 이메일일 가능성이 높습니다. 따라서 DB에서 사용자의 이메일을 조회합니다.
-		String username = userRepository.findById(userId)
-			.map(Users::getEmail)
-			.orElse(null);
-
-		if (username == null) {
-			log.warn("User not found for userId: {}. Cannot forward log for targetId: {}", userId,
-				logMessage.getTargetId());
-			return;
-		}
-
-		log.debug("Forwarding log for target [{}] to user [{}]: {}", logMessage.getTargetId(), username,
+		log.debug("Forwarding log for target [{}] to userId [{}]: {}", logMessage.getTargetId(), userId,
 			logMessage.getContent().trim());
-		messagingTemplate.convertAndSendToUser(username, "/queue/logs", logMessage);
+		messagingTemplate.convertAndSendToUser(userId.toString(), "/queue/logs", logMessage);
 	}
 }
