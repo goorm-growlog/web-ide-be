@@ -28,4 +28,10 @@ public interface ActiveSessionRepository extends JpaRepository<ActiveSession, Lo
 	Optional<ActiveSession> findByProject_Id(Long projectId);
 
 	List<ActiveSession> findAllByProject_Id(Long projectId);
+
+	void deleteByProject_Id(Long projectId);
+
+	void deleteByUser_UserIdAndProjectId(Long userId, Long projectId);
+
+	Long countAllByProjectId(Long projectId);
 }
