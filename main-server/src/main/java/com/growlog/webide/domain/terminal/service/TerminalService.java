@@ -19,8 +19,6 @@ import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.domain.terminal.dto.CodeExecutionApiRequest;
 import com.growlog.webide.domain.terminal.dto.CodeExecutionRequestDto;
 import com.growlog.webide.domain.terminal.dto.ContainerCreationRequest;
-import com.growlog.webide.domain.terminal.dto.TerminalCommandApiRequest;
-import com.growlog.webide.domain.terminal.dto.TerminalCommandRequestDto;
 import com.growlog.webide.domain.terminal.entity.ActiveInstance;
 import com.growlog.webide.domain.terminal.repository.ActiveInstanceRepository;
 import com.growlog.webide.domain.users.entity.Users;
@@ -136,10 +134,10 @@ public class TerminalService {
 	/**
 	 * [신규] 클라이언트로부터 받은 명령어를 Worker 서버로 전달합니다.
 	 */
-	public void forwardCommandToWorker(String sessionId, String command) {
+	public void forwardCommandToWorker(String sessionId, String input) {
 		Map<String, String> message = Map.of(
 			"sessionId", sessionId,
-			"command", command
+			"input", input
 		);
 		rabbitTemplate.convertAndSend(ptyCommandExchangeName, ptyCommandRoutingKey, message);
 	}
@@ -217,23 +215,5 @@ public class TerminalService {
 			.build();
 
 		return activeInstanceRepository.save(newInstance);
-	}
-
-	public void sendTerminalCommand(Long projectId, Long userId, TerminalCommandApiRequest apiRequest) {
-		// DB에서 터미널 전용 실행 환경(이미지) 정보를 조회합니다. (예: imageName이 "terminal"인 이미지)
-		// data.sql에 'terminal' 이름으로 이미지를 추가해야 합니다.
-		Image terminalImage = imageRepository.findByImageNameIgnoreCase("terminal")
-			.orElseThrow(() -> new CustomException(ErrorCode.IMAGE_NOT_FOUND));
-
-		// API 요청 DTO를 내부 메시징 DTO로 변환하고, projectId를 설정합니다.
-		TerminalCommandRequestDto messageDto = new TerminalCommandRequestDto();
-		messageDto.setProjectId(projectId);
-		messageDto.setUserId(userId); // 컨트롤러에서 전달받은 안전한 userId를 사용합니다.
-		messageDto.setCommand(apiRequest.getCommand());
-		messageDto.setDockerImage(terminalImage.getDockerBaseImage());
-
-		rabbitTemplate.convertAndSend(terminalCommandExchangeName, terminalCommandRoutingKey, messageDto);
-		log.info("Terminal command request sent: projectId={}, userId={}, image={}, command='{}'",
-			messageDto.getProjectId(), messageDto.getUserId(), messageDto.getDockerImage(), messageDto.getCommand());
 	}
 }
