@@ -21,5 +21,7 @@ public interface ActiveInstanceRepository extends JpaRepository<ActiveInstance, 
 	List<ActiveInstance> findAllByUser_UserIdAndProject_Id(Long userId, Long projectId);
 
 	Optional<ActiveInstance> findByContainerIdAndStatus(String containerId, InstanceStatus instanceStatus);
+
+	List<ActiveInstance> findAllByProject_Id(Long projectId);
 }
 

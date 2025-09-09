@@ -115,7 +115,7 @@ public class ProjectSessionEventListener {
 			final Long targetUserId = activeInstance.getUser().getUserId();
 			final String message = "Connection terminated by the project owner";
 			log.info("inactivateProject: {}", message);
-			webSocketNotificationService.sendLogSessionTerminationMessage(targetUserId.toString(), message);
+			webSocketNotificationService.sendLogSessionTerminationMessage(targetUserId, message);
 		});
 	}
 

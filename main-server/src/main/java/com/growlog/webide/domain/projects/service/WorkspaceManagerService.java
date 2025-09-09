@@ -29,6 +29,8 @@ import com.growlog.webide.domain.projects.entity.ProjectStatus;
 import com.growlog.webide.domain.projects.repository.ActiveSessionRepository;
 import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
+import com.growlog.webide.domain.terminal.entity.ActiveInstance;
+import com.growlog.webide.domain.terminal.repository.ActiveInstanceRepository;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
 import com.growlog.webide.global.common.exception.CustomException;
@@ -54,6 +56,7 @@ public class WorkspaceManagerService {
 	private final String projectsBasePath;
 	private final String templatesBasePath;
 	private final String serverId;
+	private final ActiveInstanceRepository activeInstanceRepository;
 
 	public WorkspaceManagerService(ProjectRepository projectRepository,
 		ActiveSessionRepository activeSessionRepository,
@@ -65,7 +68,7 @@ public class WorkspaceManagerService {
 		ProjectManagementProducer projectManagementProducer,
 		@Value("${efs.base-path}") String projectsBasePath,
 		@Value("${efs.templates-path}") String templatesBasePath,
-		@Value("${SERVER_ID}") String serverId) {
+		@Value("${SERVER_ID}") String serverId, ActiveInstanceRepository activeInstanceRepository) {
 		this.projectRepository = projectRepository;
 		this.activeSessionRepository = activeSessionRepository;
 		this.imageRepository = imageRepository;
@@ -77,6 +80,7 @@ public class WorkspaceManagerService {
 		this.projectsBasePath = projectsBasePath;
 		this.templatesBasePath = templatesBasePath;
 		this.serverId = serverId;
+		this.activeInstanceRepository = activeInstanceRepository;
 	}
 
 	/*
@@ -189,6 +193,7 @@ public class WorkspaceManagerService {
 		}
 
 		terminateSessions(projectId);
+		terminateInstances(projectId);
 
 		final Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
@@ -274,6 +279,18 @@ public class WorkspaceManagerService {
 			final String message = "Connection terminated by the project owner";
 			log.info("inactivateProject: {}", message);
 			webSocketNotificationService.sendSessionTerminationMessage(targetUserId, message);
+		}
+	}
+
+	public void terminateInstances(Long projectId) {
+		List<ActiveInstance> activeInstances = activeInstanceRepository.findAllByProject_Id(projectId);
+		log.info("projectId: {}, activeInstances length: {}", projectId, activeInstances.size());
+
+		for (ActiveInstance activeInstance : activeInstances) {
+			final Long targetUserId = activeInstance.getUser().getUserId();
+			final String message = "Connection terminated by the project owner";
+			log.info("inactivateProject: {}", message);
+			webSocketNotificationService.sendLogSessionTerminationMessage(targetUserId, message);
 		}
 	}
 

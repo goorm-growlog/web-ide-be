@@ -20,7 +20,7 @@ public class WebSocketNotificationService {
 	/*
 	터미널 관련 웹소켓 세션 강제 종료 메시지 발행
 	 */
-	public void sendLogSessionTerminationMessage(String targetUserId, String message) {
+	public void sendLogSessionTerminationMessage(Long targetUserId, String message) {
 		final String destination = "/queue/termination";
 		log.info("send Log Session Termination Message: {}", destination);
 		final String userId = String.valueOf(targetUserId);
