@@ -84,7 +84,7 @@
             subscribeBtn.disabled = false;
             deactivateBtn.disabled = false;
 
-            const queueUrl = `/user/topic/termination`;
+            const queueUrl = `/user/queue/termination`;
 
             stompClient.subscribe(queueUrl, function (message) {
                 log("RAW MESSAGE RECEIVED: ", message.body);

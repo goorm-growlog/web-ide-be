@@ -148,6 +148,23 @@
 
         // 4. 모든 로그를 수신할 개인 채널을 미리 구독
         stompClient.subscribe('/user/queue/logs', onMessageReceived);
+
+        const queueUrl = `/user/queue/termination`;
+
+        stompClient.subscribe(queueUrl, function (message) {
+            console.log("RAW MESSAGE RECEIVED: ", message.body);
+            const body = JSON.parse(message.body);
+            if (body.type === 'SESSION_TERMINATE') {
+                console.log(`SESSION TERMINATED: ${message.body}`);
+                alert(`The server has closed your session: ${message.body}`);
+                disconnect(); // 메시지 수신 후 연결 해제
+            }
+            if (body.type === 'PROJECT_DELETED') {
+                console.log(`PROJECT DELETION NOTICE: ${message.body}`)
+                alert(`Server Message: ${message.body}`)
+            }
+        });
+        console.log(`Subscribed to ${queueUrl} for server-sent messages.`);
     }
 
     function onMessageReceived(message) {
