@@ -3,20 +3,23 @@ name: Web IDE Backend CI/CD
 on:
   push:
     branches: [ main ]  # main 브랜치에 push(=머지 포함)되었을 때 실행됨
-  workflow_dispatch:  # 👈 수동 실행 가능하게 추가
+  workflow_dispatch:
 
 env:
   AWS_REGION: ap-northeast-2
-  EC2_HOST: ${{ secrets.EC2_HOST }}         # EC2 퍼블릭 IP 주소 (Secrets에 등록)
-  EC2_USER: ubuntu                          # EC2 사용자 계정명 (보통 ubuntu)
-  PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}   # EC2 접속용 .pem 키 내용 (Secrets에 텍스트로 등록)
-  BACKEND_IMAGE: webide-backend             # Docker 이미지 이름 (태그 포함 X)
   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}  # Docker Hub 계정
   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}  # Docker Hub 비밀번호 or Access Token
 
 jobs:
-  deploy:
+  deploy-main-server:
+    name: Deploy Main Server
     runs-on: ubuntu-latest  # GitHub가 제공하는 최신 우분투 환경에서 실행
+    env:
+      # [유지] 기존 환경변수는 Main Server용으로 사용합니다.
+      EC2_HOST: ${{ secrets.EC2_HOST }}
+      EC2_USER: ubuntu
+      PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+      BACKEND_IMAGE: webide-main-server # Main Server 전용 이미지 이름
 
     steps:
       #  GitHub 코드 체크아웃
@@ -33,85 +36,69 @@ jobs:
       # 📦 .env 파일 자동 생성
       - name: 📦 .env 파일 생성
         run: |
-          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
-          echo "DB_NAME=webide" >> .env
-          echo "DB_USER_NAME=${{ secrets.DB_USER_NAME }}" >> .env
-          echo "DB_USER_PASSWORD=${{ secrets.DB_USER_PASSWORD }}" >> .env
-          echo "DB_ROOT_PASSWORD=${{ secrets.DB_ROOT_PASSWORD }}" >> .env
+          # Main Server에 필요한 환경변수만 생성합니다.
+          echo "SPRING_PROFILES_ACTIVE=prod" >> main-server.env
+          echo "SERVER_ID=${{ secrets.SERVER_ID }}" >> main-server.env
+          echo "RDS_ENDPOINT=${{ secrets.RDS_ENDPOINT }}" >> main-server.env
+          echo "RDS_DB_NAME=webide_database" >> main-server.env
+          echo "RDS_DB_USER_NAME=${{ secrets.RDS_DB_USER_NAME }}" >> main-server.env
+          echo "RDS_DB_PASSWORD=${{ secrets.RDS_DB_PASSWORD }}" >> main-server.env
 
-          echo "RDS_ENDPOINT=${{ secrets.RDS_ENDPOINT }}" >> .env
-          echo "RDS_DB_NAME=webide_database" >> .env
-          echo "RDS_DB_USER_NAME=${{ secrets.RDS_DB_USER_NAME }}" >> .env
-          echo "RDS_DB_PASSWORD=${{ secrets.RDS_DB_PASSWORD }}" >> .env
+          echo "ACCESS_KEY=${{ secrets.ACCESS_KEY }}" >> main-server.env
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> main-server.env
+          echo "S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}" >> main-server.env
+          echo "S3_REGION=ap-northeast-2" >> main-server.env
+          echo "IMAGE_UPLOAD_DIR=profile-images/" >> main-server.env
+          echo "DEFAULT_PROFILE_IMAGE_URL=https://${{ secrets.S3_BUCKET_NAME }}.s3.amazonaws.com/profile-images/default.png" >> main-server.env
 
-          echo "ACCESS_KEY=${{ secrets.ACCESS_KEY }}" >> .env
-          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
-          echo "S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}" >> .env
-          echo "S3_REGION=ap-northeast-2" >> .env
-          echo "IMAGE_UPLOAD_DIR=profile-images/" >> .env
-          echo "DEFAULT_PROFILE_IMAGE_URL=https://${{ secrets.S3_BUCKET_NAME }}.s3.amazonaws.com/profile-images/default.png" >> .env
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> main-server.env
+          echo "JWT_EXPIRATION=3600000" >> main-server.env
+          echo "REFRESH_SECRET=${{ secrets.REFRESH_SECRET }}" >> main-server.env
+          echo "REFRESH_EXPIRATION=604800" >> main-server.env
+          
+          echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> main-server.env
+          echo "MAIL_PASSWORD=\"${{ secrets.MAIL_PASSWORD }}\"" >> main-server.env
+          echo "MAIL_FROM=${{ secrets.MAIL_FROM }}" >> main-server.env
+          
+          echo "LIVEBLOCKS_SECRET_KEY=${{ secrets.LIVEBLOCKS_SECRET_KEY }}" >> main-server.env
+          echo "LIVEBLOCKS_ROOM_SALT=${{ secrets.LIVEBLOCKS_ROOM_SALT }}" >> main-server.env
+          echo "TEMPLATE_DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> main-server.env
+          
+          echo "REDIS_HOST=${{ secrets.REDIS_HOST }}" >> main-server.env
+          echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> main-server.env
+          echo "REDIS_USERNAME=${{ secrets.REDIS_USERNAME }}" >> main-server.env
+          echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" >> main-server.env
+          
+          echo "KAKAO_REST_API_KEY=${{ secrets.KAKAO_REST_API_KEY }}" >> main-server.env
+          echo "KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}" >> main-server.env
+          echo "KAKAO_REDIRECT_URI_LOCAL=${{ secrets.KAKAO_REDIRECT_URI_LOCAL }}" >> main-server.env
+          
+          echo "RABBITMQ_HOST=${{ secrets.RABBITMQ_HOST }}" >> main-server.env
+          echo "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}" >> main-server.env
+          echo "RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}" >> main-server.env
 
-          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
-          echo "JWT_EXPIRATION=3600000" >> .env
-          echo "REFRESH_SECRET=${{ secrets.REFRESH_SECRET }}" >> .env
-          echo "REFRESH_EXPIRATION=604800" >> .env
+      - name: 🧪 Gradle Build
+        run: ./gradlew clean bootJar
 
-          echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
-          echo "MAIL_PASSWORD=\"${{ secrets.MAIL_PASSWORD }}\"" >> .env
-          echo "MAIL_FROM=${{ secrets.MAIL_FROM }}" >> .env
-
-          echo "LIVEBLOCKS_ROOM_SALT=${{ secrets.LIVEBLOCKS_ROOM_SALT }}" >> .env
-          echo "LIVEBLOCKS_SECRET_KEY=${{ secrets.LIVEBLOCKS_SECRET_KEY }}" >> .env
-
-          echo "TEMPLATE_DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> .env
-
-          echo "SPRING_PROFILES_ACTIVE=prod" >> .env
-
-          echo "REDIS_HOST=${{ secrets.REDIS_HOST }}" >> .env
-          echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> .env
-          echo "REDIS_USERNAME=${{ secrets.REDIS_USERNAME }}" >> .env
-          echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" >> .env
-
-          echo "KAKAO_REST_API_KEY=${{ secrets.KAKAO_REST_API_KEY }}" >> .env
-          echo "KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}" >> .env
-          echo "KAKAO_REDIRECT_URI_LOCAL=${{ secrets.KAKAO_REDIRECT_URI_LOCAL }}" >> .env
-
-      - name: 🔍 디버깅 .env 줄 번호 확인
-        run: cat -n .env
-
-      #  Gradle 빌드 (코드 검증, 실패 시 Docker 빌드 & 배포 중단)
-      - name: 🧪 Gradle Build (사전 확인용)
-        run: |
-          set -a
-          source .env
-          set +a
-          ./gradlew clean bootJar       # build = compile
-
-      # Docker Hub 로그인
       - name: 🔐 Docker Hub 로그인
         run: echo "${{ env.DOCKER_PASSWORD }}" | docker login -u "${{ env.DOCKER_USERNAME }}" --password-stdin
 
+      - name: 🐳 Build and Push main-server image
+        run: |
+          docker build --no-cache -t $DOCKER_USERNAME/$BACKEND_IMAGE:latest \
+          -f main-server/Dockerfile main-server
+          docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest
 
-      # 📂 .env 파일 EC2에 전송
-      - name: 📂 EC2에 .env 전송
+      - name: 📂 SCP .env to main-server EC2
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ env.EC2_HOST }}
           username: ${{ env.EC2_USER }}
           key: ${{ env.PRIVATE_KEY }}
-          source: ".env"
-          target: "/home/ubuntu/web-ide-be"
+          source: "main-server.env"
+          target: "/home/ubuntu/web-ide-be/.env"
 
-      #  Docker 이미지 빌드 및 Push
-      - name: 🐳 Docker 이미지 빌드 및 Push
-        run: |
-          docker build --no-cache -t $DOCKER_USERNAME/$BACKEND_IMAGE:latest \
-          -f main-server/Dockerfile main-server                                   # 이미지 빌드
-          docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest                      # Docker Hub로 푸시
-
-
-      # EC2에 SSH로 접속해서 컨테이너 배포
-      - name: 🚀 EC2 배포 (컨테이너 교체)
+      - name: 🚀 Deploy to main-server EC2
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ env.EC2_HOST }}
@@ -119,20 +106,84 @@ jobs:
           key: ${{ env.PRIVATE_KEY }}
           envs: DOCKER_USERNAME,BACKEND_IMAGE
           script: |
-            # 최신 이미지 pull
+            echo "### 🧹 [용량 확보] 사용하지 않는 Docker 리소스를 정리합니다..."
+            docker system prune -af --volumes
+
+            echo "### 🚚 최신 이미지를 pull 합니다..."
             docker pull $DOCKER_USERNAME/$BACKEND_IMAGE:latest
 
-            # 기존 컨테이너 정리
-            docker stop webide-backend || true
-            docker rm webide-backend || true
+            echo "### 🚀 main-server 컨테이너를 재시작합니다..."
+            cd /home/ubuntu/web-ide-be
+            docker-compose up -d --force-recreate main-server
 
-            # ✅ 환경변수 확인 로그 출력
-            echo "✅ .env 파일 적용 완료"
+  deploy-worker-server:
+    name: Deploy Worker Server
+    runs-on: ubuntu-latest
+    env:
+      # [신규] Worker Server 전용 환경변수를 사용합니다.
+      EC2_HOST: ${{ secrets.WORKER_EC2_HOST }}
+      EC2_USER: ubuntu
+      PRIVATE_KEY: ${{ secrets.WORKER_EC2_SSH_KEY }}
+      BACKEND_IMAGE: webide-worker-server
 
-            # 컨테이너 실행
-            docker-compose up -d
+    steps:
+      - name: 🔄 Checkout source code
+        uses: actions/checkout@v3
 
-            # 템플릿 이미지 미리 pull (선택 사항, 자동 pull도 되긴 함)
-            docker pull $DOCKER_USERNAME/java-template:17 || true
-            docker pull $DOCKER_USERNAME/python-template:3.11 || true
+      - name: ☕ JDK 21 설치
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
 
+      - name: 📦 Create .env for worker-server
+        run: |
+          # Worker Server에 필요한 환경변수만 생성합니다.
+          echo "SPRING_PROFILES_ACTIVE=prod" >> worker-server.env
+          echo "RABBITMQ_HOST=${{ secrets.RABBITMQ_HOST }}" >> worker-server.env
+          echo "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}" >> worker-server.env
+          echo "RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}" >> worker-server.env
+
+      - name: 🧪 Gradle Build
+        run: ./gradlew clean bootJar
+
+      - name: 🔐 Docker Hub 로그인
+        run: echo "${{ env.DOCKER_PASSWORD }}" | docker login -u "${{ env.DOCKER_USERNAME }}" --password-stdin
+
+      - name: 🐳 Build and Push worker-server image
+        run: |
+          docker build --no-cache -t $DOCKER_USERNAME/$BACKEND_IMAGE:latest \
+          -f worker-server/Dockerfile worker-server
+          docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest
+
+      - name: 📂 SCP .env to worker-server EC2
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ env.EC2_HOST }}
+          username: ${{ env.EC2_USER }}
+          key: ${{ env.PRIVATE_KEY }}
+          source: "worker-server.env"
+          target: "/home/ubuntu/web-ide-worker/.env"
+
+      - name: 🚀 Deploy to worker-server EC2
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ env.EC2_HOST }}
+          username: ${{ env.EC2_USER }}
+          key: ${{ env.PRIVATE_KEY }}
+          envs: DOCKER_USERNAME,BACKEND_IMAGE
+          script: |
+            echo "### 🧹 [용량 확보] 사용하지 않는 Docker 리소스를 정리합니다..."
+            docker system prune -af --volumes
+
+            echo "### 🚚 최신 이미지를 pull 합니다..."
+            docker pull $DOCKER_USERNAME/$BACKEND_IMAGE:latest
+
+            echo "### 🚀 worker-server 컨테이너를 재시작합니다..."
+            cd /home/ubuntu/web-ide-worker
+            docker-compose up -d --force-recreate worker-server
+
+            echo "### ⚡️ [성능 최적화] 자주 사용하는 템플릿 이미지를 미리 pull 합니다..."
+            docker pull ${{ env.DOCKER_USERNAME }}/java-template:17 || true
+            docker pull ${{ env.DOCKER_USERNAME }}/python-template:3.11 || true
+            echo "### ✅ 템플릿 이미지 pull 완료."
