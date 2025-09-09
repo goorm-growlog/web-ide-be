@@ -4,7 +4,7 @@ package com.growlog.webide.domain.projects.service;
  *  프로젝트 생성부터 사용자의 세션(컨테이너) 관리, 종료까지 전체적인 생명주기를 조율하고 관리
  * */
 
-import static org.apache.commons.io.file.PathUtils.*;
+import static org.apache.commons.io.file.PathUtils.copyDirectory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -31,7 +31,6 @@ import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
-import com.growlog.webide.factory.DockerClientFactory;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
 
@@ -44,7 +43,6 @@ import lombok.extern.slf4j.Slf4j;
 public class WorkspaceManagerService {
 
 	private final ActiveSessionRepository activeSessionRepository;
-	private final DockerClientFactory dockerClientFactory;
 	private final ProjectRepository projectRepository;
 	private final ImageRepository imageRepository;
 	private final UserRepository userRepository;
@@ -57,8 +55,7 @@ public class WorkspaceManagerService {
 	private final String templatesBasePath;
 	private final String serverId;
 
-	public WorkspaceManagerService(DockerClientFactory dockerClientFactory,
-		ProjectRepository projectRepository,
+	public WorkspaceManagerService(ProjectRepository projectRepository,
 		ActiveSessionRepository activeSessionRepository,
 		ImageRepository imageRepository,
 		UserRepository userRepository,
@@ -69,7 +66,6 @@ public class WorkspaceManagerService {
 		@Value("${efs.base-path}") String projectsBasePath,
 		@Value("${efs.templates-path}") String templatesBasePath,
 		@Value("${SERVER_ID}") String serverId) {
-		this.dockerClientFactory = dockerClientFactory;
 		this.projectRepository = projectRepository;
 		this.activeSessionRepository = activeSessionRepository;
 		this.imageRepository = imageRepository;
@@ -205,7 +201,6 @@ public class WorkspaceManagerService {
 	public void deleteProject(Long projectId, Long userId) {
 		log.info("Deleting project with ID: {}", projectId);
 
-		// 1. DB에서 프로젝트 정보 조회
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
 

@@ -16,7 +16,6 @@ import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.domain.projects.service.ActiveSessionService;
 import com.growlog.webide.domain.projects.service.WebSocketNotificationService;
 import com.growlog.webide.domain.terminal.repository.ActiveInstanceRepository;
-import com.growlog.webide.domain.terminal.service.ActiveInstanceService;
 import com.growlog.webide.domain.terminal.service.TerminalService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class ProjectSessionEventListener {
 
-	private final ActiveInstanceService activeInstanceService;
 	private final ActiveSessionService activeSessionService;
 	private final ProjectRepository projectRepository;
 	private final ActiveSessionRepository activeSessionRepository;
@@ -34,14 +32,13 @@ public class ProjectSessionEventListener {
 	private final ActiveInstanceRepository activeInstanceRepository;
 	private final WebSocketEventListener webSocketEventListener;
 
-	public ProjectSessionEventListener(ActiveInstanceService activeInstanceService,
-		ActiveSessionService activeSessionService,
+	public ProjectSessionEventListener(ActiveSessionService activeSessionService,
 		ProjectRepository projectRepository,
 		ActiveSessionRepository activeSessionRepository,
 		TerminalService terminalService,
-		WebSocketNotificationService webSocketNotificationService, ActiveInstanceRepository activeInstanceRepository,
+		WebSocketNotificationService webSocketNotificationService,
+		ActiveInstanceRepository activeInstanceRepository,
 		WebSocketEventListener webSocketEventListener) {
-		this.activeInstanceService = activeInstanceService;
 		this.activeSessionService = activeSessionService;
 		this.projectRepository = projectRepository;
 		this.activeSessionRepository = activeSessionRepository;
@@ -82,6 +79,7 @@ public class ProjectSessionEventListener {
 
 	}
 
+	// 방금 삭제한 세션에 대한 DB를 정리하고 남은 세션이 없을 경우 프로젝트 비활성화
 	private void handleRemainingSessions(Optional<Project> projectOpt, Long projectId, Long userId) {
 		if (projectOpt.isEmpty()) {
 			return;
@@ -101,6 +99,7 @@ public class ProjectSessionEventListener {
 		}
 	}
 
+	// userId, projectId를 통해 관련된 세션 정리
 	private void closeRelatedSessions(Long userId, Long projectId) {
 		activeSessionRepository.findAllByUser_UserIdAndProject_Id(userId, projectId).forEach(activeSession -> {
 			final Long targetUserId = activeSession.getUser().getUserId();
@@ -110,6 +109,7 @@ public class ProjectSessionEventListener {
 		});
 	}
 
+	// userId, projectId를 통해 인스턴스(컨테이너) 정리
 	private void closeRelatedInstances(Long userId, Long projectId) {
 		activeInstanceRepository.findAllByUser_UserIdAndProject_Id(userId, projectId).forEach(activeInstance -> {
 			final Long targetUserId = activeInstance.getUser().getUserId();

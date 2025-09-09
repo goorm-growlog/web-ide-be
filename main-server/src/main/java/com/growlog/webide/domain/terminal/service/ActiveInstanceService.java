@@ -3,7 +3,6 @@ package com.growlog.webide.domain.terminal.service;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import com.growlog.webide.domain.projects.repository.ActiveSessionRepository;
 import com.growlog.webide.domain.terminal.config.ContainerTaskProducer;
 import com.growlog.webide.domain.terminal.entity.ActiveInstance;
 import com.growlog.webide.domain.terminal.repository.ActiveInstanceRepository;

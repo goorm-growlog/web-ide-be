@@ -33,7 +33,7 @@ public class WorkspaceController {
 
 	private final WorkspaceManagerService workspaceManagerService;
 
-	@Operation(summary = "프로젝트 생성", description = "새로운 프로젝트와 Docker 볼륨을 생성합니다.")
+	@Operation(summary = "프로젝트 생성", description = "새로운 프로젝트를 생성하고 EFS에 폴더를 추가합니다.")
 	@PostMapping
 	public ResponseEntity<ApiResponse<ProjectResponse>> createProject(
 		@RequestBody CreateProjectRequest request,
@@ -43,7 +43,7 @@ public class WorkspaceController {
 		return ResponseEntity.ok(ApiResponse.ok(response));
 	}
 
-	@Operation(summary = "프로젝트 열기(컨테이너 실행)", description = "사용자를 위한 개인 컨테이너를 실행하고 접속 정보를 반환합니다.")
+	@Operation(summary = "프로젝트 열기", description = "웹소켓 세션을 열 때 호출되며, 접속 정보를 반환합니다.")
 	@PostMapping("/{projectId}/open")
 	public ResponseEntity<ApiResponse<String>> openProject(
 		@PathVariable Long projectId,
@@ -64,7 +64,7 @@ public class WorkspaceController {
 	}
 
 	@Operation(summary = "프로젝트 삭제",
-		description = "프로젝트 정보와 Docker 볼륨을 삭제합니다.")
+		description = "프로젝트 정보와 EFS 내 폴더를 삭제합니다.")
 	@DeleteMapping("/{projectId}")
 	public ResponseEntity<ApiResponse<String>> deleteProject(
 		@PathVariable Long projectId,

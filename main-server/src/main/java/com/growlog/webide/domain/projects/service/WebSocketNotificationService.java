@@ -1,7 +1,6 @@
 package com.growlog.webide.domain.projects.service;
 
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.stereotype.Service;
 
 import com.growlog.webide.domain.projects.dto.WebSocketMessage;
@@ -13,14 +12,14 @@ import lombok.extern.slf4j.Slf4j;
 public class WebSocketNotificationService {
 
 	private final SimpMessagingTemplate simpMessagingTemplate;
-	private final SimpUserRegistry simpUserRegistry;
 
-	public WebSocketNotificationService(SimpMessagingTemplate simpMessagingTemplate,
-		SimpUserRegistry simpUserRegistry) {
+	public WebSocketNotificationService(SimpMessagingTemplate simpMessagingTemplate) {
 		this.simpMessagingTemplate = simpMessagingTemplate;
-		this.simpUserRegistry = simpUserRegistry;
 	}
 
+	/*
+	터미널 관련 웹소켓 세션 강제 종료 메시지 발행
+	 */
 	public void sendLogSessionTerminationMessage(String targetUserId, String message) {
 		final String destination = "/queue/termination";
 		log.info("send Log Session Termination Message: {}", destination);
@@ -30,6 +29,9 @@ public class WebSocketNotificationService {
 		simpMessagingTemplate.convertAndSendToUser(userId, destination, sessionTerminateMessage);
 	}
 
+	/*
+	프로젝트 웹소켓 세션 강제 종료 메시지 발행
+	 */
 	public void sendSessionTerminationMessage(Long targetUserId, String message) {
 		final String destination = "/queue/termination";
 		log.info("send Project Session Termination Message: {}", destination);
@@ -39,6 +41,9 @@ public class WebSocketNotificationService {
 		simpMessagingTemplate.convertAndSendToUser(userId, destination, sessionTerminateMessage);
 	}
 
+	/*
+	프로젝트가 삭제됨에 따른 세션 강제 종료 메시지 발행
+	 */
 	public void sendProjectDeletedMessage(Long targetUserId, String message) {
 		final String destination = "/queue/termination";
 		log.info("send Project Deleted Message: {}", destination);
