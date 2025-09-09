@@ -54,6 +54,8 @@ public class WebSocketEventListener {
 		final StompHeaderAccessor accessor = MessageHeaderAccessor
 			.getAccessor(event.getMessage(), StompHeaderAccessor.class);
 
+		log.info("accessor: {}", accessor);
+
 		final boolean isLogSubscription = extractLogSubscription(accessor);
 
 		if (!isLogSubscription) {
@@ -86,11 +88,13 @@ public class WebSocketEventListener {
 		return Optional.of(new SessionInfo(userId, projectId));
 	}
 
-	private static boolean extractLogSubscription(StompHeaderAccessor accessor) {
+	public boolean extractLogSubscription(StompHeaderAccessor accessor) {
 		final Set<String> subscriptions = (Set<String>)accessor.getSessionAttributes()
 			.getOrDefault("SUBSCRIPTIONS", new HashSet<>());
-		subscriptions.contains("/user/queue/logs");
-		return true;
+		if (subscriptions.contains("/user/queue/logs")) {
+			return true;
+		}
+		return false;
 	}
 
 	public record SessionInfo(Long userId, Long projectId) {

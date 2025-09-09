@@ -21,9 +21,18 @@ public class WebSocketNotificationService {
 		this.simpUserRegistry = simpUserRegistry;
 	}
 
+	public void sendLogSessionTerminationMessage(String targetUserId, String message) {
+		final String destination = "/queue/termination";
+		log.info("send Log Session Termination Message: {}", destination);
+		final String userId = String.valueOf(targetUserId);
+
+		WebSocketMessage sessionTerminateMessage = new WebSocketMessage("LOG_SESSION_TERMINATE", message);
+		simpMessagingTemplate.convertAndSendToUser(userId, destination, sessionTerminateMessage);
+	}
+
 	public void sendSessionTerminationMessage(Long targetUserId, String message) {
 		final String destination = "/queue/termination";
-		log.info("send Session Termination Message: {}", destination);
+		log.info("send Project Session Termination Message: {}", destination);
 		final String userId = String.valueOf(targetUserId);
 
 		WebSocketMessage sessionTerminateMessage = new WebSocketMessage("SESSION_TERMINATE", message);

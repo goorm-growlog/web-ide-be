@@ -32,13 +32,15 @@ public class ProjectSessionEventListener {
 	private final TerminalService terminalService;
 	private final WebSocketNotificationService webSocketNotificationService;
 	private final ActiveInstanceRepository activeInstanceRepository;
+	private final WebSocketEventListener webSocketEventListener;
 
 	public ProjectSessionEventListener(ActiveInstanceService activeInstanceService,
 		ActiveSessionService activeSessionService,
 		ProjectRepository projectRepository,
 		ActiveSessionRepository activeSessionRepository,
 		TerminalService terminalService,
-		WebSocketNotificationService webSocketNotificationService, ActiveInstanceRepository activeInstanceRepository) {
+		WebSocketNotificationService webSocketNotificationService, ActiveInstanceRepository activeInstanceRepository,
+		WebSocketEventListener webSocketEventListener) {
 		this.activeInstanceService = activeInstanceService;
 		this.activeSessionService = activeSessionService;
 		this.projectRepository = projectRepository;
@@ -46,6 +48,7 @@ public class ProjectSessionEventListener {
 		this.terminalService = terminalService;
 		this.webSocketNotificationService = webSocketNotificationService;
 		this.activeInstanceRepository = activeInstanceRepository;
+		this.webSocketEventListener = webSocketEventListener;
 	}
 
 	@Transactional
@@ -61,22 +64,14 @@ public class ProjectSessionEventListener {
 
 			final Optional<Project> projectOpt = projectRepository.findWithLockById(projectId);
 
-			closeRelatedSessions(userId, projectId);
+			closeRelatedInstances(userId, projectId);
 
-			if (projectOpt.isPresent()) {
-				projectOpt.ifPresent(project -> {
-					final Long remainingSessions = activeSessionRepository.countAllByProjectId((projectId));
+			boolean isLogSubscription = webSocketEventListener.extractLogSubscription(accessor);
 
-					if (remainingSessions <= 1) {
-						log.info("Last session disconnected from project {}. Inactivating project.", projectId);
-						project.inactivate();
-					} else {
-						log.info("{} sessions still active in project {}. Project remains active.",
-							remainingSessions - 1, projectId);
-						activeSessionService.cleanupSession(userId, projectId);
-					}
-
-				});
+			if (!isLogSubscription) {
+				closeRelatedSessions(userId, projectId);
+				closeRelatedInstances(userId, projectId);
+				handleRemainingSessions(projectOpt, projectId, userId);
 			}
 
 			final String sessionId = event.getSessionId();
@@ -87,6 +82,25 @@ public class ProjectSessionEventListener {
 
 	}
 
+	private void handleRemainingSessions(Optional<Project> projectOpt, Long projectId, Long userId) {
+		if (projectOpt.isEmpty()) {
+			return;
+		}
+
+		activeSessionService.cleanupSession(userId, projectId);
+
+		final Long remainingSessions = activeSessionRepository.countAllByProjectId(projectId);
+		Project project = projectOpt.get();
+
+		if (remainingSessions == 0) {
+			log.info("Last session disconnected from project {}. Inactivating project.", projectId);
+			project.inactivate();
+		} else {
+			log.info("{} sessions still active in project {}. Project remains active.",
+				remainingSessions, projectId);
+		}
+	}
+
 	private void closeRelatedSessions(Long userId, Long projectId) {
 		activeSessionRepository.findAllByUser_UserIdAndProject_Id(userId, projectId).forEach(activeSession -> {
 			final Long targetUserId = activeSession.getUser().getUserId();
@@ -94,11 +108,14 @@ public class ProjectSessionEventListener {
 			log.info("inactivateProject: {}", message);
 			webSocketNotificationService.sendSessionTerminationMessage(targetUserId, message);
 		});
+	}
+
+	private void closeRelatedInstances(Long userId, Long projectId) {
 		activeInstanceRepository.findAllByUser_UserIdAndProject_Id(userId, projectId).forEach(activeInstance -> {
 			final Long targetUserId = activeInstance.getUser().getUserId();
 			final String message = "Connection terminated by the project owner";
 			log.info("inactivateProject: {}", message);
-			webSocketNotificationService.sendSessionTerminationMessage(targetUserId, message);
+			webSocketNotificationService.sendLogSessionTerminationMessage(targetUserId.toString(), message);
 		});
 	}
 
