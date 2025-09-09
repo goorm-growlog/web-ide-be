@@ -22,7 +22,7 @@ public class WebSocketNotificationService {
 	}
 
 	public void sendSessionTerminationMessage(Long targetUserId, String message) {
-		final String destination = "/topic/termination";
+		final String destination = "/queue/termination";
 		log.info("send Session Termination Message: {}", destination);
 		final String userId = String.valueOf(targetUserId);
 
@@ -31,7 +31,7 @@ public class WebSocketNotificationService {
 	}
 
 	public void sendProjectDeletedMessage(Long targetUserId, String message) {
-		final String destination = "/topic/termination";
+		final String destination = "/queue/termination";
 		log.info("send Project Deleted Message: {}", destination);
 		final String userId = String.valueOf(targetUserId);
 

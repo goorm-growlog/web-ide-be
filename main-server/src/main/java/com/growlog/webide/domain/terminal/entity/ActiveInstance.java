@@ -50,7 +50,7 @@ public class ActiveInstance {
 	@JoinColumn(name = "user_id", nullable = false)
 	private Users user;
 
-	@Column(nullable = false, unique = true)
+	@Column(unique = true)
 	private String containerId;
 
 	@Enumerated(EnumType.STRING)
@@ -71,6 +71,10 @@ public class ActiveInstance {
 		this.user = user;
 		this.containerId = containerId;
 		this.status = status;
+	}
+
+	public void setContainerId(String containerId) {
+		this.containerId = containerId;
 	}
 
 	//== 상태 변경 ==/

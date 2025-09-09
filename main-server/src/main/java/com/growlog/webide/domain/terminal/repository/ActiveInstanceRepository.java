@@ -18,6 +18,8 @@ public interface ActiveInstanceRepository extends JpaRepository<ActiveInstance, 
 
 	List<ActiveInstance> findAllByStatusAndLastActivityAtBefore(InstanceStatus status, LocalDateTime threshold);
 
+	List<ActiveInstance> findAllByUser_UserIdAndProject_Id(Long userId, Long projectId);
+
 	Optional<ActiveInstance> findByContainerIdAndStatus(String containerId, InstanceStatus instanceStatus);
 }
 

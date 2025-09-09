@@ -37,7 +37,7 @@ public class StompHandler implements ChannelInterceptor {
 
 	private final ProjectMemberRepository projectMemberRepository;
 
-	private static boolean checkDuplicatedSubscribtion(StompHeaderAccessor accessor) {
+	private static boolean checkDuplicatedSubscription(StompHeaderAccessor accessor) {
 		final Set<String> subscriptions = (Set<String>)accessor.getSessionAttributes()
 			.getOrDefault("SUBSCRIPTIONS", new HashSet<>());
 		final String destination = accessor.getDestination();
@@ -63,7 +63,7 @@ public class StompHandler implements ChannelInterceptor {
 		if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
 			try {
 				validateSubscription(accessor); // 모든 구독 경로를 이 메서드에서 처리
-				if (checkDuplicatedSubscribtion(accessor)) {
+				if (checkDuplicatedSubscription(accessor)) {
 					log.warn("Already Subscribed to {}.", accessor.getDestination());
 					return null; // 중복 구독 방지
 				}
@@ -88,8 +88,8 @@ public class StompHandler implements ChannelInterceptor {
 					log.warn("Required permissions are missing for chat subscription.");
 					throw new CustomException(ErrorCode.NOT_A_MEMBER);
 				}
-			} else if (destination != null && destination.startsWith("/user/queue/logs")) {
-				// 로그 관련 구독일 경우, 개인 채널이므로 별도의 projectId 검증 없이 통과시킵니다.
+			} else if (destination != null && destination.startsWith("/user/queue/")) {
+				// 개인 채널 구독은 별도의 projectId 검증 없이 통과시킵니다.
 				log.info("User {} subscribed to their private log queue.", userId);
 			} else {
 				// 알 수 없는 구독 경로일 경우, 거부합니다.
