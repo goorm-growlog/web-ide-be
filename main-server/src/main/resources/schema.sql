@@ -106,7 +106,6 @@ CREATE TABLE `active_sessions`
     `project_id`   BIGINT       NOT NULL COMMENT '프로젝트 ID (FK)',
     `user_id`      BIGINT       NOT NULL COMMENT '사용자 ID (FK)',
     `server_id`    VARCHAR(255) NOT NULL COMMENT 'EC2 인스턴스 ID',
-    `container_id` VARCHAR(255) COMMENT '일시적으로 실행 중인 Docker 컨테이너 ID',
     `connected_at` DATETIME(6)  NOT NULL,
     PRIMARY KEY (`session_id`),
     CONSTRAINT `fk_active_sessions_to_projects` FOREIGN KEY (`project_id`) REFERENCES `projects` (`project_id`) ON DELETE CASCADE,
