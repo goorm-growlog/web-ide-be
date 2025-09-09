@@ -123,7 +123,7 @@ CREATE TABLE `active_instances`
     `instance_id`      BIGINT                     NOT NULL AUTO_INCREMENT COMMENT '인스턴스 ID (PK)',
     `project_id`       BIGINT                     NOT NULL COMMENT '프로젝트 ID (FK)',
     `user_id`          BIGINT                     NOT NULL COMMENT '사용자 ID (FK)',
-    `container_id`     VARCHAR(255)               NOT NULL COMMENT '실행 중인 Docker 컨테이너 ID',
+    `container_id`     VARCHAR(255)               COMMENT '실행 중인 Docker 컨테이너 ID',
     `status`           ENUM ('ACTIVE', 'PENDING') NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE: 활성, PENDING: 삭제 대기',
     `connected_at`     DATETIME(6)                NOT NULL,
     `last_activity_at` DATETIME(6)                NOT NULL COMMENT '마지막 활동 시간',
