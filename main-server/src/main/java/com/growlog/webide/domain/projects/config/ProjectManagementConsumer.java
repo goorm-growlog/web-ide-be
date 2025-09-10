@@ -35,6 +35,7 @@ public class ProjectManagementConsumer {
 	public void handleDeleteSuccess(Long projectId) {
 		log.info("Received delete success for project {}", projectId);
 		workspaceManagerService.terminateSessions(projectId);
+		workspaceManagerService.terminateInstances(projectId);
 
 		try {
 			log.info("Waiting for 5 seconds to allow session cleanup...");

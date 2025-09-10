@@ -67,7 +67,6 @@ public class ProjectSessionEventListener {
 
 			if (!isLogSubscription) {
 				closeRelatedSessions(userId, projectId);
-				closeRelatedInstances(userId, projectId);
 				handleRemainingSessions(projectOpt, projectId, userId);
 			}
 

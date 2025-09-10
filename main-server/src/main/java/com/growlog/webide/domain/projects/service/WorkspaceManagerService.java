@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -213,8 +214,7 @@ public class WorkspaceManagerService {
 			throw new CustomException(ErrorCode.NO_OWNER_PERMISSION);
 		}
 
-		final String message = "Project deleted. Session will terminated";
-		webSocketNotificationService.sendProjectDeletedMessage(userId, message);
+		deleteProject(projectId);
 
 		project.deleting();
 
@@ -270,21 +270,47 @@ public class WorkspaceManagerService {
 			.collect(Collectors.toList());
 	}
 
+	public void deleteProject(Long projectId) {
+		final List<ActiveSession> activeSessions = activeSessionRepository.findAllByProject_Id(projectId);
+		log.info("projectId: {}, found {} active sessions", projectId, activeSessions.size());
+
+		final Set<Long> uniqueUserIds = activeSessions.stream().map(session ->
+			session.getUser().getUserId()).collect(Collectors.toSet());
+
+		for (Long targetUserId : uniqueUserIds) {
+			final String message = "Project deleted. Session will terminated";
+			log.info("deleteProject: {}", message);
+			webSocketNotificationService.sendProjectDeletedMessage(targetUserId, message);
+		}
+
+		final List<ActiveInstance> activeInstances = activeInstanceRepository.findAllByProject_Id(projectId);
+		log.info("projectId: {}, found {} active instances", projectId, activeInstances.size());
+
+		for (ActiveInstance activeInstance : activeInstances) {
+			final Long targetUserId = activeInstance.getUser().getUserId();
+			final String message = "Project deleted. Session will terminated";
+			log.info("deleteProject: {}", message);
+			webSocketNotificationService.sendProjectDeletedMessageToInstance(targetUserId, message);
+		}
+	}
+
 	public void terminateSessions(Long projectId) {
 		final List<ActiveSession> activeSessions = activeSessionRepository.findAllByProject_Id(projectId);
-		log.info("projectId: {}, activeSessions length: {}", projectId, activeSessions.toArray().length);
+		log.info("projectId: {}, found {} active sessions", projectId, activeSessions.size());
 
-		for (ActiveSession activeSession : activeSessions) {
-			final Long targetUserId = activeSession.getUser().getUserId();
-			final String message = "Connection terminated by the project owner";
+		final Set<Long> uniqueUserIds = activeSessions.stream().map(session ->
+			session.getUser().getUserId()).collect(Collectors.toSet());
+		final String message = "Connection terminated by the project owner";
+
+		for (Long targetUserId : uniqueUserIds) {
 			log.info("inactivateProject: {}", message);
 			webSocketNotificationService.sendSessionTerminationMessage(targetUserId, message);
 		}
 	}
 
 	public void terminateInstances(Long projectId) {
-		List<ActiveInstance> activeInstances = activeInstanceRepository.findAllByProject_Id(projectId);
-		log.info("projectId: {}, activeInstances length: {}", projectId, activeInstances.size());
+		final List<ActiveInstance> activeInstances = activeInstanceRepository.findAllByProject_Id(projectId);
+		log.info("projectId: {}, found {} active instances", projectId, activeInstances.size());
 
 		for (ActiveInstance activeInstance : activeInstances) {
 			final Long targetUserId = activeInstance.getUser().getUserId();
