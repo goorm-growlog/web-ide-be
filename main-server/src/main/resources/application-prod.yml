@@ -47,11 +47,11 @@ spring:
 
   rabbitmq:
     host: ${RABBITMQ_HOST} # Amazon MQ 엔드포인트 주소 (amqps:// 제외)
-    port: 5671             # AMQPS 기본 포트
+    port: 5672             # AMQPS 기본 포트
     username: ${RABBITMQ_USER} # Amazon MQ 사용자 이름
     password: ${RABBITMQ_PASS} # Amazon MQ 비밀번호
     ssl:
-      enabled: true         # 보안 연결 사용
+      enabled: false         # 보안 연결 사용
 
 
 efs:

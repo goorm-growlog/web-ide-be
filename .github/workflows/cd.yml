@@ -55,25 +55,25 @@ jobs:
           echo "JWT_EXPIRATION=3600000" >> main-server.env
           echo "REFRESH_SECRET=${{ secrets.REFRESH_SECRET }}" >> main-server.env
           echo "REFRESH_EXPIRATION=604800" >> main-server.env
-          
+
           echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> main-server.env
           echo "MAIL_PASSWORD=\"${{ secrets.MAIL_PASSWORD }}\"" >> main-server.env
           echo "MAIL_FROM=${{ secrets.MAIL_FROM }}" >> main-server.env
-          
+
           echo "LIVEBLOCKS_SECRET_KEY=${{ secrets.LIVEBLOCKS_SECRET_KEY }}" >> main-server.env
           echo "LIVEBLOCKS_ROOM_SALT=${{ secrets.LIVEBLOCKS_ROOM_SALT }}" >> main-server.env
           echo "TEMPLATE_DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" >> main-server.env
-          
+
           echo "REDIS_HOST=${{ secrets.REDIS_HOST }}" >> main-server.env
           echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> main-server.env
           echo "REDIS_USERNAME=${{ secrets.REDIS_USERNAME }}" >> main-server.env
           echo "REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}" >> main-server.env
-          
+
           echo "KAKAO_REST_API_KEY=${{ secrets.KAKAO_REST_API_KEY }}" >> main-server.env
           echo "KAKAO_REDIRECT_URI=${{ secrets.KAKAO_REDIRECT_URI }}" >> main-server.env
           echo "KAKAO_REDIRECT_URI_LOCAL=${{ secrets.KAKAO_REDIRECT_URI_LOCAL }}" >> main-server.env
-          
-          echo "RABBITMQ_HOST=${{ secrets.RABBITMQ_HOST }}" >> main-server.env
+
+          echo "RABBITMQ_HOST=rabbitmq" >> main-server.env
           echo "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}" >> main-server.env
           echo "RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}" >> main-server.env
 
@@ -121,9 +121,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # [신규] Worker Server 전용 환경변수를 사용합니다.
-      EC2_HOST: ${{ secrets.WORKER_EC2_HOST }}
+      WORKER_EC2_HOST: ${{ secrets.WORKER_EC2_HOST }}
       EC2_USER: ubuntu
-      PRIVATE_KEY: ${{ secrets.WORKER_EC2_SSH_KEY }}
+      PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
       BACKEND_IMAGE: webide-worker-server
 
     steps:
@@ -140,7 +140,7 @@ jobs:
         run: |
           # Worker Server에 필요한 환경변수만 생성합니다.
           echo "SPRING_PROFILES_ACTIVE=prod" >> worker-server.env
-          echo "RABBITMQ_HOST=${{ secrets.RABBITMQ_HOST }}" >> worker-server.env
+          echo "RABBITMQ_HOST=${{ secrets.MAIN_SERVER_PRIVATE_IP }}" >> worker-server.env
           echo "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}" >> worker-server.env
           echo "RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}" >> worker-server.env
 
@@ -159,7 +159,7 @@ jobs:
       - name: 📂 SCP .env to worker-server EC2
         uses: appleboy/scp-action@v0.1.4
         with:
-          host: ${{ env.EC2_HOST }}
+          host: ${{ env.WORKER_EC2_HOST }}
           username: ${{ env.EC2_USER }}
           key: ${{ env.PRIVATE_KEY }}
           source: "worker-server.env"
@@ -168,7 +168,7 @@ jobs:
       - name: 🚀 Deploy to worker-server EC2
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ env.EC2_HOST }}
+          host: ${{ env.WORKER_EC2_HOST }}
           username: ${{ env.EC2_USER }}
           key: ${{ env.PRIVATE_KEY }}
           envs: DOCKER_USERNAME,BACKEND_IMAGE
