@@ -45,7 +45,6 @@ spring:
       redirect-uri: ${KAKAO_REDIRECT_URI}
     redirect-front: https://growlog-web-ide.vercel.app/auth/kakao/success
 
-
 efs:
   base-path: /mnt/efs/projects
   templates-path: /mnt/efs/templates
