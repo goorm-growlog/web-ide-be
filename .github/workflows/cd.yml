@@ -89,6 +89,15 @@ jobs:
           -f main-server/Dockerfile .
           docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest
 
+      #  SCP 실행 전에 목적지 폴더를 미리 생성
+      - name: ➡️ Create target directory on EC2
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ env.EC2_HOST }}
+          username: ${{ env.EC2_USER }}
+          key: ${{ env.PRIVATE_KEY }}
+          script: mkdir -p /home/ubuntu/web-ide-be
+
       - name: 📂 SCP .env to main-server EC2
         uses: appleboy/scp-action@v0.1.4
         with:
