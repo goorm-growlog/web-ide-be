@@ -106,6 +106,7 @@ jobs:
           key: ${{ env.PRIVATE_KEY }}
           source: "main-server.env"
           target: "/home/ubuntu/web-ide-be/.env"
+          overwirte: true
 
       - name: 🚀 Deploy to main-server EC2
         uses: appleboy/ssh-action@v1.0.0
