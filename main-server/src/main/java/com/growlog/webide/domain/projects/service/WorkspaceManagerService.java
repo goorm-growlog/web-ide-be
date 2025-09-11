@@ -164,6 +164,12 @@ public class WorkspaceManagerService {
 		projectRepository.findByIdAndStatusNot(projectId, ProjectStatus.DELETING)
 			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_IS_DELETED));
 
+		if (project.getStatus() == ProjectStatus.INACTIVE) {
+			if (!project.getOwner().getUserId().equals(userId)) {
+				throw new CustomException(ErrorCode.NO_OWNER_PERMISSION);
+			}
+		}
+
 		// 프로젝트 상태 변경
 		project.activate();
 

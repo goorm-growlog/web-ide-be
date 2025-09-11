@@ -138,7 +138,9 @@
             log(`Subscribed to ${queueUrl} for server-sent messages.`);
         }, function (error) {
             log('CONNECTION ERROR: ' + error);
+            subscribeBtn.disabled = true;
             sendBtn.disabled = true;
+            disconnect();
         });
     }
 

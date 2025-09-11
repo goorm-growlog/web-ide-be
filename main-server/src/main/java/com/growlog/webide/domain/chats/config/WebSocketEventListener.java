@@ -82,6 +82,11 @@ public class WebSocketEventListener {
 			return Optional.empty();
 		}
 
+		if (projectIdObj == null) {
+			log.warn("projectId is missing from session attributes.");
+			return Optional.empty();
+		}
+
 		final Long userId = Long.parseLong(userIdObj.toString());
 		final Long projectId = Long.parseLong(projectIdObj.toString());
 

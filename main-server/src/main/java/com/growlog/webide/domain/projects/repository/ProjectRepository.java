@@ -13,6 +13,8 @@ import jakarta.persistence.LockModeType;
 public interface ProjectRepository extends JpaRepository<Project, Long> {
 	Optional<Project> findByIdAndStatusNot(Long projectId, ProjectStatus projectStatus);
 
+	Optional<Project> findByOwner_UserIdAndIdAndStatusNot(Long userId, Long projectId, ProjectStatus projectStatus);
+
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	Optional<Project> findWithLockById(Long projectId);
 }
