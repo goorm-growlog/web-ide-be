@@ -1,31 +1,28 @@
-# 1. 빌드용 Gradle 환경 제공
-# Gradle이 설치된 JDK 21 환경 기반으로 빌드용 이미지 설정
+# 1단계: Gradle을 사용하여 애플리케이션 빌드
+# 재현 가능한 빌드를 위해 특정 버전의 Gradle과 JDK 21을 사용합니다.
 FROM gradle:8.5.0-jdk21 AS builder
-RUN apt-get update && apt-get install -y docker.io
 
-# 2. 애플리케이션 코드 복사
-# 작업 디렉토리 설정(/app) 및 소스코드 복사(현재 디렉토리의 모든 파일(.)을 컨테이너의 /app 디렉토리로 복사)
+# 컨테이너 내부의 작업 디렉토리를 설정합니다.
 WORKDIR /app
-COPY .. .
 
-# 3. 실행 가능한 JAR 파일 빌드 (테스트 생략)
-# Gradle을 사용하여 애플리케이션을 빌드하고 실행 가능한 JAR 파일 생성
-# --no-daemon 옵션은 Gradle 데몬을 사용하지 않도록 설정하여 빌드 속도를 높임(안정성 확보)
-RUN gradle bootJar --no-daemon
+# Docker 레이어 캐시를 활용하기 위해 필요한 Gradle 설정 파일만 먼저 복사합니다.
+COPY build.gradle settings.gradle ./
+COPY gradle ./gradle
 
-# 4. 실행용 이미지 설정 (가볍고 빠름)
-# 실행 이미지는 경량 Eclipse Temurin JRE 21 사용
-FROM eclipse-temurin:21-jre
+# worker-server 모듈의 소스 코드를 복사합니다.
+# 다른 모듈의 변경 사항이 이 레이어의 캐시를 무효화하지 않도록 합니다.
+COPY worker-server ./worker-server
 
-# 🔧 Docker CLI 추가 설치
-RUN apt-get update && apt-get install -y docker.io
+# worker-server 모듈만 빌드하여 실행 가능한 JAR 파일을 생성합니다.
+# --no-daemon 옵션은 CI/CD 환경에 권장됩니다.
+RUN ./gradlew :worker-server:bootJar --no-daemon
 
-# 5. 애플리케이션 JAR 복사
-# 빌드한 JAR 파일만 실행 이미지로 복사
-COPY --from=builder /app/build/libs/*-SNAPSHOT.jar app.jar
+# 2단계: 최종 경량 런타임 이미지 생성
+# 더 작은 용량과 향상된 보안을 위해 최소한의 JRE(Java Runtime Environment) 이미지를 사용합니다.
+FROM amazoncorretto:21-alpine-jre
 
-# 6. 포트 설정 (Spring Boot 기본 포트) - 사용할 포트 정의
-EXPOSE 8080
+# 빌드 단계에서 생성된 JAR 파일을 최종 이미지로 복사합니다.
+COPY --from=builder /app/worker-server/build/libs/*.jar app.jar
 
-# 7. 실행 커맨드 - 애플리케이션 실행
+# 컨테이너가 시작될 때 애플리케이션을 실행하는 명령어입니다.
 ENTRYPOINT ["java", "-jar", "app.jar"]
