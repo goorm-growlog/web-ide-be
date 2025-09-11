@@ -89,24 +89,15 @@ jobs:
           -f main-server/Dockerfile .
           docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest
 
-      #  SCP 실행 전에 목적지 폴더를 미리 생성
-      - name: ➡️ Create target directory on EC2
-        uses: appleboy/ssh-action@v1.0.0
+      - name: 📂 RSYNC .env to main-server EC2
+        uses: burnett01/rsync-deployments@5.2
         with:
-          host: ${{ env.EC2_HOST }}
-          username: ${{ env.EC2_USER }}
-          key: ${{ env.PRIVATE_KEY }}
-          script: mkdir -p /home/ubuntu/web-ide-be
-
-      - name: 📂 SCP .env to main-server EC2
-        uses: appleboy/scp-action@v0.1.4
-        with:
-          host: ${{ env.EC2_HOST }}
-          username: ${{ env.EC2_USER }}
-          key: ${{ env.PRIVATE_KEY }}
-          source: "main-server.env"
-          target: "/home/ubuntu/web-ide-be/.env"
-          overwrite: true
+          switches: -avz --progress
+          path: main-server.env
+          remote_path: /home/ubuntu/web-ide-be/.env
+          remote_host: ${{ env.EC2_HOST }}
+          remote_user: ${{ env.EC2_USER }}
+          remote_key: ${{ env.PRIVATE_KEY }}
 
       - name: 🚀 Deploy to main-server EC2
         uses: appleboy/ssh-action@v1.0.0
