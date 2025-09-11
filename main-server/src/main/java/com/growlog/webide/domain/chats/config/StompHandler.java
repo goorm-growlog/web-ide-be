@@ -16,7 +16,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import com.growlog.webide.domain.projects.entity.Project;
+import com.growlog.webide.domain.projects.entity.ProjectStatus;
 import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
+import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
 import com.growlog.webide.global.common.jwt.JwtTokenProvider;
@@ -36,8 +39,9 @@ public class StompHandler implements ChannelInterceptor {
 	private final JwtTokenProvider jwtTokenProvider;
 
 	private final ProjectMemberRepository projectMemberRepository;
+	private final ProjectRepository projectRepository;
 
-	private static boolean checkDuplicatedSubscribtion(StompHeaderAccessor accessor) {
+	private static boolean checkDuplicatedSubscription(StompHeaderAccessor accessor) {
 		final Set<String> subscriptions = (Set<String>)accessor.getSessionAttributes()
 			.getOrDefault("SUBSCRIPTIONS", new HashSet<>());
 		final String destination = accessor.getDestination();
@@ -63,14 +67,14 @@ public class StompHandler implements ChannelInterceptor {
 		if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
 			try {
 				validateSubscription(accessor); // 모든 구독 경로를 이 메서드에서 처리
-				if (checkDuplicatedSubscribtion(accessor)) {
+				if (checkDuplicatedSubscription(accessor)) {
 					log.warn("Already Subscribed to {}.", accessor.getDestination());
 					return null; // 중복 구독 방지
 				}
 				log.info("Subscribed successfully to {}.", accessor.getDestination());
 			} catch (CustomException e) {
 				log.warn("Subscription denied: code={}, message={}", e.getErrorCode().getCode(), e.getMessage());
-				return null; // 유효하지 않은 구독은 거부
+				throw e; // 유효하지 않은 구독은 거부
 			}
 		}
 		return message;
@@ -88,8 +92,9 @@ public class StompHandler implements ChannelInterceptor {
 					log.warn("Required permissions are missing for chat subscription.");
 					throw new CustomException(ErrorCode.NOT_A_MEMBER);
 				}
-			} else if (destination != null && destination.startsWith("/user/queue/logs")) {
-				// 로그 관련 구독일 경우, 개인 채널이므로 별도의 projectId 검증 없이 통과시킵니다.
+				checkPermission(projectId, userId);
+			} else if (destination != null && destination.startsWith("/user/queue/")) {
+				// 개인 채널 구독은 별도의 projectId 검증 없이 통과시킵니다.
 				log.info("User {} subscribed to their private log queue.", userId);
 			} else {
 				// 알 수 없는 구독 경로일 경우, 거부합니다.
@@ -99,6 +104,17 @@ public class StompHandler implements ChannelInterceptor {
 		} catch (Exception e) {
 			log.warn("Failed to process subscription request.: {}", e.getMessage());
 			throw new CustomException(ErrorCode.BAD_REQUEST);
+		}
+	}
+
+	private void checkPermission(Long projectId, Long userId) {
+		Project project = projectRepository.findById(projectId)
+			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
+
+		if (project.getStatus() == ProjectStatus.INACTIVE) {
+			if (!project.getOwner().getUserId().equals(userId)) {
+				throw new CustomException(ErrorCode.NO_OWNER_PERMISSION);
+			}
 		}
 	}
 

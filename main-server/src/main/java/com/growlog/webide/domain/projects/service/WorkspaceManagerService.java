@@ -4,12 +4,13 @@ package com.growlog.webide.domain.projects.service;
  *  프로젝트 생성부터 사용자의 세션(컨테이너) 관리, 종료까지 전체적인 생명주기를 조율하고 관리
  * */
 
-import static org.apache.commons.io.file.PathUtils.*;
+import static org.apache.commons.io.file.PathUtils.copyDirectory;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -29,9 +30,10 @@ import com.growlog.webide.domain.projects.entity.ProjectStatus;
 import com.growlog.webide.domain.projects.repository.ActiveSessionRepository;
 import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
+import com.growlog.webide.domain.terminal.entity.ActiveInstance;
+import com.growlog.webide.domain.terminal.repository.ActiveInstanceRepository;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.domain.users.repository.UserRepository;
-import com.growlog.webide.factory.DockerClientFactory;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
 
@@ -44,7 +46,6 @@ import lombok.extern.slf4j.Slf4j;
 public class WorkspaceManagerService {
 
 	private final ActiveSessionRepository activeSessionRepository;
-	private final DockerClientFactory dockerClientFactory;
 	private final ProjectRepository projectRepository;
 	private final ImageRepository imageRepository;
 	private final UserRepository userRepository;
@@ -56,9 +57,9 @@ public class WorkspaceManagerService {
 	private final String projectsBasePath;
 	private final String templatesBasePath;
 	private final String serverId;
+	private final ActiveInstanceRepository activeInstanceRepository;
 
-	public WorkspaceManagerService(DockerClientFactory dockerClientFactory,
-		ProjectRepository projectRepository,
+	public WorkspaceManagerService(ProjectRepository projectRepository,
 		ActiveSessionRepository activeSessionRepository,
 		ImageRepository imageRepository,
 		UserRepository userRepository,
@@ -68,8 +69,7 @@ public class WorkspaceManagerService {
 		ProjectManagementProducer projectManagementProducer,
 		@Value("${efs.base-path}") String projectsBasePath,
 		@Value("${efs.templates-path}") String templatesBasePath,
-		@Value("${SERVER_ID}") String serverId) {
-		this.dockerClientFactory = dockerClientFactory;
+		@Value("${SERVER_ID}") String serverId, ActiveInstanceRepository activeInstanceRepository) {
 		this.projectRepository = projectRepository;
 		this.activeSessionRepository = activeSessionRepository;
 		this.imageRepository = imageRepository;
@@ -81,6 +81,7 @@ public class WorkspaceManagerService {
 		this.projectsBasePath = projectsBasePath;
 		this.templatesBasePath = templatesBasePath;
 		this.serverId = serverId;
+		this.activeInstanceRepository = activeInstanceRepository;
 	}
 
 	/*
@@ -163,6 +164,12 @@ public class WorkspaceManagerService {
 		projectRepository.findByIdAndStatusNot(projectId, ProjectStatus.DELETING)
 			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_IS_DELETED));
 
+		if (project.getStatus() == ProjectStatus.INACTIVE) {
+			if (!project.getOwner().getUserId().equals(userId)) {
+				throw new CustomException(ErrorCode.NO_OWNER_PERMISSION);
+			}
+		}
+
 		// 프로젝트 상태 변경
 		project.activate();
 
@@ -193,6 +200,7 @@ public class WorkspaceManagerService {
 		}
 
 		terminateSessions(projectId);
+		terminateInstances(projectId);
 
 		final Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
@@ -205,7 +213,6 @@ public class WorkspaceManagerService {
 	public void deleteProject(Long projectId, Long userId) {
 		log.info("Deleting project with ID: {}", projectId);
 
-		// 1. DB에서 프로젝트 정보 조회
 		Project project = projectRepository.findById(projectId)
 			.orElseThrow(() -> new CustomException(ErrorCode.PROJECT_NOT_FOUND));
 
@@ -213,8 +220,7 @@ public class WorkspaceManagerService {
 			throw new CustomException(ErrorCode.NO_OWNER_PERMISSION);
 		}
 
-		final String message = "Project deleted. Session will terminated";
-		webSocketNotificationService.sendProjectDeletedMessage(userId, message);
+		deleteProject(projectId);
 
 		project.deleting();
 
@@ -270,15 +276,53 @@ public class WorkspaceManagerService {
 			.collect(Collectors.toList());
 	}
 
+	public void deleteProject(Long projectId) {
+		final List<ActiveSession> activeSessions = activeSessionRepository.findAllByProject_Id(projectId);
+		log.info("projectId: {}, found {} active sessions", projectId, activeSessions.size());
+
+		final Set<Long> uniqueUserIds = activeSessions.stream().map(session ->
+			session.getUser().getUserId()).collect(Collectors.toSet());
+
+		for (Long targetUserId : uniqueUserIds) {
+			final String message = "Project deleted. Session will terminated";
+			log.info("deleteProject: {}", message);
+			webSocketNotificationService.sendProjectDeletedMessage(targetUserId, message);
+		}
+
+		final List<ActiveInstance> activeInstances = activeInstanceRepository.findAllByProject_Id(projectId);
+		log.info("projectId: {}, found {} active instances", projectId, activeInstances.size());
+
+		for (ActiveInstance activeInstance : activeInstances) {
+			final Long targetUserId = activeInstance.getUser().getUserId();
+			final String message = "Project deleted. Session will terminated";
+			log.info("deleteProject: {}", message);
+			webSocketNotificationService.sendProjectDeletedMessageToInstance(targetUserId, message);
+		}
+	}
+
 	public void terminateSessions(Long projectId) {
 		final List<ActiveSession> activeSessions = activeSessionRepository.findAllByProject_Id(projectId);
-		log.info("projectId: {}, activeSessions length: {}", projectId, activeSessions.toArray().length);
+		log.info("projectId: {}, found {} active sessions", projectId, activeSessions.size());
 
-		for (ActiveSession activeSession : activeSessions) {
-			final Long targetUserId = activeSession.getUser().getUserId();
-			final String message = "Connection terminated by the project owner";
+		final Set<Long> uniqueUserIds = activeSessions.stream().map(session ->
+			session.getUser().getUserId()).collect(Collectors.toSet());
+		final String message = "Connection terminated by the project owner";
+
+		for (Long targetUserId : uniqueUserIds) {
 			log.info("inactivateProject: {}", message);
 			webSocketNotificationService.sendSessionTerminationMessage(targetUserId, message);
+		}
+	}
+
+	public void terminateInstances(Long projectId) {
+		final List<ActiveInstance> activeInstances = activeInstanceRepository.findAllByProject_Id(projectId);
+		log.info("projectId: {}, found {} active instances", projectId, activeInstances.size());
+
+		for (ActiveInstance activeInstance : activeInstances) {
+			final Long targetUserId = activeInstance.getUser().getUserId();
+			final String message = "Connection terminated by the project owner";
+			log.info("inactivateProject: {}", message);
+			webSocketNotificationService.sendLogSessionTerminationMessage(targetUserId, message);
 		}
 	}
 

@@ -1,7 +1,10 @@
 package com.growlog.webide.domain.chats.config;
 
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
+import org.jetbrains.annotations.NotNull;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
@@ -36,14 +39,7 @@ public class WebSocketEventListener {
 
 			log.info("Retrieved from session -> userId: {}, projectId: {}", userIdObj, projectIdObj);
 
-			if (userIdObj == null || projectIdObj == null) {
-				log.warn("userId or projectId is missing from session attributes.");
-				return Optional.empty();
-			}
-
-			Long userId = Long.parseLong(userIdObj.toString());
-			Long projectId = Long.parseLong(projectIdObj.toString());
-			return Optional.of(new SessionInfo(userId, projectId));
+			return handleSubscription(accessor, userIdObj, projectIdObj);
 		} catch (Exception e) {
 			log.warn("Failed to extract session info from session attributes.", e);
 			return Optional.empty();
@@ -58,18 +54,52 @@ public class WebSocketEventListener {
 		final StompHeaderAccessor accessor = MessageHeaderAccessor
 			.getAccessor(event.getMessage(), StompHeaderAccessor.class);
 
-		extractSessionInfo(accessor).ifPresent(sessionInfo -> {
-			log.info("Processing leave action for userId: {} in projectId: {}", sessionInfo.userId(),
-				sessionInfo.projectId());
+		log.info("accessor: {}", accessor);
 
-			final ChattingResponseDto response = chatService.leave(sessionInfo.projectId(), sessionInfo.userId());
+		final boolean isLogSubscription = extractLogSubscription(accessor);
 
-			final String destination = "/topic/projects/" + sessionInfo.projectId() + "/chat";
+		if (!isLogSubscription) {
+			extractSessionInfo(accessor).ifPresent(sessionInfo -> {
+				log.info("Processing leave action for userId: {} in projectId: {}", sessionInfo.userId(),
+					sessionInfo.projectId());
 
-			log.info("Sending leave message to destination: {}. Payload: {}", destination, response);
+				final ChattingResponseDto response = chatService.leave(sessionInfo.projectId(), sessionInfo.userId());
 
-			template.convertAndSend(destination, response);
-		});
+				final String destination = "/topic/projects/" + sessionInfo.projectId() + "/chat";
+
+				log.info("Sending leave message to destination: {}. Payload: {}", destination, response);
+
+				template.convertAndSend(destination, response);
+			});
+		}
+	}
+
+	@NotNull
+	private static Optional<SessionInfo> handleSubscription(StompHeaderAccessor accessor, Object userIdObj,
+		Object projectIdObj) {
+		if (userIdObj == null) {
+			log.warn("userId is missing from session attributes.");
+			return Optional.empty();
+		}
+
+		if (projectIdObj == null) {
+			log.warn("projectId is missing from session attributes.");
+			return Optional.empty();
+		}
+
+		final Long userId = Long.parseLong(userIdObj.toString());
+		final Long projectId = Long.parseLong(projectIdObj.toString());
+
+		return Optional.of(new SessionInfo(userId, projectId));
+	}
+
+	public boolean extractLogSubscription(StompHeaderAccessor accessor) {
+		final Set<String> subscriptions = (Set<String>)accessor.getSessionAttributes()
+			.getOrDefault("SUBSCRIPTIONS", new HashSet<>());
+		if (subscriptions.contains("/user/queue/logs")) {
+			return true;
+		}
+		return false;
 	}
 
 	public record SessionInfo(Long userId, Long projectId) {

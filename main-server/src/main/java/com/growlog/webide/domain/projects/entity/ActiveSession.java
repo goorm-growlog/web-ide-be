@@ -48,9 +48,6 @@ public class ActiveSession {
 	@Column(name = "server_id", nullable = false)
 	private String serverId;
 
-	@Column(nullable = false)
-	private String containerId;
-
 	@CreatedDate
 	@Column(updatable = false)
 	private LocalDateTime connectedAt;
@@ -63,10 +60,6 @@ public class ActiveSession {
 		this.project = project;
 		this.user = user;
 		this.serverId = serverId;
-		this.containerId = containerId;
 	}
 
-	public void setContainerId(String containerId) {
-		this.containerId = containerId;
-	}
 }

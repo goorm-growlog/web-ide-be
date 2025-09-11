@@ -5,6 +5,43 @@
     <!-- STOMP와 SockJS 라이브러리를 CDN으로 불러옵니다. -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-content: flex-end;
+            gap: 10px;
+        }
+
+        .toast-notification {
+            background-color: #333;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.5s ease-in-out;
+            min-width: 250px;
+        }
+
+        .toast-notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .toast-notification.error {
+            background-color: #d9534f;
+        }
+
+        .toast-notification.warning {
+            background-color: #f0ad4e;
+            color: #333;
+        }
+    </style>
 </head>
 <body>
 <h1>WebSocket STOMP Auth Test Client</h1>
@@ -84,25 +121,26 @@
             subscribeBtn.disabled = false;
             deactivateBtn.disabled = false;
 
-            const queueUrl = `/user/topic/termination`;
+            const queueUrl = `/user/queue/termination`;
 
             stompClient.subscribe(queueUrl, function (message) {
-                log("RAW MESSAGE RECEIVED: ", message.body);
                 const body = JSON.parse(message.body);
                 if (body.type === 'SESSION_TERMINATE') {
                     log(`SESSION TERMINATED: ${message.body}`);
-                    alert(`The server has closed your session: ${message.body}`);
+                    showToast(`The server has closed your session: ${body.message}`, 'warning');
                     disconnect(); // 메시지 수신 후 연결 해제
                 }
                 if (body.type === 'PROJECT_DELETED') {
                     log(`PROJECT DELETION NOTICE: ${message.body}`)
-                    alert(`Server Message: ${message.body}`)
+                    showToast(`Server Message: ${body.message}`, 'error');
                 }
             });
             log(`Subscribed to ${queueUrl} for server-sent messages.`);
         }, function (error) {
             log('CONNECTION ERROR: ' + error);
+            subscribeBtn.disabled = true;
             sendBtn.disabled = true;
+            disconnect();
         });
     }
 
@@ -218,6 +256,33 @@
             })
             .then(data => log(`API call successful: ${data}`))
             .catch(error => log(`API call error: ${error.message}`));
+    }
+
+    function showToast(message, type) {
+        let container = document.getElementById('toast-container');
+        if(!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        const notification = document.createElement('div');
+
+        notification.className = `toast-notification ${type}`;
+        notification.textContent = message;
+
+        container.appendChild(notification);
+
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 100);
+
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                notification.remove();
+            }, 500);
+        }, 7000);
     }
 
     // 각 버튼에 클릭 이벤트를 연결합니다.

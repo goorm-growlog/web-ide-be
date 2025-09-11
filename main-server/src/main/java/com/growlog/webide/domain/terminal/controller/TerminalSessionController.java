@@ -29,6 +29,7 @@ public class TerminalSessionController {
 	@MessageMapping("/terminal/start")
 	public void startTerminalSession(@Payload Map<String, Long> payload, SimpMessageHeaderAccessor accessor) {
 		Long projectId = payload.get("projectId");
+		accessor.getSessionAttributes().put("projectId", projectId);
 		Authentication authentication = (Authentication)accessor.getUser();
 		UserPrincipal userPrincipal = (UserPrincipal)authentication.getPrincipal();
 		String sessionId = accessor.getSessionId();

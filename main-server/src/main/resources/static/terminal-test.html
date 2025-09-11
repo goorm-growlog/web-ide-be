@@ -73,6 +73,42 @@
             border-radius: 4px;
             margin-top: 1em;
         }
+
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+        }
+
+        .toast-notification {
+            background-color: #333;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.5s ease-in-out;
+            min-width: 250px;
+        }
+
+        .toast-notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .toast-notification.error {
+            background-color: #d9534f;
+        }
+
+        .toast-notification.warning {
+            background-color: #f0ad4e;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -148,6 +184,22 @@
 
         // 4. 모든 로그를 수신할 개인 채널을 미리 구독
         stompClient.subscribe('/user/queue/logs', onMessageReceived);
+
+        const queueUrl = `/user/queue/termination`;
+
+        stompClient.subscribe(queueUrl, function (message) {
+            const body = JSON.parse(message.body);
+            if (body.type === 'LOG_SESSION_TERMINATE') {
+                console.log(`LOG SESSION TERMINATED: ${message.body}`);
+                showToast(`The server has closed your session: ${body.message}`, 'warning');
+                disconnect(); // 메시지 수신 후 연결 해제
+            }
+            if (body.type === 'PROJECT_DELETED (TERMINAL)') {
+                console.log(`PROJECT DELETION NOTICE: ${message.body}`)
+                showToast(`Server Message: ${body.message}`, 'error');
+            }
+        });
+        console.log(`Subscribed to ${queueUrl} for server-sent messages.`);
     }
 
     function onMessageReceived(message) {
@@ -189,6 +241,33 @@
         disconnectBtn.disabled = true;
         stompClient = null;
         terminalContainerId = null;
+    }
+
+    function showToast(message, type) {
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        const notification = document.createElement('div');
+
+        notification.className = `toast-notification ${type}`;
+        notification.textContent = message;
+
+        container.appendChild(notification);
+
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 100);
+
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                notification.remove();
+            }, 500);
+        }, 7000);
     }
 </script>
 </body>

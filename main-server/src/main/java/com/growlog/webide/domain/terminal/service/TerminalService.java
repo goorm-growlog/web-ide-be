@@ -5,17 +5,20 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.jetbrains.annotations.NotNull;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import com.growlog.webide.domain.images.entity.Image;
 import com.growlog.webide.domain.images.repository.ImageRepository;
 import com.growlog.webide.domain.projects.entity.InstanceStatus;
 import com.growlog.webide.domain.projects.entity.Project;
+import com.growlog.webide.domain.projects.repository.ActiveSessionRepository;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.domain.terminal.dto.CodeExecutionApiRequest;
 import com.growlog.webide.domain.terminal.dto.CodeExecutionRequestDto;
@@ -41,6 +44,7 @@ public class TerminalService {
 	private final UserRepository userRepository;
 	private final Map<String, Long> sessionToInstanceId = new ConcurrentHashMap<>();
 
+	private final ActiveSessionRepository activeSessionRepository;
 	@Value("${code-execution.rabbitmq.exchange.name}")
 	private String codeExecutionExchangeName;
 	@Value("${code-execution.rabbitmq.routing.key}")
@@ -77,13 +81,14 @@ public class TerminalService {
 		ImageRepository imageRepository,
 		ActiveInstanceRepository activeInstanceRepository,
 		ProjectRepository projectRepository,
-		UserRepository userRepository) {
+		UserRepository userRepository, ActiveSessionRepository activeSessionRepository) {
 		this.rabbitTemplate = rabbitTemplate;
 		this.rpcRabbitTemplate = rpcRabbitTemplate;
 		this.imageRepository = imageRepository;
 		this.activeInstanceRepository = activeInstanceRepository;
 		this.projectRepository = projectRepository;
 		this.userRepository = userRepository;
+		this.activeSessionRepository = activeSessionRepository;
 	}
 
 	/**
@@ -241,26 +246,41 @@ public class TerminalService {
 		ContainerCreationRequest creationRequest = new ContainerCreationRequest(projectId, userId,
 			project.getImage().getDockerBaseImage());
 
-		// RPC call to worker server to create a container and get its ID back
-		// Note: RabbitMQConfig needs to be set up for RPC.
-		// [수정] RPC 전용으로 설정된 rpcRabbitTemplate을 사용합니다.
-		String containerId = (String)rpcRabbitTemplate.convertSendAndReceive(rpcExchangeName, rpcRequestRoutingKey,
-			creationRequest);
+		return handleCreateContainer(projectId, project, user, creationRequest);
+	}
 
-		if (containerId == null || containerId.isBlank()) {
-			log.error("Failed to create container for project {}. Worker did not return a container ID.", projectId);
-			throw new CustomException(ErrorCode.CONTAINER_CREATION_FAILED);
-		}
-
-		log.info("Container {} created by worker. Saving new ActiveInstance.", containerId);
-
+	@NotNull
+	private ActiveInstance handleCreateContainer(Long projectId, Project project, Users user,
+		ContainerCreationRequest creationRequest) {
 		ActiveInstance newInstance = ActiveInstance.builder()
 			.project(project)
 			.user(user)
-			.containerId(containerId)
-			.status(InstanceStatus.ACTIVE)
+			.status(InstanceStatus.PENDING)
 			.build();
+		activeInstanceRepository.save(newInstance);
 
-		return activeInstanceRepository.save(newInstance);
+		try {
+			// RPC call to worker server to create a container and get its ID back
+			// Note: RabbitMQConfig needs to be set up for RPC.
+			// [수정] RPC 전용으로 설정된 rpcRabbitTemplate을 사용합니다.
+			String containerId = (String)rpcRabbitTemplate.convertSendAndReceive(rpcExchangeName, rpcRequestRoutingKey,
+				creationRequest);
+
+			if (!StringUtils.hasText(containerId)) {
+				log.error("Failed to create container for project {}. Worker did not return a container ID.",
+					projectId);
+				throw new CustomException(ErrorCode.CONTAINER_CREATION_FAILED);
+			}
+
+			log.info("Container {} created by worker. Saving new ActiveInstance.", containerId);
+			newInstance.setContainerId(containerId);
+			newInstance.activate();
+
+			return activeInstanceRepository.save(newInstance);
+		} catch (Exception e) {
+			log.error("Deleting instance due to container creation failure. instanceId: {}", newInstance.getId());
+			activeInstanceRepository.delete(newInstance);
+			throw new CustomException(ErrorCode.CONTAINER_CREATION_FAILED);
+		}
 	}
 }
