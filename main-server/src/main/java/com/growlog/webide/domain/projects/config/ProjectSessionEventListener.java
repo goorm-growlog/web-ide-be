@@ -102,7 +102,7 @@ public class ProjectSessionEventListener {
 	private void closeRelatedSessions(Long userId, Long projectId) {
 		activeSessionRepository.findAllByUser_UserIdAndProject_Id(userId, projectId).forEach(activeSession -> {
 			final Long targetUserId = activeSession.getUser().getUserId();
-			final String message = "Connection terminated by the project owner";
+			final String message = "Connection terminated due to close project";
 			log.info("inactivateProject: {}", message);
 			webSocketNotificationService.sendSessionTerminationMessage(targetUserId, message);
 		});
@@ -112,7 +112,7 @@ public class ProjectSessionEventListener {
 	private void closeRelatedInstances(Long userId, Long projectId) {
 		activeInstanceRepository.findAllByUser_UserIdAndProject_Id(userId, projectId).forEach(activeInstance -> {
 			final Long targetUserId = activeInstance.getUser().getUserId();
-			final String message = "Connection terminated by the project owner";
+			final String message = "Connection terminated due to close project";
 			log.info("inactivateProject: {}", message);
 			webSocketNotificationService.sendLogSessionTerminationMessage(targetUserId, message);
 		});
