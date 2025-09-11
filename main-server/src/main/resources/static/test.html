@@ -5,6 +5,43 @@
     <!-- STOMP와 SockJS 라이브러리를 CDN으로 불러옵니다. -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-content: flex-end;
+            gap: 10px;
+        }
+
+        .toast-notification {
+            background-color: #333;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.5s ease-in-out;
+            min-width: 250px;
+        }
+
+        .toast-notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .toast-notification.error {
+            background-color: #d9534f;
+        }
+
+        .toast-notification.warning {
+            background-color: #f0ad4e;
+            color: #333;
+        }
+    </style>
 </head>
 <body>
 <h1>WebSocket STOMP Auth Test Client</h1>
@@ -18,8 +55,11 @@
 </div>
 <div>
     <label for="projectId">Project ID:</label>
-    <input id="projectId" type="text" value="1">
+    <input id="projectId" type="text">
     <button disabled id="subscribeBtn">2. Subscribe & Enter</button>
+</div>
+<div>
+    <button disabled id="deactivateBtn">Trigger Project Deactivation</button>
 </div>
 <hr>
 <div>
@@ -41,6 +81,7 @@
     const logDiv = document.getElementById('log');
     const chatMessageInput = document.getElementById('chatMessage');
     const sendBtn = document.getElementById('sendBtn');
+    const deactivateBtn = document.getElementById('deactivateBtn');
 
     let stompClient = null;
 
@@ -78,9 +119,28 @@
             connectBtn.disabled = true;
             disconnectBtn.disabled = false;
             subscribeBtn.disabled = false;
+            deactivateBtn.disabled = false;
+
+            const queueUrl = `/user/queue/termination`;
+
+            stompClient.subscribe(queueUrl, function (message) {
+                const body = JSON.parse(message.body);
+                if (body.type === 'SESSION_TERMINATE') {
+                    log(`SESSION TERMINATED: ${message.body}`);
+                    showToast(`The server has closed your session: ${body.message}`, 'warning');
+                    disconnect(); // 메시지 수신 후 연결 해제
+                }
+                if (body.type === 'PROJECT_DELETED') {
+                    log(`PROJECT DELETION NOTICE: ${message.body}`)
+                    showToast(`Server Message: ${body.message}`, 'error');
+                }
+            });
+            log(`Subscribed to ${queueUrl} for server-sent messages.`);
         }, function (error) {
             log('CONNECTION ERROR: ' + error);
+            subscribeBtn.disabled = true;
             sendBtn.disabled = true;
+            disconnect();
         });
     }
 
@@ -94,6 +154,7 @@
         disconnectBtn.disabled = true;
         subscribeBtn.disabled = true;
         sendBtn.disabled = true;
+        deactivateBtn.disabled = true;
     }
 
     // 토픽 구독 및 입장 메시지 전송 함수
@@ -101,6 +162,33 @@
         const projectId = projectIdInput.value;
         const topicUrl = `/topic/projects/${projectId}/chat`;
         const enterUrl = `/app/projects/${projectId}/chat/enter`;
+
+        const openApiUrl = `http://localhost:8080/projects/${projectId}/open`;
+
+        log(`Calling 'Open Project' API: ${openApiUrl}`);
+        fetch(openApiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + jwtTokenInput.value
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    // API 호출이 실패한 경우 (서버 에러 등)
+                    throw new Error(`API call failed with status: ${response.status}`);
+                }
+                return response.json(); // 성공 응답을 JSON으로 파싱
+            })
+            .then(data => {
+                // API 호출 성공 후 로직
+                log(`'Open Project' API call successful`);
+            })
+            .catch(error => {
+                // 네트워크 에러 또는 API 호출 실패 시
+                console.error('API call error:', error);
+                log(`ERROR: Could not open project. ${error.message}`);
+            });
 
         log(`Subscribing to: ${topicUrl}`);
 
@@ -136,11 +224,73 @@
         chatMessageInput.value = ''; // 메시지 입력 창 비우기
     }
 
+    function triggerDeactivation() {
+        const projectId = projectIdInput.value;
+        if (!projectId) {
+            alert('Project ID를 입력하세요!');
+            return;
+        }
+
+        log(`Triggering deactivation for project ID: ${projectId}`);
+
+        log(`JWT Token exists: ${!!jwtTokenInput.value}`);
+        log(`Full URL: /projects/${projectId}/inactivate`);
+
+        // fetch API를 사용해 서버의 비활성화 엔드포인트를 호출합니다.
+        fetch(`http://localhost:8080/projects/${projectId}/inactivate`, {
+            method: 'PATCH',
+            headers: {
+                // JWT 인증이 필요하므로 헤더에 토큰을 포함시킵니다.
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + jwtTokenInput.value
+            }
+        })
+            .then(response => {
+                log(`Response status: ${response.status}`);
+                log(`Response ok: ${response.ok}`);
+                log(`Response headers:`, response.headers);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.text();
+            })
+            .then(data => log(`API call successful: ${data}`))
+            .catch(error => log(`API call error: ${error.message}`));
+    }
+
+    function showToast(message, type) {
+        let container = document.getElementById('toast-container');
+        if(!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        const notification = document.createElement('div');
+
+        notification.className = `toast-notification ${type}`;
+        notification.textContent = message;
+
+        container.appendChild(notification);
+
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 100);
+
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                notification.remove();
+            }, 500);
+        }, 7000);
+    }
+
     // 각 버튼에 클릭 이벤트를 연결합니다.
     connectBtn.addEventListener('click', connect);
     disconnectBtn.addEventListener('click', disconnect);
     subscribeBtn.addEventListener('click', subscribeAndEnter);
     sendBtn.addEventListener('click', sendTalk);
+    deactivateBtn.addEventListener('click', triggerDeactivation);
 </script>
 </body>
 </html>

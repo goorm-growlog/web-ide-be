@@ -1,6 +1,6 @@
 package com.growlog.webide.config;
 
-import static org.springframework.security.config.Customizer.withDefaults;
+import static org.springframework.security.config.Customizer.*;
 
 import java.util.List;
 
@@ -80,7 +80,8 @@ public class SecurityConfig {
 					"/users/signup",
 					"/auth/login/**",
 					"/users/signup",
-					"/auth/kakao"
+					"/auth/kakao/**",
+					"/auth/github/**"
 				).permitAll()
 				// 프로젝트 관련 경로는 인증 필요
 				.requestMatchers("/projects/**").authenticated()

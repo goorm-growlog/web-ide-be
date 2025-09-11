@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
-import com.growlog.webide.domain.projects.dto.OpenProjectResponse;
 import com.growlog.webide.domain.projects.dto.ProjectResponse;
 import com.growlog.webide.domain.projects.dto.UpdateProjectRequest;
 import com.growlog.webide.domain.projects.service.WorkspaceManagerService;
@@ -34,7 +33,7 @@ public class WorkspaceController {
 
 	private final WorkspaceManagerService workspaceManagerService;
 
-	@Operation(summary = "프로젝트 생성", description = "새로운 프로젝트와 Docker 볼륨을 생성합니다.")
+	@Operation(summary = "프로젝트 생성", description = "새로운 프로젝트를 생성하고 EFS에 폴더를 추가합니다.")
 	@PostMapping
 	public ResponseEntity<ApiResponse<ProjectResponse>> createProject(
 		@RequestBody CreateProjectRequest request,
@@ -44,31 +43,28 @@ public class WorkspaceController {
 		return ResponseEntity.ok(ApiResponse.ok(response));
 	}
 
-	@Operation(summary = "프로젝트 열기(컨테이너 실행)", description = "사용자를 위한 개인 컨테이너를 실행하고 접속 정보를 반환합니다.")
+	@Operation(summary = "프로젝트 열기", description = "웹소켓 세션을 열 때 호출되며, 접속 정보를 반환합니다.")
 	@PostMapping("/{projectId}/open")
-	public ResponseEntity<ApiResponse<OpenProjectResponse>> openProject(
+	public ResponseEntity<ApiResponse<String>> openProject(
 		@PathVariable Long projectId,
 		@AuthenticationPrincipal UserPrincipal userPrincipal
 	) {
 		Long userId = userPrincipal.getUserId();
-		OpenProjectResponse response = workspaceManagerService.openProject(projectId, userId);
-		return ResponseEntity.ok(ApiResponse.ok(response));
+		workspaceManagerService.openProject(projectId, userId);
+		return ResponseEntity.ok(ApiResponse.ok("Complete Opening"));
 	}
 
-	@Operation(summary = "프로젝트 닫기(컨테이너 종료)",
-		description = "컨테이너 ID에 해당하는 활성 세션을 종료하고 컨테이너를 삭제합니다.")
-	@PostMapping("/{projectId}/close")
-	public ResponseEntity<ApiResponse<String>> closeProjectSession(
-		@PathVariable Long projectId,
-		@AuthenticationPrincipal UserPrincipal userPrincipal
-	) {
-		Long userId = userPrincipal.getUserId();
-		workspaceManagerService.closeProjectSession(projectId, userId);
-		return ResponseEntity.ok(ApiResponse.ok("Complete Closing."));
+	@Operation(summary = "프로젝트 비활성화", description = "모든 사용자 세션 연결을 종료하고 프로젝트를 비활성화합니다. (Owner Only)")
+	@PatchMapping("/{projectId}/inactivate")
+	public ResponseEntity<ApiResponse<String>> inactivateProject(@PathVariable Long projectId,
+		@AuthenticationPrincipal UserPrincipal userPrincipal) {
+		final Long userId = userPrincipal.getUserId();
+		workspaceManagerService.inactivateProject(projectId, userId);
+		return ResponseEntity.ok(ApiResponse.ok("Project Deactivated"));
 	}
 
 	@Operation(summary = "프로젝트 삭제",
-		description = "프로젝트 정보와 Docker 볼륨을 삭제합니다.")
+		description = "프로젝트 정보와 EFS 내 폴더를 삭제합니다.")
 	@DeleteMapping("/{projectId}")
 	public ResponseEntity<ApiResponse<String>> deleteProject(
 		@PathVariable Long projectId,
