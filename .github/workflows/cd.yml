@@ -86,7 +86,7 @@ jobs:
       - name: 🐳 Build and Push main-server image
         run: |
           docker build --no-cache -t $DOCKER_USERNAME/$BACKEND_IMAGE:latest \
-          -f main-server/Dockerfile main-server
+          -f main-server/Dockerfile .
           docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest
 
       - name: 📂 SCP .env to main-server EC2
@@ -153,7 +153,7 @@ jobs:
       - name: 🐳 Build and Push worker-server image
         run: |
           docker build --no-cache -t $DOCKER_USERNAME/$BACKEND_IMAGE:latest \
-          -f worker-server/Dockerfile worker-server
+          -f worker-server/Dockerfile .
           docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest
 
       - name: 📂 SCP .env to worker-server EC2
