@@ -19,7 +19,7 @@ RUN ./gradlew :worker-server:bootJar --no-daemon
 
 # 2단계: 최종 경량 런타임 이미지 생성
 # 더 작은 용량과 향상된 보안을 위해 최소한의 JRE(Java Runtime Environment) 이미지를 사용합니다.
-FROM amazoncorretto:21-alpine-jre
+FROM amazoncorretto:21-alpine3.22
 
 # 빌드 단계에서 생성된 JAR 파일을 최종 이미지로 복사합니다.
 COPY --from=builder /app/worker-server/build/libs/*.jar app.jar
