@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.growlog.webide.domain.auth.dto.GithubDto;
 import com.growlog.webide.domain.auth.dto.KakaoDto;
 import com.growlog.webide.domain.auth.dto.LoginRequestDto;
 import com.growlog.webide.domain.auth.dto.RotatedTokens;
@@ -33,7 +34,6 @@ public class AuthService {
 	private final PasswordEncoder passwordEncoder;
 	private final RefreshTokenRepository refreshTokenRepository;
 	private final KakaoOAuth kakaoOAuth;
-	//private final UserLoginHistoryRepository userLoginHistoryRepository;
 
 	// 로그인 + AccessToken + RefreshToken 발급
 	public RotatedTokens login(LoginRequestDto request) {
@@ -98,7 +98,7 @@ public class AuthService {
 		// 3. 기존 회원이면 로그인, 기존 회원이 아니면 회원가입
 		String email = profile.getKakaoAccount().getEmail();
 		Users user = userRepository.findByEmail(email)
-			.orElseGet(() -> createNewUser(profile));
+			.orElseGet(() -> createNewUserFromKakao(profile));
 
 		String accessToken = jwtTokenProvider.createToken(user.getUserId());
 		String refreshToken = jwtTokenProvider.createRefreshToken(user.getUserId());
@@ -109,7 +109,7 @@ public class AuthService {
 	}
 
 	// 카카오 계정으로 회원가입
-	public Users createNewUser(KakaoDto.KakaoProfile profile) {
+	public Users createNewUserFromKakao(KakaoDto.KakaoProfile profile) {
 		UserRegistrationRequestDto request = new UserRegistrationRequestDto();
 		request.setEmail(profile.getKakaoAccount().getEmail());
 		request.setUsername(profile.getKakaoAccount().getProfile().getNickname());
@@ -122,6 +122,40 @@ public class AuthService {
 			.createdAt(LocalDateTime.now())
 			.profileImageUrl(profile.getProperties().getThumbnailImage())
 			.provider(Provider.KAKAO)
+			.build();
+
+		return userRepository.save(user);
+	}
+
+	// Github 계정으로 로그인
+	public RotatedTokens githubLogin(GithubDto.UserDto request) {
+		String email = request.getEmail();
+		Users user = userRepository.findByEmail(email)
+			.orElseGet(() -> createNewUserFromGithub(request));
+
+		String accessToken = jwtTokenProvider.createToken(user.getUserId());
+		String refreshToken = jwtTokenProvider.createRefreshToken(user.getUserId());
+
+		refreshTokenRepository.save(new RefreshToken(user.getUserId(), refreshToken));
+
+		RotatedTokens tokens = new RotatedTokens(user.getUserId(), user.getName(), accessToken, refreshToken);
+		return tokens;
+	}
+
+	// Github 계정으로 회원가입
+	public Users createNewUserFromGithub(GithubDto.UserDto profile) {
+		UserRegistrationRequestDto request = new UserRegistrationRequestDto();
+		request.setEmail(profile.getEmail());
+		request.setUsername(profile.getName());
+		request.setPassword("github" + profile.getId() + "_" + UUID.randomUUID().toString());
+
+		Users user = Users.builder()
+			.name(request.getUsername())
+			.email(request.getEmail())
+			.password(passwordEncoder.encode(request.getPassword())) // 비밀번호 암호화
+			.createdAt(LocalDateTime.now())
+			.profileImageUrl(profile.getAvatarUrl())
+			.provider(Provider.GITHUB)
 			.build();
 
 		return userRepository.save(user);

@@ -53,7 +53,6 @@ spring:
     ssl:
       enabled: false         # 보안 연결 사용
 
-
 efs:
   base-path: /mnt/efs/projects
   templates-path: /mnt/efs/templates
