@@ -6,12 +6,16 @@ FROM gradle:8.5.0-jdk21 AS builder
 WORKDIR /app
 
 # Docker 레이어 캐시를 활용하기 위해 필요한 Gradle 설정 파일만 먼저 복사합니다.
-COPY worker-server/build.gradle settings.gradle ./
-COPY gradle ./gradle
+COPY ./gradlew ./gradlew
+COPY ./settings.gradle ./settings.gradle
+COPY ./gradle ./gradle
+COPY ./worker-server/build.gradle ./worker-server/build.gradle
 
 # worker-server 모듈의 소스 코드를 복사합니다.
 # 다른 모듈의 변경 사항이 이 레이어의 캐시를 무효화하지 않도록 합니다.
-COPY worker-server ./worker-server
+COPY ./worker-server ./worker-server
+
+RUN chmod +x ./gradlew
 
 # worker-server 모듈만 빌드하여 실행 가능한 JAR 파일을 생성합니다.
 # --no-daemon 옵션은 CI/CD 환경에 권장됩니다.
