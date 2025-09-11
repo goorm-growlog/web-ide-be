@@ -51,6 +51,7 @@ public enum ErrorCode {
 	ACTIVE_CONTAINER_NOT_FOUND("ACTIVE_CONTAINER_NOT_FOUND", "Active container not found."),
 	NOT_SUPPORT_LANGUAGE("NOT_SUPPORT_LANGUAGE", "Unsupported language."),
 	PROJECT_NOT_FOUND("PROJECT_NOT_FOUND", "Project not found."),
+	PROJECT_IS_DELETED("PROJECT_IS_DELETED", "This project has been deleted."),
 	FILE_ALREADY_EXISTS("FILE_ALREADY_EXISTS", "A file or directory already exists at this path."),
 	FILE_NOT_FOUND("FILE_NOT_FOUND", "File or directory not found."),
 	FILE_OPERATION_FAILED("FILE_OPERATION_FAILED", "An error occurred during file operation."),
@@ -64,6 +65,10 @@ public enum ErrorCode {
 	MEMBER_ALREADY_EXISTS("MEMBER_ALREADY_EXISTS", "This user is already a member of the project."),
 	MEMBER_NOT_FOUND("MEMBER_NOT_FOUND", "Project member not found."),
 	PATH_NOT_ALLOWED("PATH_NOT_ALLOWED", "Path is not allowed."),
+
+	// 컨테이너 실행 관련
+	CONTAINER_CREATION_FAILED("CONTAINER_CREATION_FAILED",
+		"Failed to prepare the execution environment. Please try again later."),
 
 	// 채팅 관련
 	KEYWORD_NOT_FOUND("KEYWORD_NOT_FOUND", "Search keyword cannot be empty.");

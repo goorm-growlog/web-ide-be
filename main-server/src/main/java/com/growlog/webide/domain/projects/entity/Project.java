@@ -83,8 +83,12 @@ public class Project {
 		this.status = ProjectStatus.ACTIVE;
 	}
 
-	public void deactivate() {
+	public void inactivate() {
 		this.status = ProjectStatus.INACTIVE;
+	}
+
+	public void deleting() {
+		this.status = ProjectStatus.DELETING;
 	}
 
 	//== 정보 수정 ==//

@@ -39,3 +39,123 @@ jwt:
   refresh:
     secret: ${REFRESH_SECRET}
     expiration: ${REFRESH_EXPIRATION}
+
+# 코드 실행 관련 RabbitMQ 설정
+code-execution:
+  rabbitmq:
+    exchange:
+      name: code.execution.exchange
+    queue:
+      name: code.execution.queue
+    routing:
+      key: terminal.command.routing-key
+
+# 로그 메시지 수신 관련 RabbitMQ 설정 (Worker -> Main)
+log-reception:
+  rabbitmq:
+    exchange:
+      name: logs.exchange
+    queue:
+      name: logs.from.worker.queue
+    routing:
+      key: logs.to.client.key
+
+# RPC for container creation
+rpc:
+  rabbitmq:
+    exchange:
+      name: rpc.exchange
+    request-routing-key: rpc.container.create # Worker로 요청을 보낼 때 사용할 라우팅 키
+    reply-queue-name: rpc.container.reply.queue # Worker로부터 응답을 받을 큐 이름
+
+# 컨테이너 생명주기(삭제) 관련 RabbitMQ 설정
+container-lifecycle:
+  rabbitmq:
+    exchange:
+      name: container.lifecycle.exchange
+    request: # To Worker
+      routing-key: container.delete.key
+    response: # From Worker
+      queue-name: container.deleted.ack.queue
+      routing-key: container.deleted.ack.key
+
+# PTY 기반 Stateful 터미널 세션 관련 설정
+pty-session:
+  rabbitmq:
+    start: # 세션 시작 요청
+      exchange: pty.start.exchange
+      routing-key: pty.start.key
+    command: # 명령어 전달
+      exchange: pty.command.exchange
+      routing-key: pty.command.key
+    stop: # 세션 종료 알림
+      exchange: pty.stop.exchange
+      routing-key: pty.stop.key
+
+# 컨테이너 할당 요청 관련 RabbitMQ 설정
+container-acquire:
+  rabbitmq:
+    exchange:
+      name: container.acquire.exchange
+    queue:
+      name: container.acquire.queue
+    routing:
+      key: container.acquire.routing-key
+
+# 컨테이너 정리 요청 관련 RabbitMQ 설정
+container-cleanup:
+  rabbitmq:
+    exchange:
+      name: container.cleanup.exchange
+    queue:
+      name: container.cleanup.queue
+    routing:
+      key: container.cleanup.routing-key
+
+# 컨테이너 관련 작업 응답을 위한 RabbitMQ 설정
+container-response:
+  rabbitmq:
+    exchange:
+      name: container.response.exchange
+    queue:
+      name:
+        acquire-success: container.aq.success.queue
+        acquire-failure: container.aq.failure.queue
+        cleanup-success: container.cleanup.success.queue
+    routing:
+      key:
+        acquire-success: container.acquire.success
+        acquire-failure: container.acquire.failure
+        cleanup-success: container.cleanup.success
+
+# 프로젝트 삭제 요청 관련 RabbitMQ 설정
+project-delete:
+  rabbitmq:
+    exchange:
+      name: project.delete.exchange
+    queue:
+      name: project.delete.queue
+    routing:
+      key: project.delete.routing-key
+
+# 프로젝트 관련 작업 응답을 위한 RabbitMQ 설정
+project-response:
+  rabbitmq:
+    exchange:
+      name: project.response.exchange
+    queue:
+      name:
+        delete-success: project.delete.success.queue
+    routing:
+      key:
+        delete-success: project.delete.success.routing-key
+
+# 프로젝트 DB 정리 요청 관련 RabbitMQ 설정
+project-db-cleanup:
+  rabbitmq:
+    exchange:
+      name: db.cleanup.exchange
+    queue:
+      name: db.cleanup.queue
+    routing:
+      key: db.cleanup.routing-key

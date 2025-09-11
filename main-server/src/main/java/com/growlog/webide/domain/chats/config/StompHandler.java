@@ -52,26 +52,25 @@ public class StompHandler implements ChannelInterceptor {
 
 	@Override
 	public Message<?> preSend(Message<?> message, MessageChannel channel) {
-		final StompHeaderAccessor accessor = MessageHeaderAccessor
-			.getAccessor(message, StompHeaderAccessor.class);
+		final StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
 		if (StompCommand.CONNECT.equals(accessor.getCommand())) {
 			handleValidToken(accessor);
 			log.info("Connected successfully");
 		}
 
+		// [수정] 모든 구독 요청에 대해 유효성 검사를 먼저 수행하도록 구조 변경
 		if (StompCommand.SUBSCRIBE.equals(accessor.getCommand())) {
 			try {
-				validateSubscription(accessor);
-
+				validateSubscription(accessor); // 모든 구독 경로를 이 메서드에서 처리
 				if (checkDuplicatedSubscribtion(accessor)) {
-					log.warn("Already Subscribed.");
-					return null;
+					log.warn("Already Subscribed to {}.", accessor.getDestination());
+					return null; // 중복 구독 방지
 				}
-				log.info("Subscribed successfully");
+				log.info("Subscribed successfully to {}.", accessor.getDestination());
 			} catch (CustomException e) {
 				log.warn("Subscription denied: code={}, message={}", e.getErrorCode().getCode(), e.getMessage());
-				return null;
+				return null; // 유효하지 않은 구독은 거부
 			}
 		}
 		return message;
@@ -79,13 +78,23 @@ public class StompHandler implements ChannelInterceptor {
 
 	private void validateSubscription(StompHeaderAccessor accessor) {
 		try {
-			final Long userId = Long.parseLong(accessor.getSessionAttributes().get("userId").toString());
+			final Long userId = (Long)accessor.getSessionAttributes().get("userId");
 			final String destination = accessor.getDestination();
-			final Long projectId = Long.parseLong(destination.split("/")[3]);
 
-			if (projectMemberRepository.findByProject_IdAndUser_UserId(projectId, userId).isEmpty()) {
-				log.warn("Required permissions are missing.");
-				throw new CustomException(ErrorCode.NOT_A_MEMBER);
+			if (destination != null && destination.startsWith("/topic/projects/")) {
+				// 채팅 관련 구독일 경우, projectId를 검증합니다.
+				final Long projectId = Long.parseLong(destination.split("/")[3]);
+				if (projectMemberRepository.findByProject_IdAndUser_UserId(projectId, userId).isEmpty()) {
+					log.warn("Required permissions are missing for chat subscription.");
+					throw new CustomException(ErrorCode.NOT_A_MEMBER);
+				}
+			} else if (destination != null && destination.startsWith("/user/queue/logs")) {
+				// 로그 관련 구독일 경우, 개인 채널이므로 별도의 projectId 검증 없이 통과시킵니다.
+				log.info("User {} subscribed to their private log queue.", userId);
+			} else {
+				// 알 수 없는 구독 경로일 경우, 거부합니다.
+				log.warn("Attempted to subscribe to an unknown or disallowed destination: {}", destination);
+				throw new CustomException(ErrorCode.BAD_REQUEST);
 			}
 		} catch (Exception e) {
 			log.warn("Failed to process subscription request.: {}", e.getMessage());

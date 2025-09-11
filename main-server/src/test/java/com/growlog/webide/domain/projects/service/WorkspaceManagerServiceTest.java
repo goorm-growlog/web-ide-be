@@ -51,13 +51,13 @@
 // import com.growlog.webide.domain.projects.dto.CreateProjectRequest;
 // import com.growlog.webide.domain.projects.dto.OpenProjectResponse;
 // import com.growlog.webide.domain.projects.dto.ProjectResponse;
-// import com.growlog.webide.domain.projects.entity.ActiveInstance;
+// import com.growlog.webide.domain.terminal.entity.ActiveInstance;
 // import com.growlog.webide.domain.projects.entity.InstanceStatus;
 // import com.growlog.webide.domain.projects.entity.MemberRole;
 // import com.growlog.webide.domain.projects.entity.Project;
 // import com.growlog.webide.domain.projects.entity.ProjectMembers;
 // import com.growlog.webide.domain.projects.entity.ProjectStatus;
-// import com.growlog.webide.domain.projects.repository.ActiveInstanceRepository;
+// import com.growlog.webide.domain.terminal.repository.ActiveInstanceRepository;
 // import com.growlog.webide.domain.projects.repository.ProjectMemberRepository;
 // import com.growlog.webide.domain.projects.repository.ProjectRepository;
 // import com.growlog.webide.domain.templates.service.TemplateService;

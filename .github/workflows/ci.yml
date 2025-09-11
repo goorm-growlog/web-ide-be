@@ -69,6 +69,9 @@ jobs:
           KAKAO_REST_API_KEY=secret
           KAKAO_REDIRECT_URI=secret
           KAKAO_REDIRECT_URI_LOCAL=secret
+          SERVER_ID=secret
+          RABBITMQ_DEFAULT_USER=admin
+          RABBITMQ_DEFAULT_PASS=admin
           EOL
 
       - name: ⏳ Wait for MySQL to be healthy

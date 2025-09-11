@@ -37,7 +37,7 @@ spring:
       mail.smtp.starttls.enable: true
 
   rabbitmq:
-    host: localhost
+    host: rabbitmq
     port: 5672
     username: admin
     password: admin
@@ -57,5 +57,5 @@ upload:
     local-dir: uploads/profiles/
 
 efs:
-  base-path: ./efs/projects
-  templates-path: ./efs/templates
+  base-path: /tmp/growlog-workspaces/projects      # 로컬 테스트용 공유 디렉토리 (절대 경로 권장)
+  templates-path: /tmp/growlog-workspaces/templates # 로컬 테스트용 공유 디렉토리 (절대 경로 권장)
