@@ -15,7 +15,6 @@ jobs:
     name: Deploy Main Server
     runs-on: ubuntu-latest  # GitHub가 제공하는 최신 우분투 환경에서 실행
     env:
-      # [유지] 기존 환경변수는 Main Server용으로 사용합니다.
       EC2_HOST: ${{ secrets.EC2_HOST }}
       EC2_USER: ubuntu
       PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
@@ -87,7 +86,9 @@ jobs:
         run: |
           docker build --no-cache -t $DOCKER_USERNAME/$BACKEND_IMAGE:latest \
           -f main-server/Dockerfile .
-          docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest
+
+      - name: ⬆️ Push main-server image
+        run: docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest
 
       - name: 📂 RSYNC .env to main-server EC2
         uses: burnett01/rsync-deployments@5.2
@@ -110,9 +111,6 @@ jobs:
             echo "### 🧹 [용량 확보] 사용하지 않는 Docker 리소스를 정리합니다..."
             docker system prune -af --volumes
 
-            echo "### 🚚 최신 이미지를 pull 합니다..."
-            docker pull $DOCKER_USERNAME/$BACKEND_IMAGE:latest
-
             echo "### 🚀 main-server 컨테이너를 재시작합니다..."
             cd /home/ubuntu/web-ide-be
             docker-compose up -d --force-recreate --no-deps main-server
@@ -121,7 +119,6 @@ jobs:
     name: Deploy Worker Server
     runs-on: ubuntu-latest
     env:
-      # [신규] Worker Server 전용 환경변수를 사용합니다.
       WORKER_EC2_HOST: ${{ secrets.WORKER_EC2_HOST }}
       EC2_USER: ubuntu
       PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
@@ -155,18 +152,20 @@ jobs:
         run: |
           docker build --no-cache -t $DOCKER_USERNAME/$BACKEND_IMAGE:latest \
           -f worker-server/Dockerfile .
-          docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest
+
+      - name: ⬆️ Push worker-server image
+        run: docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest
 
       - name: 📂 RSYNC .env to worker-server EC2
         uses: burnett01/rsync-deployments@5.2
         with:
           switches: -avz --progress
           path: worker-server.env
-          remote_path: /home/ubuntu/web-ide-worker/.env # 파일 이름까지 명확하게 지정
+          remote_path: /home/ubuntu/web-ide-worker/.env
           remote_host: ${{ env.WORKER_EC2_HOST }}
           remote_user: ${{ env.EC2_USER }}
           remote_key: ${{ env.PRIVATE_KEY }}
-          
+
       - name: 🚀 Deploy to worker-server EC2
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -177,9 +176,6 @@ jobs:
           script: |
             echo "### 🧹 [용량 확보] 사용하지 않는 Docker 리소스를 정리합니다..."
             docker system prune -af --volumes
-
-            echo "### 🚚 최신 이미지를 pull 합니다..."
-            docker pull $DOCKER_USERNAME/$BACKEND_IMAGE:latest
 
             echo "### 🚀 worker-server 컨테이너를 재시작합니다..."
             cd /home/ubuntu/web-ide-worker

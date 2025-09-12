@@ -164,7 +164,7 @@
         term.write("🔌 Connecting to WebSocket...\r\n");
 
         // 2. WebSocket 연결
-        const socket = new SockJS('http://localhost:8080/ws');
+        const socket = new SockJS('/ws');
         stompClient = Stomp.over(socket);
         stompClient.debug = null;
 
