@@ -1,18 +1,17 @@
 package com.growlog.webide.domain.files.service;
 
-import com.google.common.jimfs.Jimfs;
-import com.growlog.webide.domain.files.dto.CreateFileRequest;
-import com.growlog.webide.domain.files.dto.tree.WebSocketMessage;
-import com.growlog.webide.domain.files.entity.FileMeta;
-import com.growlog.webide.domain.files.repository.FileMetaRepository;
-import com.growlog.webide.domain.images.entity.Image;
-import com.growlog.webide.domain.permissions.service.ProjectPermissionService;
-import com.growlog.webide.domain.projects.entity.Project;
-import com.growlog.webide.domain.projects.repository.ProjectRepository;
-import com.growlog.webide.domain.users.entity.Users;
-import com.growlog.webide.global.common.exception.CustomException;
-import com.growlog.webide.global.common.exception.ErrorCode;
-import lombok.extern.slf4j.Slf4j;
+import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.BDDMockito.*;
+
+import java.nio.file.FileSystem;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -25,17 +24,20 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.nio.file.FileSystem;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import com.google.common.jimfs.Jimfs;
+import com.growlog.webide.domain.files.dto.CreateFileRequest;
+import com.growlog.webide.domain.files.dto.tree.WebSocketMessage;
+import com.growlog.webide.domain.files.entity.FileMeta;
+import com.growlog.webide.domain.files.repository.FileMetaRepository;
+import com.growlog.webide.domain.images.entity.Image;
+import com.growlog.webide.domain.permissions.service.ProjectPermissionService;
+import com.growlog.webide.domain.projects.entity.Project;
+import com.growlog.webide.domain.projects.repository.ProjectRepository;
+import com.growlog.webide.domain.users.entity.Users;
+import com.growlog.webide.global.common.exception.CustomException;
+import com.growlog.webide.global.common.exception.ErrorCode;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.BDDMockito.*;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @ExtendWith(MockitoExtension.class)

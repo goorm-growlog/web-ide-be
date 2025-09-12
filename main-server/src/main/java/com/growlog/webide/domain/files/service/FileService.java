@@ -1,5 +1,27 @@
 package com.growlog.webide.domain.files.service;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
 import com.growlog.webide.domain.files.dto.CreateFileRequest;
 import com.growlog.webide.domain.files.dto.FileOpenResponseDto;
 import com.growlog.webide.domain.files.dto.tree.TreeAddEventDto;
@@ -13,24 +35,8 @@ import com.growlog.webide.domain.projects.entity.Project;
 import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.file.*;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -48,10 +54,10 @@ public class FileService {
 	private final FileSystem fileSystem;
 
 	public FileService(@Value("${efs.base-path}") String efsBasePath,
-					   SimpMessagingTemplate messagingTemplate,
-					   ProjectRepository projectRepository,
-					   ProjectPermissionService permissionService,
-					   FileMetaRepository fileMetaRepository) {
+		SimpMessagingTemplate messagingTemplate,
+		ProjectRepository projectRepository,
+		ProjectPermissionService permissionService,
+		FileMetaRepository fileMetaRepository) {
 		this.efsBasePath = efsBasePath;
 		this.messagingTemplate = messagingTemplate;
 		this.projectRepository = projectRepository;
