@@ -101,10 +101,10 @@
             return;
         }
 
-        log('Connecting to ws://localhost:8080/ws ...');
+        log('Connecting to /ws ...');
 
         // 1. SockJS를 통해 웹소켓 연결을 생성합니다.
-        const socket = new SockJS('http://localhost:8080/ws');
+        const socket = new SockJS('/ws');
 
         // 2. SockJS 연결 위에서 STOMP 클라이언트를 생성합니다.
         stompClient = Stomp.over(socket);
@@ -163,7 +163,7 @@
         const topicUrl = `/topic/projects/${projectId}/chat`;
         const enterUrl = `/app/projects/${projectId}/chat/enter`;
 
-        const openApiUrl = `http://localhost:8080/projects/${projectId}/open`;
+        const openApiUrl = `/projects/${projectId}/open`;
 
         log(`Calling 'Open Project' API: ${openApiUrl}`);
         fetch(openApiUrl, {
@@ -237,7 +237,7 @@
         log(`Full URL: /projects/${projectId}/inactivate`);
 
         // fetch API를 사용해 서버의 비활성화 엔드포인트를 호출합니다.
-        fetch(`http://localhost:8080/projects/${projectId}/inactivate`, {
+        fetch(`/projects/${projectId}/inactivate`, {
             method: 'PATCH',
             headers: {
                 // JWT 인증이 필요하므로 헤더에 토큰을 포함시킵니다.
