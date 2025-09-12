@@ -1,29 +1,5 @@
 package com.growlog.webide.domain.files.service;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.BDDMockito.*;
-
-import java.nio.file.FileSystem;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.test.util.ReflectionTestUtils;
-
 import com.google.common.jimfs.Jimfs;
 import com.growlog.webide.domain.files.dto.CreateFileRequest;
 import com.growlog.webide.domain.files.dto.tree.WebSocketMessage;
@@ -36,8 +12,30 @@ import com.growlog.webide.domain.projects.repository.ProjectRepository;
 import com.growlog.webide.domain.users.entity.Users;
 import com.growlog.webide.global.common.exception.CustomException;
 import com.growlog.webide.global.common.exception.ErrorCode;
-
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.nio.file.FileSystem;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.BDDMockito.*;
 
 @Slf4j
 @ExtendWith(MockitoExtension.class)
@@ -250,7 +248,7 @@ class FileServiceTest {
 		Long projectId = 1L;
 		Long userId = 123L;
 		String fromPath = "/src";
-		String toPath = "/source";
+		String toPath = "/new/source";
 
 		Project fakeProject = Project.builder().build();
 		ReflectionTestUtils.setField(fakeProject, "id", projectId);
@@ -285,7 +283,7 @@ class FileServiceTest {
 
 		// 2. DB 저장 로직 검증 (ArgumentCaptor 사용)
 		ArgumentCaptor<List<FileMeta>> captor = ArgumentCaptor.forClass(List.class);
-		then(fileMetaRepository).should(times(1)).saveAll(captor.capture());
+		then(fileMetaRepository).should(times(2)).saveAll(captor.capture());
 
 		List<FileMeta> savedMetas = captor.getValue();
 		assertThat(savedMetas).hasSize(2); // 2개의 객체가 저장되었는지 확인
