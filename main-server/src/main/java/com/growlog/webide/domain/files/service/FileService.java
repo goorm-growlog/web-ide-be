@@ -193,6 +193,8 @@ public class FileService {
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 
+		saveAllParentFolders(new File(toPath), project);
+
 		//DB 메타데이터 업데이트
 		// 이동할 대상과 그 하위의 모든 파일/폴더 메타데이터를 DB에서 조회
 		List<FileMeta> metasToMove = fileMetaRepository.findByProjectIdAndPathStartingWith(projectId, fromPath);

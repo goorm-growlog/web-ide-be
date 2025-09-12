@@ -250,7 +250,7 @@ class FileServiceTest {
 		Long projectId = 1L;
 		Long userId = 123L;
 		String fromPath = "/src";
-		String toPath = "/source";
+		String toPath = "/new/source";
 
 		Project fakeProject = Project.builder().build();
 		ReflectionTestUtils.setField(fakeProject, "id", projectId);
@@ -285,7 +285,7 @@ class FileServiceTest {
 
 		// 2. DB 저장 로직 검증 (ArgumentCaptor 사용)
 		ArgumentCaptor<List<FileMeta>> captor = ArgumentCaptor.forClass(List.class);
-		then(fileMetaRepository).should(times(1)).saveAll(captor.capture());
+		then(fileMetaRepository).should(times(2)).saveAll(captor.capture());
 
 		List<FileMeta> savedMetas = captor.getValue();
 		assertThat(savedMetas).hasSize(2); // 2개의 객체가 저장되었는지 확인
