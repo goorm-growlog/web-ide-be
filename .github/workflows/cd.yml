@@ -164,7 +164,7 @@ jobs:
           username: ${{ env.EC2_USER }}
           key: ${{ env.PRIVATE_KEY }}
           source: "worker-server.env"
-          target: "/home/ubuntu/web-ide-worker/.env"
+          target: "/home/ubuntu/web-ide-worker/"
           overwrite: true
 
       - name: 🚀 Deploy to worker-server EC2
