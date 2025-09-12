@@ -115,7 +115,7 @@ jobs:
 
             echo "### 🚀 main-server 컨테이너를 재시작합니다..."
             cd /home/ubuntu/web-ide-be
-            docker-compose up -d --force-recreate main-server
+            docker-compose up -d --force-recreate --no-deps main-server
 
   deploy-worker-server:
     name: Deploy Worker Server
