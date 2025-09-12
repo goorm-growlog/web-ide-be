@@ -157,16 +157,16 @@ jobs:
           -f worker-server/Dockerfile .
           docker push $DOCKER_USERNAME/$BACKEND_IMAGE:latest
 
-      - name: 📂 SCP .env to worker-server EC2
-        uses: appleboy/scp-action@v0.1.4
+      - name: 📂 RSYNC .env to worker-server EC2
+        uses: burnett01/rsync-deployments@5.2
         with:
-          host: ${{ env.WORKER_EC2_HOST }}
-          username: ${{ env.EC2_USER }}
-          key: ${{ env.PRIVATE_KEY }}
-          source: "worker-server.env"
-          target: "/home/ubuntu/web-ide-worker/"
-          overwrite: true
-
+          switches: -avz --progress
+          path: worker-server.env
+          remote_path: /home/ubuntu/web-ide-worker/.env # 파일 이름까지 명확하게 지정
+          remote_host: ${{ env.WORKER_EC2_HOST }}
+          remote_user: ${{ env.EC2_USER }}
+          remote_key: ${{ env.PRIVATE_KEY }}
+          
       - name: 🚀 Deploy to worker-server EC2
         uses: appleboy/ssh-action@v1.0.0
         with:
