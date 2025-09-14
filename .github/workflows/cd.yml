@@ -53,7 +53,7 @@ jobs:
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> main-server.env
           echo "JWT_EXPIRATION=3600000" >> main-server.env
           echo "REFRESH_SECRET=${{ secrets.REFRESH_SECRET }}" >> main-server.env
-          echo "REFRESH_EXPIRATION=604800" >> main-server.env
+          echo "REFRESH_EXPIRATION=604800000" >> main-server.env
 
           echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> main-server.env
           echo "MAIL_PASSWORD=\"${{ secrets.MAIL_PASSWORD }}\"" >> main-server.env

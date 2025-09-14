@@ -55,7 +55,7 @@ jobs:
           JWT_SECRET=mytestsecret
           JWT_EXPIRATION=3600000
           REFRESH_SECRET=mytestsecret
-          REFRESH_EXPIRATION=604800
+          REFRESH_EXPIRATION=604800000
           SPRING_PROFILES_ACTIVE=local
           MAIL_USERNAME=test@example.com
           MAIL_PASSWORD=secret
