@@ -41,7 +41,7 @@ public class TreeWebSocketController {
 			throw new AccessDeniedException("WebSocket authentication failed: No userId");
 		}
 
-		log.info("[WS] 트리 요청 userId={}, projectId={}", userId, projectId);
+		log.info("[WS] tree request userId={}, projectId={}", userId, projectId);
 
 		// 🌳 트리 구성
 		TreeNodeDto rootNode = treeService.getInitialTree(projectId);

@@ -24,6 +24,7 @@ import org.springframework.util.StringUtils;
 
 import com.growlog.webide.domain.files.dto.CreateFileRequest;
 import com.growlog.webide.domain.files.dto.FileOpenResponseDto;
+import com.growlog.webide.domain.files.dto.FileSearchResponseDto;
 import com.growlog.webide.domain.files.dto.tree.TreeAddEventDto;
 import com.growlog.webide.domain.files.dto.tree.TreeMoveEventDto;
 import com.growlog.webide.domain.files.dto.tree.TreeRemoveEventDto;
@@ -255,12 +256,23 @@ public class FileService {
 		}
 	}
 
-	/*public List<FileSearchResponseDto> searchFilesByName(Long projectId, String query) {
-		return fileMetaRepository.findByProjectIdAndNameContainingIgnoreCaseAndDeletedFalse(projectId, query)
+	public List<FileSearchResponseDto> searchFilesByName(Long projectId, String query) {
+		List<FileMeta> searchResults = fileMetaRepository.findByProjectIdAndNameContainingIgnoreCaseAndDeletedFalse(
+			projectId, query);
+
+		if (searchResults.isEmpty()) {
+			log.warn("File search failed: No results found for query '{}' in projectId {}.", query, projectId);
+			throw new CustomException(ErrorCode.FILE_NOT_FOUND);
+		}
+
+		log.info("File search successful: Found {} results for query '{}' in projectId {}.", searchResults.size(),
+			query, projectId);
+
+		return searchResults
 			.stream()
 			.map(FileSearchResponseDto::from)
 			.toList();
-	}*/
+	}
 
 	@Transactional(readOnly = true)
 	public void saveFileToStorage(Long projectId, String relativePath, String content, Long userId) {
@@ -360,7 +372,7 @@ public class FileService {
 			log.error("Race Condition or Inconsistent State: File already exists on EFS. path: {}", e.getFile(), e);
 			throw new CustomException(ErrorCode.FILE_ALREADY_EXISTS);
 		} catch (IOException e) {
-			log.error("IO 예외 발생.", e);
+			log.error("IO Exception Occurred.", e);
 			log.error("Failed to create file or directory on EFS.", e);
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}

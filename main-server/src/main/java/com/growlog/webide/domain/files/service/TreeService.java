@@ -41,7 +41,7 @@ public class TreeService {
 	public TreeNodeDto getInitialTree(Long projectId) {
 		boolean isEmpty = fileMetaRepository.findAllByProjectIdAndDeletedFalse(projectId).isEmpty();
 		if (isEmpty) {
-			log.info("[TreeService] DB가 비어있어 EFS와 동기화를 시작합니다.");
+			log.info("[TreeService] The DB is empty and starts synchronizing with EFS.");
 			syncFromEfs(projectId);
 		}
 		return buildTreeFromDb(projectId);
@@ -55,9 +55,12 @@ public class TreeService {
 		// DB에서 루트 경로("/")가 이미 있는지 확인(없으면 생성하여 오류 방지)
 		fileMetaRepository.findByProjectIdAndPathAndDeletedFalse(projectId, "/")
 			.ifPresentOrElse(
-				(meta) -> log.info("DB에 루트'/' 정보가 이미 존재합니다. 동기화를 계속합니다. projectId: {}", projectId),
+				(meta) -> log.info(
+					"The DB already has the root '/' information. Continue the synchronization. projectId: {}",
+					projectId),
 				() -> {
-					log.info("DB에 루트'/' 정보가 없어 새로 생성합니다. projectId: {}", projectId);
+					log.info("The DB does not have the root '/' information, so create a new one. projectId: {}",
+						projectId);
 					FileMeta rootMeta = FileMeta.relativePath(project, "/", "folder");
 					fileMetaRepository.save(rootMeta);
 				}
@@ -66,7 +69,7 @@ public class TreeService {
 		Path projectPath = FileSystems.getDefault().getPath(efsBasePath, String.valueOf(projectId));
 
 		if (!Files.exists(projectPath)) {
-			log.warn("프로젝트 경로가 EFS에 존재하지 않습니다. projectId: {}", projectId);
+			log.warn("Project path does not exist in EFS. projectId: {}", projectId);
 			return;
 		}
 
@@ -79,7 +82,7 @@ public class TreeService {
 			});
 			fileMetaRepository.saveAll(metasToSave);
 		} catch (IOException e) {
-			log.error("EFS 스캔 중 오류 발생. projectId={}", projectId, e);
+			log.error("Error during EFS scan. projectId={}", projectId, e);
 			throw new CustomException(ErrorCode.FILE_OPERATION_FAILED);
 		}
 	}
@@ -92,7 +95,7 @@ public class TreeService {
 		List<FileMeta> files = fileMetaRepository.findAllByProjectIdAndDeletedFalse(projectId);
 
 		if (files.isEmpty()) {
-			throw new IllegalStateException("데이터 오류: projectId " + projectId + "에 해당하는 파일 정보가 없습니다.");
+			throw new IllegalStateException("Data Error: No file information corresponding to projectId :" + projectId);
 		}
 
 		Map<String, TreeNodeDto> nodes = new HashMap<>();
@@ -106,7 +109,8 @@ public class TreeService {
 		TreeNodeDto root = nodes.get("/");
 		if (root == null) {
 			// 이 경우는 데이터가 잘못된 상태이므로 예외를 발생
-			throw new IllegalStateException("데이터 오류: projectId " + projectId + "의 FileMeta에 루트('/') 정보가 없습니다.");
+			throw new IllegalStateException(
+				"DataError: No root('/') information in FileMeta of projectId : " + projectId);
 		}
 
 		// parent-child 관계 구성
