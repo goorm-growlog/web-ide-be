@@ -23,15 +23,20 @@
 https://growlog-web-ide.vercel.app/
 
 ## 기술 스택
+| Category       | Stack                                                                                             |
+|----------------|---------------------------------------------------------------------------------------------------|
+| Language       | ![Java 21](https://img.shields.io/badge/java%2021-%23ED8B00.svg?style=for-the-badge&logo=openjdk&logoColor=white)                                   |
+| Framework      | ![Spring Boot](https://img.shields.io/badge/spring%20boot-%236DB33F.svg?style=for-the-badge&logo=spring&logoColor=white) &nbsp; |
+| Package Manager      | ![Gradle](https://img.shields.io/badge/Gradle-02303A.svg?style=for-the-badge&logo=Gradle&logoColor=white) &nbsp;|
+| Database & ORM | ![MySQL](https://img.shields.io/badge/mysql-4479A1.svg?style=for-the-badge&logo=mysql&logoColor=white) &nbsp; ![Spring Data JPA](https://img.shields.io/badge/spring%20data%20JPA-%236DB33F.svg?style=for-the-badge&logo=spring&logoColor=white) &nbsp; ![Redis](https://img.shields.io/badge/redis-%23DD0031.svg?style=for-the-badge&logo=redis&logoColor=white)             |
+| API Documetation       | ![Swagger](https://img.shields.io/badge/-Swagger-%23Clojure?style=for-the-badge&logo=swagger&logoColor=white) &nbsp; |
+| Auth/Security | ![Spring Security](https://img.shields.io/badge/spring%20security-%236DB33F.svg?style=for-the-badge&logo=spring&logoColor=white) <br> ![JWT](https://img.shields.io/badge/JWT-black?style=for-the-badge&logo=JSON%20web%20tokens)|
+| RTC           |![WebSocket](https://img.shields.io/badge/WebSocket-%23262626.svg?style=for-the-badge&logo=liveblocks&logoColor=white)      |
+| Static Analysis           |![CheckStyle](https://img.shields.io/badge/checkstyle-%23FFFFFF.svg?style=for-the-badge&logo=liveblocks) <br> 	![SonarLint](https://img.shields.io/badge/SonarLint-CB2029?style=for-the-badge&logo=SONARLINT&logoColor=white) <br>![IntelliJ Inspection](https://img.shields.io/badge/IntelliJ%20Inspection-000000.svg?style=for-the-badge&logo=intellij-idea&logoColor=white)     |
+| File Management           |![AWS S3](https://img.shields.io/badge/AWS%20S3-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white) <br> 	![AWS EFS](https://img.shields.io/badge/AWS%20EFS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white)     |
+| Infrastructure & CI/CD           |![AWS](https://img.shields.io/badge/AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white) <br> 	![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white) <br>    ![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)     |
+| Monitoring           |![Spring Actuator](https://img.shields.io/badge/spring%20Actuator-%236DB33F.svg?style=for-the-badge&logo=spring&logoColor=white) <br> 	![Node Exporter](https://img.shields.io/badge/node%20Exporter-6DA55F?style=for-the-badge&logo=node.js&logoColor=white) <br>    ![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?style=for-the-badge&logo=Prometheus&logoColor=white)  <br>   ![Grafana](https://img.shields.io/badge/grafana-%23F46800.svg?style=for-the-badge&logo=grafana&logoColor=white)     |
 
-| Category       | Stack                                                                                                                                                                                                                                                                                                                                                         |
-|----------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Language       | ![Java](https://img.shields.io/badge/Java-21-007396?logo=java)                                                                                                                                                                                                                                                                                                |
-| Framework      | ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-6DB33F?logo=springboot) <br> ![JPA](https://img.shields.io/badge/Spring%20Data%20JPA-ORM-59666C?logo=spring) <br> ![WebSocket](https://img.shields.io/badge/Spring%20WebSocket-RealTime-6DB33F?logo=spring)                                                                                   |
-| Real-time Comm | ![Socket.IO](https://img.shields.io/badge/Socket.IO-RealTime-010101?logo=socket.io)                                                                                                                                                                                                                                                                           |
-| Database       | ![MySQL](https://img.shields.io/badge/MySQL-개발용-4479A1?logo=mysql) <br> ![AWS RDS](https://img.shields.io/badge/AWS%20RDS-운영용-527FFF?logo=amazonaws)                                                                                                                                                                                                          |
-| Auth           | ![Spring Security JWT](https://img.shields.io/badge/Security-JWT-000000?logo=springsecurity)                                                                                                                                                                                                                                                                  |
-| Infra & Deploy | ![AWS EC2](https://img.shields.io/badge/AWS%20EC2-Deploy-FF9900?logo=amazonaws) <br> ![Docker](https://img.shields.io/badge/Docker-Container-2496ED?logo=docker) <br> ![Docker Hub](https://img.shields.io/badge/Docker%20Hub-Image-2496ED?logo=docker) <br> ![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-CI/CD-2088FF?logo=githubactions) |
 
 ## 아키텍쳐
 
@@ -85,15 +90,24 @@ https://growlog-web-ide.vercel.app/
 
 ### 사용자 인증
 
-![signup_cropped](https://github.com/user-attachments/assets/aa6dab76-4a2b-427f-9524-326a3d25c646)
+https://github.com/user-attachments/assets/996307f7-cdbd-420f-bdd3-61f06316f4c7
+
+
+### Github 소셜 로그인
+
+
+https://github.com/user-attachments/assets/1a7b89d7-0f7f-4df0-ab59-1585ccea39ae
+
 
 ### 프로젝트 생성
 
-![create_cropped](https://github.com/user-attachments/assets/b2c8eea6-6edb-4acc-8dbb-a73f30550dd1)
+https://github.com/user-attachments/assets/d6a8b4b3-9933-4988-9bed-159d6e52c2b2
+
 
 ### 코드 편집
 
-![edit_cropped](https://github.com/user-attachments/assets/20f9c931-f01e-43d7-8bfe-b5aa4c70f9cd)
+https://github.com/user-attachments/assets/05c83ca7-54cc-4962-b72f-fc7b44fb61cc
+
 
 ### 프로젝트 초대
 
@@ -102,4 +116,9 @@ https://growlog-web-ide.vercel.app/
 ### 채팅
 
 ![chat_cropped](https://github.com/user-attachments/assets/006fa4db-9fc4-4bb3-9cf2-d9830842342c)
+
+
+### 음성채팅
+
+https://github.com/user-attachments/assets/0e958e90-9636-4dfb-a28f-fd89f550ab70
 
